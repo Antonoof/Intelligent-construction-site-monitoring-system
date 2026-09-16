@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.env
+
+data/*/*
+!data/*/.gitkeep
+!data/schedules/example_schedule.csv
+weights/*
+!weights/.gitkeep
+outputs/*
+!outputs/.gitkeep
+runs/
+.comet/

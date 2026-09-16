@@ -1,0 +1,12 @@
+ultralytics
+hydra-core
+omegaconf
+comet-ml
+pycocotools
+opencv-python
+numpy
+pandas
+openpyxl
+plotly
+streamlit
+pytest

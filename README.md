@@ -1,2 +1,34 @@
-# Intelligent-construction-site-monitoring-system
-An intelligent system that evaluates, based on images from the construction site, whether the actual construction and installation work complies with the schedule, using data on the availability and behavior of construction equipment.
+# Intelligent construction site monitoring system
+
+Система, которая по снимкам со строительной площадки оценивает, соответствуют ли фактически
+выполняемые строительно-монтажные работы календарному плану, на основании наличия и поведения
+строительной техники.
+
+**Идея:** снимки → детекция техники → трекинг → состояние (нет / простой / движение / работа) →
+машино-часы по зонам и дням → сопоставление с графиком → объяснимые отклонения → отчёт.
+
+## Структура проекта
+
+```
+src/datasets/       датасеты техники -> YOLO, единый class_map, сплиты по камерам/датам, баланс классов
+src/model/          детектор (YOLO), трекер, классификатор состояния техники
+src/pipeline/       чтение снимков, зоны площадки, агрегация во временную шкалу, оркестрация
+src/schedule/       календарный план: парсинг, каталог «вид работ -> техника», сопоставление, отклонения, скоринг
+src/metrics/        детекция (mAP, день/ночь), трекинг, состояние техники, качество выявления отклонений
+src/logger/         интерфейс логгера + Comet ML
+src/report/         отчёт план/факт: таблица, Гантт, отклонения с кадрами-доказательствами
+src/utils/          визуализация, I/O, сиды, рабочий календарь
+src/configs/        Hydra-конфиги (train / inference / evaluate / monitor + подконфиги)
+train.py            обучение детектора
+inference.py        детекция + трекинг + состояние на снимках
+evaluate.py         метрики
+monitor.py          снимки + график -> отчёт о соответствии
+demo/               интерактивное демо
+data/               данные (не в git), пример графика в data/schedules/
+tests/              тесты логики графика и отклонений
+docs/               документация и ранбуки (Kaggle, DataSphere)
+jobs/               конфиги DataSphere Jobs + entry point для VM
+notebooks/          тонкие просмотрщики поверх src/, без собственной логики
+```
+
+> Работа в процессе — документация будет дополняться.
