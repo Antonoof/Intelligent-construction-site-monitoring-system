@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Новый проект — {{ app_name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/create.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page page--narrow" data-default-classes='{{ (default_classes or [])|tojson }}'>
+  <div class="page__head">
+    <div>
+      <h1>Новый проект</h1>
+      <p>Добавьте папки с изображениями и YOLO-разметкой. AutoDetect2 рекурсивно найдёт каждое
+         изображение и подберёт к нему <code>.txt</code> с боксами.</p>
+    </div>
+  </div>
+
+  <ol class="steps">
+    <li class="step is-active" data-step="1"><span>1</span>Папки с данными</li>
+    <li class="step" data-step="2"><span>2</span>Split и классы</li>
+    <li class="step" data-step="3"><span>3</span>Создание</li>
+  </ol>
+
+  <section class="card">
+    <div class="card__head">
+      <h2>Источники данных</h2>
+      <div class="spacer"></div>
+      <button class="btn btn--sm" id="add-folders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><use href="#i-folder"/></svg>
+        Добавить папки
+      </button>
+    </div>
+
+    <div id="sources"></div>
+
+    <div class="source-hint">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><use href="#i-info"/></svg>
+      <div>
+        <b>Как ищется разметка.</b> Для <code>.../images/frame.jpg</code> проверяются
+        <code>.../labels/frame.txt</code>, <code>./labels/frame.txt</code> и <code>./frame.txt</code>.
+        Классы берутся из первых чисел каждой строки.
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid--2" style="margin-top:16px; align-items:start">
+    <div class="card">
+      <div class="card__head"><h2>Параметры проекта</h2></div>
+      <div class="field">
+        <label for="project-name">Название</label>
+        <input type="text" id="project-name" placeholder="night-vision-detection" value="">
+        <span class="field__hint">Используется как имя папки в <code>workspace/projects</code></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head">
+        <h2>Классы</h2>
+        <span class="badge" id="class-count">0</span>
+        <div class="spacer"></div>
+        <button class="btn btn--sm" id="load-yaml">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-layers"/></svg>
+          data.yaml
+        </button>
+        <button class="btn btn--sm" id="upload-yaml">Загрузить файл</button>
+        <input type="file" id="yaml-file" accept=".yaml,.yml" class="hidden">
+      </div>
+
+      <div id="classes"></div>
+      <div class="yaml-note hidden" id="yaml-note"></div>
+    </div>
+  </section>
+
+  <div class="create-actions">
+    <a class="btn" href="/">Отмена</a>
+    <div class="spacer"></div>
+    <div class="create-summary muted tiny" id="summary">Папки не выбраны</div>
+    <button class="btn btn--primary btn--lg" id="create" disabled>
+      Создать проект
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><use href="#i-arrow"/></svg>
+    </button>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/create.js') }}"></script>{% endblock %}

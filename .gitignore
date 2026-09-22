@@ -1,0 +1,59 @@
+# ---------------------------------------------------------------- Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------- IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# -------------------------------------------------------------- OS junk
+.DS_Store
+__MACOSX/
+Thumbs.db
+desktop.ini
+
+# ----------------------------------------------------------------- Данные
+# Изображения и разметка живут рядом с кодом, но в git не едут: репозиторий
+# должен клонироваться за секунды, а датасет весит гигабайты.
+images/
+labels/
+data/
+datasets/
+dataset/
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.webp
+*.tif
+*.tiff
+
+# Исключение — иконки и скриншоты документации
+!docs/**/*.png
+!autodetect2/frontend/static/**/*.png
+!autodetect2/frontend/static/**/*.svg
+
+# ------------------------------------ Рабочее пространство AutoDetect2
+# Проекты, кэш эмбеддингов, выборки, задания, экспорты.
+workspace/
+dinov2_clustering/
+
+# ------------------------------------------- Веса и артефакты обучения
+*.pt
+*.onnx
+*.engine
+*.npz
+runs/
+result/
+results/
+predictions/
+submission*.csv
+AutoFile*.zip

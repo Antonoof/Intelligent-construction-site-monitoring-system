@@ -1,0 +1,21 @@
+# AutoDetect2 — веб-приложение
+fastapi>=0.115
+uvicorn>=0.34
+jinja2>=3.1
+python-multipart>=0.0.20
+PyYAML>=6.0
+numpy>=1.26
+pillow>=10.0
+scikit-learn>=1.4
+
+# Эмбеддинги DINOv2 (при отсутствии — резервный дескриптор)
+torch>=2.1
+torchvision>=0.16
+
+# Инференс и подбор WBF
+ultralytics>=8.3
+ensemble-boxes>=1.0.9
+optuna>=3.6
+
+# Опционально: UMAP для карты данных (иначе t-SNE / PCA)
+umap-learn>=0.5

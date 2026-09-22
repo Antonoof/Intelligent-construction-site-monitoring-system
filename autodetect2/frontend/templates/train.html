@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% set active = "train" %}
+{% block title %}Обучение — {{ project.name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/train.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page" data-project="{{ project.id }}">
+  <div class="page__head">
+    <div>
+      <h1>Обучение</h1>
+      <p>Выберите архитектуру и параметры — AutoDetect2 соберёт <code>AutoFile.zip</code>:
+         распакуйте на сервере с датасетом, запустите <code>train.py</code> и получите веса и
+         <code>submission.csv</code> по всем данным.</p>
+    </div>
+  </div>
+
+  <div class="train">
+    <section class="col" style="gap:16px">
+      <div class="card">
+        <div class="card__head"><h2>Архитектура</h2><div class="spacer"></div>
+          <span class="badge" id="ensemble-count">1 модель</span>
+        </div>
+
+        <div class="models" id="models">
+          {% for key, spec in families.items() %}
+          <button class="model" data-family="{{ key }}">
+            <span class="model__name">{{ spec.label }}</span>
+            <span class="model__meta">imgsz {{ spec.imgsz }}</span>
+            <span class="model__check"></span>
+          </button>
+          {% endfor %}
+        </div>
+
+        <div class="row row--wrap" style="margin-top:16px">
+          <span class="label">Размер</span>
+          <div class="btn-group" id="sizes">
+            {% for size in sizes %}
+            <button data-size="{{ size }}">{{ size }}</button>
+            {% endfor %}
+          </div>
+          <div class="spacer"></div>
+          <label class="check"><input type="checkbox" id="ensemble-mode"> ансамбль из нескольких архитектур</label>
+        </div>
+
+        <div class="ensemble hidden" id="ensemble"></div>
+      </div>
+
+      <div class="card">
+        <div class="card__head">
+          <h2>Параметры</h2>
+          <div class="spacer"></div>
+          <button class="btn btn--sm" id="randomize" title="Значения из random_params() AutoDetect">Случайные</button>
+          <button class="btn btn--sm" id="reset-params">Сбросить</button>
+        </div>
+        <div id="params"></div>
+      </div>
+    </section>
+
+    <aside class="col" style="gap:16px">
+      <div class="card">
+        <div class="card__head"><h2>Датасет</h2></div>
+        <dl class="kv">
+          <dt>Изображений</dt><dd>{{ project.counts.total or 0 }}</dd>
+          <dt>train / val</dt><dd>{{ project.counts.train or 0 }} / {{ project.counts.val or 0 }}</dd>
+          <dt>Классов</dt><dd>{{ project.nc or 0 }}</dd>
+          <dt>Боксов</dt><dd>{{ project.counts.boxes or 0 }}</dd>
+        </dl>
+      </div>
+
+      <div class="card card--pad-0">
+        <div class="card__head" style="padding:16px 18px 0"><h2>train.yaml</h2>
+          <div class="spacer"></div>
+          <span class="tiny faint">создан вместе с проектом</span>
+        </div>
+        <pre class="yaml scroll-y" id="yaml-preview"></pre>
+      </div>
+
+      <div class="card">
+        <div class="card__head"><h2>AutoFile</h2></div>
+        <p class="muted tiny">В архив попадут <code>train.py</code>, <code>predict.py</code>,
+           <code>data.yaml</code>, <code>train.yaml</code>, пакет <code>autodetect</code> и README
+           с командой запуска.</p>
+        <div class="row" style="margin-top:14px">
+          <button class="btn" id="save-config">Сохранить конфигурацию</button>
+          <button class="btn btn--primary" id="build">Собрать AutoFile.zip</button>
+        </div>
+        <div id="bundle-result" class="bundle hidden"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/train.js') }}"></script>{% endblock %}

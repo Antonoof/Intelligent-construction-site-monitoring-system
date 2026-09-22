@@ -1,0 +1,100 @@
+.modal--editor {
+  width: min(1560px, 96vw);
+  height: min(94vh, 1040px);
+}
+
+.modal--editor .modal__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 14px 18px 18px;
+}
+
+.editor-modal {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "bar  bar"
+    "stage side"
+    "foot foot";
+  gap: 12px;
+}
+
+.editor-modal__bar {
+  grid-area: bar;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.editor-modal__bar input[type="range"] { width: 110px; }
+
+.editor-modal__stage {
+  grid-area: stage;
+  min-height: 0;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: #0a0e14;
+  overflow: hidden;
+}
+
+.editor-modal__stage canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+
+.editor-modal__side {
+  grid-area: side;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.editor-modal__boxes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editor-modal__boxes .boxrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.editor-modal__boxes .boxrow:hover { background: var(--surface-3); }
+.editor-modal__boxes .boxrow.is-active { outline: 1px solid var(--accent); }
+.editor-modal__boxes .boxrow i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.editor-modal__boxes .boxrow .spacer { flex: 1; }
+
+.editor-modal__foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .editor-modal {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "bar" "stage" "side" "foot";
+  }
+  .editor-modal__side { max-height: 200px; }
+}

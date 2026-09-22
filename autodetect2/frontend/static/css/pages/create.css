@@ -1,0 +1,98 @@
+.page--narrow { max-width: 1020px; }
+
+.steps {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px 9px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text-faint);
+  font-size: 13px;
+  transition: color var(--speed) var(--ease), border-color var(--speed) var(--ease);
+}
+
+.step span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.step.is-active { color: var(--text); border-color: var(--accent-line); }
+.step.is-active span { background: var(--accent); color: #fff; }
+.step.is-done span { background: rgba(61, 220, 151, 0.2); color: var(--green); }
+
+.source {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  margin-bottom: 8px;
+}
+
+.source__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--surface-3);
+  color: var(--accent);
+}
+
+.source__icon svg { width: 17px; height: 17px; }
+
+.source__path { font-family: var(--mono); font-size: 12.5px; }
+.source__meta { display: flex; gap: 8px; margin-top: 3px; font-size: 12px; color: var(--text-dim); }
+.source__meta .warn { color: var(--amber); }
+
+.source-hint {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: rgba(76, 141, 255, 0.05);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.source-hint svg { width: 17px; height: 17px; flex: none; color: var(--accent); margin-top: 2px; }
+.source-hint code { color: var(--text); }
+
+.create-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.create-summary { text-align: right; }
+
+code {
+  background: var(--surface-3);
+  padding: 1px 5px;
+  border-radius: 5px;
+  color: var(--text-dim);
+}

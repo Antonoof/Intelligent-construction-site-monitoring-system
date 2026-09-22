@@ -1,0 +1,92 @@
+.picker { display: flex; flex-direction: column; gap: 12px; }
+
+.picker__bar { display: flex; gap: 8px; align-items: center; }
+.picker__bar .flip { transform: rotate(180deg); }
+
+.picker__list {
+  height: min(46vh, 430px);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.picker__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.picker__row:last-child { border-bottom: 0; }
+.picker__row:hover { background: rgba(76, 141, 255, 0.06); }
+.picker__row.is-picked { background: var(--accent-soft); }
+
+.picker__icon { display: grid; place-items: center; color: var(--text-faint); }
+.picker__icon svg { width: 16px; height: 16px; }
+
+.picker__name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.picker__name:hover { color: var(--accent); }
+
+.picker__current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.picker__current .mono { font-size: 12px; color: var(--text-dim); }
+
+.picker__preview {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--surface-2);
+}
+
+.picker__preview img {
+  width: 92px;
+  height: 56px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface-3);
+}
+
+.picker__hint { padding: 10px 12px; font-size: 12px; color: var(--text-faint); }
+
+.picker__basket { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+.picker__chip-x {
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  opacity: 0.7;
+}
+
+.picker__chip-x:hover { opacity: 1; }

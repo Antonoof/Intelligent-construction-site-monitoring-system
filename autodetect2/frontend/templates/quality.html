@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% set active = "quality" %}
+{% block title %}Проверка разметки — {{ project.name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/quality.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page page--wide quality" data-project="{{ project.id }}" data-classes='{{ (project.names or [])|tojson }}'>
+  <div class="page__head">
+    <div>
+      <h1>Проверка разметки</h1>
+      <p class="muted">
+        Что в разметке сломано, а что просто выбивается из общего ряда.
+        Модель для этого не нужна — считается по самим файлам и по тому,
+        насколько объект похож на остальные объекты своего класса.
+      </p>
+    </div>
+    <div class="spacer"></div>
+    <label class="check"><input type="checkbox" id="check-classes" checked> сверять классы по виду объектов</label>
+    <button class="btn btn--primary" id="run">Проверить</button>
+  </div>
+
+  <section class="grid grid--4" id="summary" style="margin-bottom:18px"></section>
+
+  <section class="quality__body">
+    <aside class="quality__side">
+      <div class="card card--pad-sm">
+        <div class="card__head"><div class="card__title">Виды проблем</div></div>
+        <div id="kinds" class="kinds"></div>
+      </div>
+
+      <div class="card card--pad-sm">
+        <div class="card__head"><div class="card__title">Баланс классов</div></div>
+        <div id="classes" class="classbars"></div>
+      </div>
+    </aside>
+
+    <section class="card card--pad-0 quality__list">
+      <div class="card__head">
+        <div class="card__title">Кадры</div>
+        <span class="badge" id="rows-count">0</span>
+        <div class="spacer"></div>
+        <input type="search" id="filter" placeholder="Поиск по имени" style="width:180px">
+        <button class="btn btn--sm" id="clear-kind" hidden>Сбросить фильтр</button>
+        <button class="btn btn--sm" id="to-assignment">В задание напарнику</button>
+      </div>
+      <div class="scroll-y" id="rows"></div>
+    </section>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/quality.js') }}"></script>{% endblock %}

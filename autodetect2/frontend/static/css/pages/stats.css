@@ -1,0 +1,77 @@
+.filters { display: flex; align-items: flex-end; gap: 10px; }
+.filters .field { width: 110px; }
+
+.dashboard { display: flex; flex-direction: column; gap: 16px; }
+
+.hero-row { display: flex; gap: 16px; align-items: stretch; }
+
+.hero-map {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 260px;
+  padding: 20px 26px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--accent-line);
+  background: linear-gradient(135deg, rgba(57, 135, 229, 0.16), rgba(25, 158, 112, 0.08));
+}
+
+.hero-map__value {
+  font-size: 54px;
+  font-weight: 620;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.table-wrap { max-height: 340px; overflow: auto; padding: 0 8px 8px; }
+
+.error-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.error-notes span b { color: var(--text); }
+
+/* ------------------------------------------------------------------ charts */
+.chart-row { cursor: default; outline: none; }
+.chart-row:hover rect:not(.chart-hit), .chart-row:focus rect:not(.chart-hit) { filter: brightness(1.18); }
+
+.chart-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 300;
+  min-width: 130px;
+  padding: 9px 11px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: rgba(16, 21, 30, 0.97);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  font-size: 12px;
+}
+
+.chart-tip__head {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.chart-tip__row { display: flex; align-items: center; gap: 8px; line-height: 1.7; }
+.chart-tip__row i { width: 12px; height: 3px; border-radius: 2px; flex: none; }
+.chart-tip__row span { color: var(--text-dim); }
+.chart-tip__row b { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--text); }
+
+@media (max-width: 1000px) {
+  .hero-row { flex-direction: column; }
+  .filters { flex-wrap: wrap; }
+}

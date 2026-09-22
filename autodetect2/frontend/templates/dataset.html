@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% set active = "dataset" %}
+{% block title %}Датасет — {{ project.name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/dataset.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page page--wide dataset" data-project="{{ project.id }}">
+  <div class="page__head">
+    <div>
+      <h1>Датасет</h1>
+      <p class="muted">Деление на train/val, выгрузка в YOLO и задания напарнику.</p>
+    </div>
+  </div>
+
+  <section class="grid grid--4" id="status" style="margin-bottom:18px"></section>
+
+  <section class="grid grid--2" style="align-items:start; gap:18px">
+    <!-- ------------------------------------------------------ train / val -->
+    <div class="card">
+      <div class="card__head">
+        <h2>Деление train / val</h2>
+        <div class="spacer"></div>
+        <span class="badge" id="split-current">—</span>
+      </div>
+
+      <div class="btn-group" id="split-mode" style="margin-bottom:12px">
+        <button class="is-active" data-mode="ratio">Долей</button>
+        <button data-mode="count">Числом кадров</button>
+      </div>
+
+      <div class="field" id="ratio-field">
+        <label>Сколько уходит в val — <b id="ratio-value">20%</b></label>
+        <div class="row" style="gap:10px">
+          <input type="range" id="ratio" min="0.05" max="0.5" step="0.01" value="0.2" style="flex:1">
+          <div class="btn-group">
+            <button data-ratio="0.1">10</button>
+            <button data-ratio="0.15">15</button>
+            <button class="is-active" data-ratio="0.2">20</button>
+            <button data-ratio="0.3">30</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="field hidden" id="count-field">
+        <label>Сколько кадров в val</label>
+        <input type="number" id="count" min="0" value="500">
+      </div>
+
+      <div class="grid grid--2" style="gap:12px; margin-top:12px">
+        <div class="field">
+          <label>Что делим</label>
+          <select id="scope">
+            <option value="labeled">только размеченные</option>
+            <option value="all">все кадры</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Группировка</label>
+          <select id="group-by">
+            <option value="series">по съёмке (общий префикс)</option>
+            <option value="folder">по папке</option>
+            <option value="none">без группировки</option>
+          </select>
+          <span class="field__hint" id="group-hint">кадры одной съёмки не разъезжаются между train и val</span>
+        </div>
+      </div>
+
+      <div class="row" style="gap:16px; margin-top:12px">
+        <label class="check"><input type="checkbox" id="stratify" checked> выравнивать классы</label>
+        <div class="field" style="width:110px">
+          <label>seed</label>
+          <input type="number" id="seed" value="42">
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn--sm" id="plan">План</button>
+        <button class="btn btn--sm btn--primary" id="apply">Применить</button>
+      </div>
+
+      <div id="plan-result" class="plan"></div>
+    </div>
+
+    <!-- ---------------------------------------------------------- выгрузка -->
+    <div class="card">
+      <div class="card__head">
+        <h2>Выгрузка в YOLO</h2>
+        <div class="spacer"></div>
+      </div>
+      <p class="muted tiny">
+        Обычная структура <code>images/train</code>, <code>labels/train</code>, <code>images/val</code>,
+        <code>labels/val</code> плюс <code>data.yaml</code>. Такую папку открывает и ultralytics,
+        и CVAT, и Roboflow.
+      </p>
+
+      <div class="grid grid--2" style="gap:12px; margin-top:12px">
+        <div class="field">
+          <label>Как класть файлы</label>
+          <select id="link-mode">
+            <option value="hardlink">жёсткие ссылки (быстро, без копии)</option>
+            <option value="copy">копировать файлы</option>
+            <option value="symlink">символические ссылки</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Неразмеченные кадры</label>
+          <select id="include-unlabeled">
+            <option value="false">пропустить</option>
+            <option value="true">взять с пустыми labels</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="spacer"></div>
+        <button class="btn btn--sm btn--primary" id="export">Выгрузить</button>
+      </div>
+      <div id="export-result" class="kv"></div>
+
+      <div class="card__head" style="margin-top:20px">
+        <h2>Предразметка моделью</h2>
+        <div class="spacer"></div>
+        <span class="badge" id="proposals-state">нет</span>
+      </div>
+      <p class="muted tiny">
+        Модель расставляет черновые боксы на неразмеченных кадрах — дальше их
+        остаётся править, а не рисовать с нуля.
+      </p>
+      <div class="grid grid--2" style="gap:12px; margin-top:12px">
+        <div class="field">
+          <label>Модель</label>
+          <select id="prelabel-model"><option value="">— загрузите *.pt в разделе «Инференс» —</option></select>
+        </div>
+        <div class="field">
+          <label>Порог уверенности — <b id="prelabel-conf-value">0.25</b></label>
+          <input type="range" id="prelabel-conf" min="0.05" max="0.9" step="0.05" value="0.25">
+        </div>
+      </div>
+      <div class="row" style="gap:12px; margin-top:12px">
+        <div class="field" style="width:130px">
+          <label>Сколько кадров</label>
+          <input type="number" id="prelabel-limit" min="1" value="1000">
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn--sm" id="apply-proposals">Принять в разметку</button>
+        <button class="btn btn--sm btn--primary" id="prelabel">Разметить</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ задания -->
+  <section class="card" style="margin-top:18px">
+    <div class="card__head">
+      <h2>Задания напарнику</h2>
+      <span class="badge" id="assignment-count">0</span>
+      <div class="spacer"></div>
+      <button class="btn btn--sm" id="accept">Принять задание</button>
+      <button class="btn btn--sm" id="import">Импортировать результат</button>
+      <button class="btn btn--sm btn--primary" id="create">Создать задание</button>
+    </div>
+    <p class="muted tiny">
+      Кадры из задания переходят в состояние «в ожидании»: они исчезают из вашей
+      очереди и из отбора, пока напарник не вернёт результат. Так одни и те же
+      изображения не размечаются дважды.
+    </p>
+    <div id="assignments" class="assignments"></div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/dataset.js') }}"></script>{% endblock %}

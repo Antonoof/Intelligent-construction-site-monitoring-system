@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% set active = "heatmap" %}
+{% block title %}Карта данных — {{ project.name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/heatmap.css') }}">{% endblock %}
+
+{% block content %}
+<main class="heatmap" data-project="{{ project.id }}">
+  <section class="map">
+    <div class="map__bar">
+      <div class="btn-group" id="heat-mode">
+        <button class="is-active" data-heat="errors" title="ошибки / объекты">Ошибки</button>
+        <button data-heat="missed" title="пропуски / размеченные объекты">Пропуски</button>
+        <button data-heat="ghost" title="боксы в пустом месте / размеченные объекты">Ложные</button>
+        <button data-heat="loose" title="объект найден, но IoU &lt; 0.5">Рамки</button>
+        <button data-heat="interest">Интерес</button>
+        <button data-heat="conf">Неуверенность</button>
+        <button data-heat="density">Плотность</button>
+      </div>
+
+      <div class="map__filter">
+        <span class="tiny faint">порог <b id="threshold-label">0.00</b></span>
+        <input type="range" id="threshold" min="0" max="0.95" step="0.01" value="0">
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="btn-group" id="point-mode" title="Чем красить точки">
+        <button class="is-active" data-mode="heat">по полю</button>
+        <button data-mode="cluster">кластеры</button>
+        <button data-mode="state">ошибки</button>
+        <button data-mode="split">split</button>
+      </div>
+
+      <label class="check"><input type="checkbox" id="show-points" checked> точки</label>
+      <label class="check"><input type="checkbox" id="show-labels" checked> имена</label>
+
+      <input type="number" id="clusters" min="2" max="200" value="24" title="Число кластеров" style="width:74px">
+      <button class="btn btn--sm" id="rebuild">Пересобрать</button>
+      <div class="btn-group">
+        <button id="zoom-out" title="Отдалить">−</button>
+        <button id="zoom-in" title="Приблизить">+</button>
+        <button id="zoom-reset" title="Сбросить (двойной клик)">⟲</button>
+      </div>
+    </div>
+
+    <div class="map__canvas">
+      <canvas id="field"></canvas>
+      <div class="map__tooltip hidden" id="tooltip"></div>
+      <div class="map__loading" id="map-loading">
+        <div class="spinner"></div>
+        <span>Готовим карту…</span>
+      </div>
+    </div>
+
+    <div class="map__foot">
+      <div class="scale">
+        <span class="tiny faint" id="scale-title">доля ошибок</span>
+        <div class="scale__bar" id="scale-bar"></div>
+        <div class="scale__ticks">
+          <span id="scale-hint">среднее по области</span><span class="spacer"></span><span>максимум</span>
+        </div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="spacer"></div>
+      <span class="tiny faint" id="map-meta"></span>
+    </div>
+  </section>
+
+  <aside class="detail">
+    <div class="detail__head">
+      <div style="min-width:0">
+        <h2 class="truncate" id="detail-name">Точка не выбрана</h2>
+        <span class="tiny faint" id="detail-sub">Кликните по точке на карте</span>
+      </div>
+      <button class="btn btn--sm btn--primary hidden" id="detail-annotate">Разметить</button>
+    </div>
+
+    <div class="detail__canvas">
+      <canvas id="preview"></canvas>
+    </div>
+
+    <div class="detail__legend">
+      <div class="btn-group" id="preview-layers">
+        <button class="is-active" data-layer="gt">GT — сплошная</button>
+        <button class="is-active" data-layer="pred">Предсказания — пунктир</button>
+      </div>
+      <span class="tiny faint">цвет = класс</span>
+    </div>
+
+    <div class="detail__stats" id="detail-stats"></div>
+    <div class="detail__boxes scroll-y" id="detail-boxes"></div>
+  </aside>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/heatmap.js') }}"></script>{% endblock %}

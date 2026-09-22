@@ -1,0 +1,69 @@
+/* ------------------------------------------------------------ train / val */
+.plan { margin-top: 16px; }
+
+.split-bar {
+  display: flex;
+  height: 30px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface-3);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.split-bar i {
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: width var(--speed) var(--ease);
+}
+
+.split-bar__train { background: rgba(76, 141, 255, 0.35); color: #dbe7ff; }
+.split-bar__val { background: rgba(162, 116, 255, 0.35); color: #eadcff; }
+
+.plan .table { margin-top: 14px; }
+.plan .table td:first-child { white-space: nowrap; }
+
+/* ------------------------------------------------------------- выгрузка */
+#export-result:not(:empty) {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+#export-result .mono { font-family: var(--mono); word-break: break-all; }
+
+/* -------------------------------------------------------------- задания */
+.assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.assignment {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+}
+
+.assignment__main {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+
+.assignment__main a { color: var(--accent); text-decoration: none; }
+.assignment__main a:hover { text-decoration: underline; }
+
+@media (max-width: 860px) {
+  .assignment { flex-direction: column; align-items: stretch; }
+}

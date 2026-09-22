@@ -1,0 +1,59 @@
+:root {
+  /* surfaces */
+  --bg: #0a0e14;
+  --bg-grad: radial-gradient(1200px 600px at 15% -10%, #16233a 0%, transparent 60%),
+             radial-gradient(900px 500px at 90% 0%, #1a1630 0%, transparent 55%);
+  --surface: #10151e;
+  --surface-2: #151c28;
+  --surface-3: #1b2431;
+  --overlay: rgba(6, 9, 14, 0.72);
+
+  /* lines & text */
+  --line: #222c3a;
+  --line-soft: #1a2230;
+  --text: #e8eef7;
+  --text-dim: #9aa9bd;
+  --text-faint: #66748a;
+
+  /* accents */
+  --accent: #4c8dff;
+  --accent-soft: rgba(76, 141, 255, 0.14);
+  --accent-line: rgba(76, 141, 255, 0.4);
+  --violet: #a274ff;
+  --teal: #2fd4b5;
+  --green: #3ddc97;
+  --amber: #ffb648;
+  --red: #ff6b6b;
+  --pink: #ff7ab8;
+
+  /* Categorical series palette, stepped for the dark chart surface.
+     Validated: lightness band, chroma floor, CVD ΔE, contrast vs --surface. */
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #c98500;
+  --s5: #d55181;
+  --s6: #008300;
+  --s7: #9085e9;
+  --s8: #e66767;
+
+  --grid: #1e2733;
+  --axis: #33405166;
+
+  /* geometry */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 26px;
+  --pad: 20px;
+
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.55);
+
+  --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Code", ui-monospace, "SF Mono", Consolas, monospace;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --speed: 180ms;
+}

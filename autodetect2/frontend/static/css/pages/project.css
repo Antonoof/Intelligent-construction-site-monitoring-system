@@ -1,0 +1,52 @@
+.hub .tile { min-height: 200px; text-align: left; font: inherit; cursor: pointer; }
+.hub .tile code { background: var(--surface-3); padding: 1px 5px; border-radius: 5px; color: var(--text-dim); }
+.hub .tile.is-muted { opacity: 0.72; }
+.hub .tile.is-muted:hover { opacity: 1; }
+
+.artifacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.artifact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.artifact__icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface-3);
+  color: var(--text-dim);
+  flex: none;
+}
+
+.artifact__icon svg { width: 16px; height: 16px; }
+.artifact__body { min-width: 0; flex: 1; }
+.artifact__name { font-size: 13px; font-weight: 500; }
+.artifact__meta { font-size: 11.5px; color: var(--text-faint); }
+
+.upload-drop {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 30px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  text-align: center;
+  color: var(--text-dim);
+  transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease);
+}
+
+.upload-drop.is-over { border-color: var(--accent); background: var(--accent-soft); }
+.upload-drop svg { width: 26px; height: 26px; color: var(--text-faint); }

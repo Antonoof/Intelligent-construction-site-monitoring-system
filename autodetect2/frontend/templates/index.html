@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} — рабочее место детекции{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/index.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page">
+  <section class="hero">
+    <div class="hero__text">
+      <span class="badge badge--accent"><i class="dot"></i>AutoML для object detection</span>
+      <h1>Размечайте меньше. Обучайте точнее.</h1>
+      <p class="muted">
+        AutoDetect2 собирает датасет, находит изображения, которые действительно стоит разметить,
+        готовит конфигурацию обучения YOLO и подбирает параметры ансамбля WBF —
+        в одном рабочем пространстве.
+      </p>
+      <div class="hero__stats">
+        <div><b>DINOv2</b><span>эмбеддинги + кластеры</span></div>
+        <div><b>Optuna</b><span>подбор WBF</span></div>
+        <div><b>AutoFile</b><span>готовый код обучения</span></div>
+      </div>
+    </div>
+    <div class="hero__art" aria-hidden="true">
+      <div class="hero__grid"></div>
+      <span class="hero__box hero__box--1"></span>
+      <span class="hero__box hero__box--2"></span>
+      <span class="hero__box hero__box--3"></span>
+    </div>
+  </section>
+
+  <section class="grid grid--2 start-actions">
+    <a class="tile tile--start" href="/create" style="--tile-color: var(--accent); --tile-glow: rgba(76,141,255,.4)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><use href="#i-plus"/></svg></span>
+      <h3>Создать проект</h3>
+      <p>Укажите папки с изображениями и YOLO-разметкой, разложите их по train / val — AutoDetect2 соберёт индекс, data.yaml и конфигурацию обучения.</p>
+      <span class="tile__meta">Шаг 1 → выбор папок · Шаг 2 → split · Шаг 3 → создание</span>
+    </a>
+
+    <button class="tile tile--start" id="open-project" style="--tile-color: var(--violet); --tile-glow: rgba(162,116,255,.35)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-open"/></svg></span>
+      <h3>Загрузить готовый</h3>
+      <p>Откройте папку существующего проекта с файлом <code>project.json</code> — вся история разметки, метрик и экспортов подхватится автоматически.</p>
+      <span class="tile__meta">Проекты хранятся в <code>workspace/projects</code></span>
+    </button>
+  </section>
+
+  <section class="projects">
+    <div class="card__head">
+      <h2>Проекты</h2>
+      <span class="badge">{{ projects|length }}</span>
+      <div class="spacer"></div>
+      <input type="search" id="project-filter" placeholder="Поиск по названию" style="width:220px">
+    </div>
+
+    {% if projects %}
+    <div class="grid grid--auto" id="project-list">
+      {% for item in projects %}
+      <article class="project-card" data-name="{{ item.name|lower }}">
+        <a href="/p/{{ item.id }}" class="project-card__main">
+          <h3 class="truncate">{{ item.name }}</h3>
+          <div class="project-card__meta">
+            <span>{{ item.counts.total or 0 }} изображений</span>
+            <span>·</span>
+            <span>{{ item.nc or 0 }} классов</span>
+          </div>
+          <div class="project-card__split">
+            <span class="badge badge--accent">train {{ item.counts.train or 0 }}</span>
+            <span class="badge badge--violet">val {{ item.counts.val or 0 }}</span>
+          </div>
+        </a>
+        <div class="project-card__foot">
+          <span class="tiny faint truncate">{{ item.updated_at or item.created_at }}</span>
+          <button class="icon-btn" data-delete="{{ item.id }}" title="Удалить проект">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><use href="#i-trash"/></svg>
+          </button>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><use href="#i-layers"/></svg>
+      <p>Пока нет ни одного проекта</p>
+      <a class="btn btn--primary" href="/create">Создать первый</a>
+    </div>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/index.js') }}"></script>{% endblock %}

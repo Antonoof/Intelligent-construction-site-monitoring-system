@@ -1,0 +1,7 @@
+ultralytics>=8.3.0
+torch>=2.1
+torchvision>=0.16
+numpy>=1.26
+ensemble-boxes>=1.0.9
+optuna>=3.6
+PyYAML>=6.0

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — {{ app_name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/project.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page" data-project="{{ project.id }}">
+  <div class="page__head">
+    <div>
+      <h1>{{ project.name }}</h1>
+      <p class="mono tiny faint">{{ project.root }}</p>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn--sm" href="/api/projects/{{ project.id }}/samples?limit=5" target="_blank">Индекс</a>
+  </div>
+
+  <section class="grid grid--4" style="margin-bottom:22px">
+    <div class="stat">
+      <span class="stat__label">Изображений</span>
+      <span class="stat__value">{{ "{:,}".format(project.counts.total or 0).replace(",", " ") }}</span>
+      <span class="stat__sub">train {{ project.counts.train or 0 }} · val {{ project.counts.val or 0 }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat__label">С разметкой</span>
+      <span class="stat__value">{{ "{:,}".format(project.counts.labeled or 0).replace(",", " ") }}</span>
+      <div class="meter"><i style="width: {{ (100 * (project.counts.labeled or 0) / (project.counts.total or 1))|round(1) }}%"></i></div>
+    </div>
+    <div class="stat">
+      <span class="stat__label">Боксов</span>
+      <span class="stat__value">{{ "{:,}".format(project.counts.boxes or 0).replace(",", " ") }}</span>
+      <span class="stat__sub">{{ project.nc or 0 }} классов</span>
+    </div>
+    <div class="stat" id="submission-stat">
+      <span class="stat__label">submission.csv</span>
+      <span class="stat__value">{{ "есть" if project.has_submission else "нет" }}</span>
+      <span class="stat__sub">
+        {% if project.submission %}{{ project.submission.boxes }} боксов{% if project.submission.skipped and project.submission.skipped.ground_truth %} · пропущено {{ project.submission.skipped.ground_truth }} строк gt{% else %} · {{ project.submission.layout }}{% endif %}{% else %}загрузите результаты модели{% endif %}
+      </span>
+    </div>
+  </section>
+
+  <section class="grid grid--3 hub">
+    <a class="tile" href="/p/{{ project.id }}/annotate" style="--tile-color: var(--accent); --tile-glow: rgba(76,141,255,.35)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-wand"/></svg></span>
+      <h3>Разметка</h3>
+      <p>Активный отбор: кластеры DINOv2 + пороги уверенности + выбросы модели. Скажите, сколько изображений готовы разметить.</p>
+      <span class="tile__meta">Cluster · Interest · Diversity</span>
+    </a>
+
+    <a class="tile" href="/p/{{ project.id }}/quality" style="--tile-color: var(--red); --tile-glow: rgba(255,107,107,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-info"/></svg></span>
+      <h3>Проверка разметки</h3>
+      <p>Выбросы в существующей разметке: вылеты за кадр, дубли, перепутанные классы и боксы, которые не похожи на свой класс.</p>
+      <span class="tile__meta">{% if project.quality %}{{ project.quality.images_with_issues }} кадров с замечаниями{% else %}ещё не запускалась{% endif %}</span>
+    </a>
+
+    <a class="tile" href="/p/{{ project.id }}/dataset" style="--tile-color: var(--teal); --tile-glow: rgba(47,212,181,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-layers"/></svg></span>
+      <h3>Датасет</h3>
+      <p>Деление на train/val в нужных пропорциях, выгрузка в YOLO, предразметка моделью и задания напарнику.</p>
+      <span class="tile__meta">{% if project.split %}train {{ project.split.train }} · val {{ project.split.val }}{% else %}split ещё не задан{% endif %}</span>
+    </a>
+
+    <a class="tile" href="/p/{{ project.id }}/train" style="--tile-color: var(--teal); --tile-glow: rgba(47,212,181,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-cpu"/></svg></span>
+      <h3>Обучение</h3>
+      <p>YOLO 8 / 11 / 12 / 26 в размерах n, m, l, x. На выходе — <code>AutoFile.zip</code> с готовым кодом обучения и сборкой submission.csv.</p>
+      <span class="tile__meta">train.yaml создан вместе с проектом</span>
+    </a>
+
+    <a class="tile" href="/p/{{ project.id }}/inference" style="--tile-color: var(--violet); --tile-glow: rgba(162,116,255,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-layers"/></svg></span>
+      <h3>Инференс</h3>
+      <p>Подключите n моделей <code>*.pt</code>, отберите k разнородных изображений и найдите параметры WBF через Optuna.</p>
+      <span class="tile__meta">Weighted Boxes Fusion · Optuna TPE</span>
+    </a>
+
+    <button class="tile" id="load-results" style="--tile-color: var(--amber); --tile-glow: rgba(255,182,72,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-upload"/></svg></span>
+      <h3>Загрузить результаты</h3>
+      <p>submission.csv из обучения или инференса. Он включает интересы по уверенности и разбор ошибок во всех остальных разделах.</p>
+      <span class="tile__meta" id="submission-meta">{% if project.submission %}{{ project.submission.file }}{% else %}файл не загружен{% endif %}</span>
+    </button>
+
+    <a class="tile {{ '' if project.has_submission else 'is-muted' }}" href="/p/{{ project.id }}/stats" style="--tile-color: var(--green); --tile-glow: rgba(61,220,151,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-chart"/></svg></span>
+      <h3>Статистика</h3>
+      <p>Дашборд по ошибкам: mAP, mAP по кластерам, precision/recall, распределения боксов и худшие изображения.</p>
+      <span class="tile__meta">{% if project.has_submission %}готово к расчёту{% else %}нужен submission.csv{% endif %}</span>
+    </a>
+
+    <a class="tile" href="/p/{{ project.id }}/heatmap" style="--tile-color: var(--pink); --tile-glow: rgba(255,122,184,.3)">
+      <span class="tile__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-map"/></svg></span>
+      <h3>Показать heatmap</h3>
+      <p>Карта датасета в пространстве признаков: кластеры, пороги уверенности и выбросы. Зум, панорама и просмотр изображения с боксами.</p>
+      <span class="tile__meta">пунктир — предсказание модели</span>
+    </a>
+  </section>
+
+  <section class="grid grid--2" style="margin-top:22px; align-items:start">
+    <div class="card">
+      <div class="card__head">
+        <h2>Артефакты проекта</h2>
+        <div class="spacer"></div>
+        <button class="btn btn--sm" id="refresh-artifacts">Обновить</button>
+      </div>
+      <div id="artifacts" class="artifacts"></div>
+    </div>
+
+    <div class="card">
+      <div class="card__head">
+        <h2>Классы</h2>
+        <span class="badge" id="class-count">{{ project.nc or 0 }}</span>
+        <div class="spacer"></div>
+        <button class="btn btn--sm" id="load-yaml">Из data.yaml</button>
+        <button class="btn btn--sm btn--primary" id="save-classes">Сохранить</button>
+      </div>
+      <div id="classes"></div>
+      <p class="field__hint" style="margin-top:10px">
+        Имена попадают в <code>data.yaml</code> проекта и в бандл обучения. Порядок — это id класса.
+      </p>
+    </div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/project.js') }}"></script>{% endblock %}

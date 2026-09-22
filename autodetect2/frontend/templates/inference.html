@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set active = "inference" %}
+{% block title %}Инференс — {{ project.name }}{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ asset('css/pages/inference.css') }}">{% endblock %}
+
+{% block content %}
+<main class="page" data-project="{{ project.id }}">
+  <div class="page__head">
+    <div>
+      <h1>Инференс</h1>
+      <p>Подключите модели <code>*.pt</code>, отберите k разнородных изображений валидации и
+         запустите Optuna по параметрам Weighted Boxes Fusion. Результат — <code>AutoFile_infer.zip</code>
+         с готовыми порогами.</p>
+    </div>
+  </div>
+
+  <div class="infer">
+    <section class="col" style="gap:16px">
+      <div class="card">
+        <div class="card__head">
+          <h2>Модели</h2>
+          <span class="badge" id="model-count">0</span>
+          <div class="spacer"></div>
+          <button class="btn btn--sm" id="find-models">Поиск по диску</button>
+          <button class="btn btn--sm" id="upload-model">Загрузить .pt</button>
+          <input type="file" id="model-file" accept=".pt" multiple class="hidden">
+        </div>
+        <div id="models" class="models"></div>
+      </div>
+
+      <div class="card">
+        <div class="card__head"><h2>Подбор параметров</h2></div>
+
+        <div class="grid grid--3">
+          <div class="field">
+            <label for="k">k — изображений для валидации</label>
+            <input type="number" id="k" min="1" max="5000" value="100">
+            <span class="field__hint">жадный k-center по эмбеддингам: максимально разнородные кадры</span>
+          </div>
+          <div class="field">
+            <label for="trials">Optuna trials</label>
+            <input type="number" id="trials" min="1" max="1000" value="40">
+            <span class="field__hint">модели прогоняются один раз, дальше перебирается только WBF</span>
+          </div>
+          <div class="field">
+            <label for="split">Источник валидации</label>
+            <select id="split">
+              <option value="val">val</option>
+              <option value="train">train</option>
+              <option value="">train + val</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid--4" style="margin-top:14px">
+          <div class="field">
+            <label>conf range</label>
+            <div class="row"><input type="number" id="conf-min" step="0.001" value="0.005"><input type="number" id="conf-max" step="0.01" value="0.5"></div>
+          </div>
+          <div class="field">
+            <label>wbf iou range</label>
+            <div class="row"><input type="number" id="iou-min" step="0.01" value="0.3"><input type="number" id="iou-max" step="0.01" value="0.7"></div>
+          </div>
+          <div class="field">
+            <label>skip_box_thr range</label>
+            <div class="row"><input type="number" id="skip-min" step="0.001" value="0.001"><input type="number" id="skip-max" step="0.001" value="0.05"></div>
+          </div>
+          <div class="field">
+            <label for="conf-type">conf_type</label>
+            <select id="conf-type">
+              <option value="avg">avg</option>
+              <option value="max">max</option>
+              <option value="box_and_model_avg">box_and_model_avg</option>
+              <option value="absent_model_aware_avg">absent_model_aware_avg</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:18px">
+          <div class="field" style="width:140px">
+            <label for="device">device</label>
+            <select id="device">
+              <option value="auto">auto</option>
+              <option value="cuda">cuda</option>
+              <option value="cpu">cpu</option>
+            </select>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn btn--primary btn--lg" id="run" disabled>Запустить подбор</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="col" style="gap:16px">
+      <div class="card" id="result-card">
+        <div class="card__head"><h2>Найденные параметры</h2></div>
+        <div id="result">
+          <p class="muted tiny">Пока ничего не подобрано. Запустите Optuna — здесь появятся пороги
+             по каждой модели, IoU объединения и итоговый F1.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card__head"><h2>AutoFile</h2></div>
+        <p class="muted tiny">Архив содержит <code>infer.py</code> с WBF и файл
+           <code>wbf_params.json</code> — запуск одной командой на тестовых изображениях.</p>
+        <label class="check" style="margin:12px 0"><input type="checkbox" id="include-weights"> вложить веса моделей в архив</label>
+        <button class="btn btn--block" id="build" disabled>Собрать AutoFile_infer.zip</button>
+        <div id="bundle-result" class="bundle hidden"></div>
+      </div>
+    </aside>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{{ asset('js/pages/inference.js') }}"></script>{% endblock %}
