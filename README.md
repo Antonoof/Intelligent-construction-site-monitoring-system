@@ -6,7 +6,7 @@
 
 Первый модуль — детектор строительной техники **RF-DETR Large** (736 px, mAP50 ≈ 0.91 на валидации).
 
-![Детекция техники на камерах стройплощадки](reports/showcase/gallery.jpg)
+<p align="center"><img src="reports/showcase/gallery.jpg" alt="Детекция техники на камерах стройплощадки"></p>
 
 <p align="center">
   <b>mAP50 0.907</b> · mAP50-95 0.767 · Precision 0.938 · Recall 0.807 · 10 классов техники
@@ -32,34 +32,19 @@ flowchart LR
 
 ## Результаты на видео
 
-Три камеры, разные участки и условия съёмки. На каждом видео: фрагмент с детекциями
-и таймлайн — когда какая техника была в кадре.
+Три камеры, разные участки и условия съёмки.
 
 ### Котлован: экскаваторы и автокран
 
 <p align="center"><img src="reports/showcase/1325_20230922_144430_014.gif" width="560"></p>
 
-![Таймлайн техники](reports/showcase/1325_20230922_144430_014_timeline.png)
-
-Экскаватор и автокран в кадре всё видео (53 с), экскаваторов временами два.
-Кран-манипулятор появляется в последние 3 секунды.
-
 ### Земляные работы: экскаватор и самосвалы
 
 <p align="center"><img src="reports/showcase/238_20230922_122759_037.gif" width="560"></p>
 
-![Таймлайн техники](reports/showcase/238_20230922_122759_037_timeline.png)
-
-Экскаватор работает всё время, самосвалы в кадре 95% времени, до двух одновременно —
-типичная картина вывоза грунта.
-
 ### Подъезд к площадке: бетономешалка
 
 <p align="center"><img src="reports/showcase/2501_20231017_163235_135.gif" width="560"></p>
-
-![Таймлайн техники](reports/showcase/2501_20231017_163235_135_timeline.png)
-
-Бетономешалка заезжает на третьей секунде и остаётся в кадре до конца; экскаватор на дальнем плане виден всё время.
 
 ### Сводка по видео
 
@@ -79,7 +64,7 @@ flowchart LR
 
 ```bash
 python scripts/run_inference.py        # детекция на всех видео
-python scripts/make_showcase.py        # кадры, GIF, таймлайны -> reports/showcase/
+python scripts/make_showcase.py        # кадры и GIF -> reports/showcase/
 ```
 
 ## Структура
@@ -101,13 +86,13 @@ python scripts/make_showcase.py        # кадры, GIF, таймлайны -> 
 │   ├── run_inference.py        # обычный инференс: видео с боксами + CSV + сводка
 │   ├── benchmark_inference.py  # замер скорости (FPS, задержка p50/p95, память GPU)
 │   ├── plot_train_metrics.py   # графики метрик обучения -> reports/plots/*.png
-│   └── make_showcase.py        # кадры, GIF и таймлайны по результатам -> reports/showcase/
+│   └── make_showcase.py        # кадры и GIF по результатам -> reports/showcase/
 ├── train/
 │   └── train_rfdetr.py         # обучение детектора
 ├── reports/
 │   ├── rfdetr_large_train_metrics.csv  # метрики обучения
 │   ├── plots/                  # графики: mAP, P/R/F1, лосс, AP по классам
-│   └── showcase/               # примеры детекции: кадры, GIF, таймлайны
+│   └── showcase/               # примеры детекции: кадры и GIF
 └── outputs/                    # результаты запусков (не в git)
 ```
 
