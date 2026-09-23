@@ -1,0 +1,31 @@
+# Настройки инференса детектора строительной техники (RF-DETR).
+# Относительные пути считаются от корня репозитория.
+# Любой параметр можно переопределить флагом командной строки (см. --help у скриптов).
+
+model:
+  weights: weights/rfdetr_large_best_ema.pth
+  device: auto          # auto | cuda | cuda:0 | cpu
+  threshold: 0.55        # минимальная уверенность детекции
+  optimize: false       # model.inference(): JIT-трассировка графа, быстрее на GPU
+  half: false           # fp16, только для CUDA
+
+videos:
+  # glob-шаблоны; ** — рекурсивно по подпапкам
+  patterns:
+    - data/videos/**/*.mp4
+    - data/videos/**/*.avi
+    - data/videos/**/*.mov
+    - data/videos/**/*.mkv
+  frame_stride: 1       # обрабатывать каждый N-й кадр (техника движется медленно, 5-10 обычно хватает)
+
+output:
+  dir: outputs/inference
+  save_video: true      # видео с нарисованными боксами
+  save_csv: true        # покадровые детекции для сопоставления с графиком работ
+  show: false           # показывать окно с кадрами (q — пропустить видео)
+
+benchmark:
+  dir: outputs/benchmark
+  warmup_frames: 20     # прогревочные кадры, в статистику не входят
+  max_frames: 300       # сколько кадров мерить на каждом видео; null — все
+  batch_size: 1
