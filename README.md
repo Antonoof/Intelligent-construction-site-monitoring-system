@@ -1,4 +1,6 @@
-# Intelligent construction site monitoring system
+# AutoDetect2 - фреймворк для авторазметки
+
+<p align="center"><img src="docs/autodetect.png" alt="AutoDetect2Image"></p>
 
 Система оценивает по фотографиям со стройплощадки, идут ли строительно-монтажные
 работы по графику, — опираясь на присутствие и поведение строительной техники.
