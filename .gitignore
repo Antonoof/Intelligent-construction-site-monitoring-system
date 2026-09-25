@@ -1,16 +1,20 @@
+# Большие данные и веса — в git не идут
+*.pth
+*.pt
+*.npy
+*.mp4
+*.mp3
+*.zip
+videos for train/
+training/data/frames/
+training/data/features/
+training/runs/
+# панели PNG по 3 МБ — уменьшенные копии лежат в docs/assets
+predictions/*/panels/
+
+# Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
 .ipynb_checkpoints/
-.env
-
-data/*/*
-!data/*/.gitkeep
-!data/schedules/example_schedule.csv
-weights/*
-!weights/.gitkeep
-outputs/*
-!outputs/.gitkeep
-runs/
-.comet/
