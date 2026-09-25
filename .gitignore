@@ -1,18 +1,20 @@
-# веса и чекпоинты — слишком большие для git
-weights/**/*.pth
-weights/**/*.ckpt
-weights/**/*.onnx
-weights/**/*.engine
+# Большие данные и веса — в git не идут
+*.pth
+*.pt
+*.npy
+*.mp4
+*.mp3
+*.zip
+videos for train/
+training/data/frames/
+training/data/features/
+training/runs/
+# панели PNG по 3 МБ — уменьшенные копии лежат в docs/assets
+predictions/*/panels/
 
-# входные видео и результаты
-data/videos/*
-!data/videos/.gitkeep
-outputs/
-
-# python
+# Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-*.egg-info/
 .ipynb_checkpoints/
