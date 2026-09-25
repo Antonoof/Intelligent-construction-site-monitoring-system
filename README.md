@@ -1,11 +1,11 @@
-# AutoDetect2 - фреймворк для авторазметки
-
-<p align="center"><img src="docs/autodetect.png" alt="AutoDetect2Image"></p>
-
+## AutoDetect2 - фреймворк для авторазметки
 
 **AutoDetect2** — фреймворк для улучшения и ускорения разметки, в него входит: авторазметка,
 поиск выбросов в существующей разметке, активный отбор кадров, деление на train/val,
 передача заданий напарнику и сборка кода обучения YOLO.
+
+<p align="center"><img src="docs/autodetect.png" alt="AutoDetect2Image"></p>
+
 
 ```bash
 pip install -r requirements.txt
