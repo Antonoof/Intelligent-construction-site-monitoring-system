@@ -1,3 +1,0 @@
-# Yandex DataSphere runbook
-
-TODO

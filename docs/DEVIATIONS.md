@@ -1,3 +1,0 @@
-# Deviation rules
-
-TODO

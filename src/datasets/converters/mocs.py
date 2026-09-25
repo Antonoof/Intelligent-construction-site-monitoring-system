@@ -1,1 +1,0 @@
-"""MOCS -> YOLO format conversion."""
