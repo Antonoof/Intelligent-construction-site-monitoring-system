@@ -30,6 +30,18 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 .n-btn{transition:background-color .15s,color .15s,border-color .15s}
 .n-btn:hover{filter:brightness(1.08)}
 .n-ghost:hover{background:#EDEDEA!important;color:#0A0A0A!important}
+.n-line{display:block;overflow:hidden;padding:0.03em 0 0.07em;margin:-0.03em 0 -0.07em}
+.n-li{display:block;animation:n-up 1.05s cubic-bezier(.16,.84,.24,1) both}.n-l2{animation-delay:.09s}.n-l3{animation-delay:.2s}.n-l4{animation-delay:.29s}
+@keyframes n-up{from{transform:translateY(110%)}to{transform:none}}
+@keyframes n-in{from{opacity:0;transform:translateY(46px)}to{opacity:1;transform:none}}
+@supports (animation-timeline:view()){.n-rev{animation:n-in linear both;animation-timeline:view();animation-range:entry 4% cover 26%}}
+.n-moment{transition:background-color .2s}
+.n-moment:hover{background:#101214}
+.n-mday{color:transparent;-webkit-text-stroke:1.5px #50555A;transition:color .25s,-webkit-text-stroke-color .25s}
+.n-moment:hover .n-mday{color:#FFC21A;-webkit-text-stroke-color:#FFC21A}
+.n-watch:hover{background:#FFC21A!important;color:#0A0A0A!important;border-color:#FFC21A!important}
+@keyframes n-glow{0%,100%{opacity:.82}50%{opacity:1}}
+.n-sun{animation:n-glow 6s ease-in-out infinite}
 @media (max-width:900px){
 .n-stage{height:auto!important;aspect-ratio:4/3.4}
 .n-copy{position:relative!important;inset:auto!important;padding:30px 0 8px!important}
@@ -39,8 +51,11 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 .n-hide-sm{display:none!important}
 .n-pain{grid-template-columns:minmax(0,1fr)!important}
 .n-step{min-height:0!important}
+.n-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.n-mgrid{grid-template-columns:auto minmax(0,1fr)!important;gap:10px 18px!important}
+.n-mgrid .n-watch{grid-column:1/-1;justify-self:start}
 }
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.n-rise,.n-marquee,.n-blink,.n-cut{animation:none!important}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.n-rise,.n-marquee,.n-blink,.n-cut,.n-li,.n-rev,.n-sun{animation:none!important}}
 </style>
 </helmet>
 <div style="width: 100%; min-width: 320px; background: #0A0A0A; color: #EDEDEA; font-family: 'Golos Text', 'Segoe UI', 'Helvetica Neue', sans-serif; overflow-x: clip;">
@@ -61,7 +76,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 <div style="width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 clamp(16px, 3vw, 24px); box-sizing: border-box;">
 <div ref="{{ setCopy }}" style="max-width: 700px; display: flex; flex-direction: column; gap: 22px; pointer-events: auto;">
 <span class="n-rise" style="align-self: flex-start; display: inline-flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #C9CCCF;"><span class="n-blink" style="width: 9px; height: 9px; background: #FF3B30; display: inline-block;"></span>Ночная смена · камера · AI · график</span>
-<h1 class="n-rise n-d1" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(44px, 6.2vw, 100px); line-height: 0.88; letter-spacing: -0.04em; text-transform: uppercase; text-shadow: 0 2px 40px rgba(0,0,0,0.6);">Видит<br>стройку.<br><span style="color: #FFC21A;">Знает<br>график.</span></h1>
+<h1 style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(44px, 6.2vw, 100px); line-height: 0.88; letter-spacing: -0.04em; text-transform: uppercase; text-shadow: 0 2px 40px rgba(0,0,0,0.6);"><span class="n-line"><span class="n-li">Видит</span></span><span class="n-line"><span class="n-li n-l2">стройку.</span></span><span class="n-line" style="color: #FFC21A;"><span class="n-li n-l3">Знает</span></span><span class="n-line" style="color: #FFC21A;"><span class="n-li n-l4">график.</span></span></h1>
 <div class="n-rise n-d2" style="display: flex; flex-wrap: wrap; gap: 10px;">
 <button type="button" class="n-btn" onClick="{{ startStory }}" style="display: inline-flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 26px; border-radius: 0; border: 0; background: #FFC21A; color: #0A0A0A; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 700; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M5 3v18l16-9z"></path></svg>43 дня за 1 минуту</button>
 <a href="#how" class="n-btn n-ghost" style="display: inline-flex; align-items: center; min-height: 56px; padding: 0 24px; border: 1px solid rgba(237,237,234,0.5); color: #EDEDEA; text-decoration: none; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 700; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(0,0,0,0.25);">Как это работает</a>
@@ -142,11 +157,47 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 <div style="max-width: 1320px; margin: 0 auto; padding: clamp(56px, 8vw, 120px) clamp(16px, 3vw, 24px); box-sizing: border-box;">
 <div class="n-pain" style="display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); align-items: end; gap: 12px 40px; padding-bottom: clamp(18px, 2.4vw, 30px); border-bottom: 1px solid #1E2124;">
 <span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; line-height: 1.6; text-transform: uppercase; color: #7C8186; padding-bottom: 0.6em;">Сейчас срыв графика замечают на планёрке</span>
-<span style="position: relative; justify-self: start; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(52px, 10.4vw, 160px); line-height: 0.86; letter-spacing: -0.05em; text-transform: uppercase; color: #34383C; white-space: nowrap;">Недели<span class="n-cut" aria-hidden="true" style="position: absolute; left: -2%; right: -2%; top: 50%; height: 0.08em; margin-top: -0.04em; background: #FF3B30;"></span></span>
+<span style="position: relative; justify-self: start; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(52px, 10.4vw, 160px); line-height: 0.86; letter-spacing: -0.05em; text-transform: uppercase; color: #34383C; white-space: nowrap;">Недели<span class="{{ cut }}" aria-hidden="true" style="position: absolute; left: -2%; right: -2%; top: 50%; height: 0.08em; margin-top: -0.04em; background: #FF3B30;"></span></span>
 </div>
 <div class="n-pain" style="display: grid; grid-template-columns: minmax(180px, 280px) minmax(0, 1fr); align-items: end; gap: 12px 40px; padding-top: clamp(18px, 2.4vw, 30px);">
 <span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; line-height: 1.6; text-transform: uppercase; color: #FFC21A; padding-bottom: 0.6em;">С ОКО — от кадра камеры до алерта</span>
 <span style="justify-self: start; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(52px, 10.4vw, 160px); line-height: 0.86; letter-spacing: -0.05em; text-transform: uppercase; color: #FFC21A; white-space: nowrap;">5 минут</span>
+</div>
+</div>
+</section>
+
+<section id="story" aria-labelledby="story-title" style="background: #0A0A0A; border-top: 1px solid #1E2124; scroll-margin-top: 56px;">
+<div style="max-width: 1320px; margin: 0 auto; padding: clamp(64px, 8vw, 116px) clamp(16px, 3vw, 24px); box-sizing: border-box; display: flex; flex-direction: column; gap: clamp(36px, 4.6vw, 60px);">
+<div class="{{ rev }}" style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 22px 48px;">
+<div style="display: flex; flex-direction: column; gap: 18px;">
+<span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #FFC21A;">Демо-симуляция · 05.10 — 16.11.2026</span>
+<h2 id="story-title" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(36px, 5.8vw, 92px); line-height: 0.9; letter-spacing: -0.04em; text-transform: uppercase;">43 ночи<br>одной стройки</h2>
+</div>
+<p style="margin: 0; max-width: 34ch; font-size: clamp(17px, 1.45vw, 20px); line-height: 1.45; color: #B4B8BC;">Котлован, плита, восемь этажей каркаса. Каждый сигнал — в ту же смену, а не на планёрке.</p>
+</div>
+<div ref="{{ setStats }}" class="n-stats" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #2A2D30; border-left: 1px solid #2A2D30;">
+<sc-for list="{{ stats }}" as="sn" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 12px; padding: clamp(18px, 2vw, 26px) clamp(16px, 1.8vw, 24px) clamp(20px, 2.2vw, 28px); border-right: 1px solid #2A2D30; border-bottom: 1px solid #2A2D30; min-width: 0;">
+<span style="font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(52px, 6.6vw, 108px); line-height: 0.86; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; {{ sn.color }}">{{ sn.value }}</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; line-height: 1.5; text-transform: uppercase; color: #8A8F94;">{{ sn.label }}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 14px;">
+<span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #7C8186;">Что AI поймал за эти ночи — нажмите, чтобы увидеть</span>
+<ol aria-label="Сигналы AI за 43 ночи" style="margin: 0; padding: 0; list-style: none; border-top: 1px solid #2A2D30;">
+<sc-for list="{{ moments }}" as="mo" hint-placeholder-count="7">
+<li class="n-moment n-mgrid" style="display: grid; grid-template-columns: clamp(96px, 10vw, 150px) minmax(0, 1fr) auto; align-items: center; gap: 10px 28px; padding: clamp(16px, 1.8vw, 24px) 0; border-bottom: 1px solid #2A2D30;">
+<span class="n-mday" aria-hidden="true" style="font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(46px, 5.4vw, 84px); line-height: 0.85; letter-spacing: -0.05em;">{{ mo.num }}</span>
+<span style="display: flex; flex-direction: column; gap: 9px; min-width: 0;">
+<span style="display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;"><span style="color: #8A8F94;">{{ mo.when }}</span><span style="display: inline-flex; align-items: center; gap: 7px; {{ mo.tagStyle }}"><span style="width: 7px; height: 7px; display: inline-block; {{ mo.dot }}"></span>{{ mo.tag }}</span></span>
+<span style="font-size: clamp(18px, 1.7vw, 24px); line-height: 1.3; font-weight: 500; color: #EDEDEA;">{{ mo.text }}</span>
+<span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6E7378;">{{ mo.outcome }}</span>
+</span>
+<button type="button" class="n-btn n-watch" onClick="{{ mo.go }}" aria-label="{{ mo.aria }}" style="display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 16px; border: 1px solid #33373B; border-radius: 0; background: transparent; color: #EDEDEA; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; white-space: nowrap;"><svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M5 3v18l16-9z"></path></svg>Смотреть</button>
+</li>
+</sc-for>
+</ol>
 </div>
 </div>
 </section>
@@ -164,7 +215,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 <li style="display: flex; flex-direction: column; gap: 18px; padding: 26px 24px 30px; border-right: 1px solid #2A2D30; border-bottom: 1px solid #2A2D30; min-height: 230px; box-sizing: border-box;" class="n-step">
 <span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: #7C8186;">02</span>
 <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#FFC21A" stroke-width="1.6" stroke-linecap="square"><path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5"></path><rect x="8" y="8" width="8" height="8"></rect></svg>
-<a href="https://github.com/Antonoof/Intelligent-construction-site-monitoring-system/tree/main" style="margin-top: auto; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 800; font-size: 21px; text-transform: uppercase; letter-spacing: -0.01em;">AI-детектор</a>
+<span style="margin-top: auto; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 800; font-size: 21px; text-transform: uppercase; letter-spacing: -0.01em;">AI-детектор</span>
 <span style="font-size: 15.5px; line-height: 1.4; color: #9EA3A8;">находит и считает технику</span>
 </li>
 <li style="display: flex; flex-direction: column; gap: 18px; padding: 26px 24px 30px; border-right: 1px solid #2A2D30; border-bottom: 1px solid #2A2D30; min-height: 230px; box-sizing: border-box;" class="n-step">
@@ -183,6 +234,14 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 </div>
 </section>
 
+<section aria-label="Ритм ОКО" style="background: #0A0A0A;">
+<div style="max-width: 1320px; margin: 0 auto; padding: clamp(72px, 10vw, 150px) clamp(16px, 3vw, 24px); box-sizing: border-box; display: flex; flex-direction: column; gap: clamp(14px, 2vw, 28px);">
+<p class="{{ rev }}" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(28px, 4.4vw, 72px); line-height: 1; letter-spacing: -0.035em; text-transform: uppercase;"><span style="color: #EDEDEA;">Кадр</span> <span style="color: #4A4F54;">— каждые 5 минут.</span></p>
+<p class="{{ rev }}" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(28px, 4.4vw, 72px); line-height: 1; letter-spacing: -0.035em; text-transform: uppercase;"><span style="color: #EDEDEA;">Сверка</span> <span style="color: #4A4F54;">— каждую смену.</span></p>
+<p class="{{ rev }}" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(28px, 4.4vw, 72px); line-height: 1; letter-spacing: -0.035em; text-transform: uppercase;"><span style="color: #EDEDEA;">Сигнал</span> <span style="color: #4A4F54;">—</span> <span style="color: #FFC21A;">в тот же день.</span></p>
+</div>
+</section>
+
 <section aria-labelledby="verdict-title" style="background: #FFC21A; color: #0A0A0A;">
 <div style="max-width: 1320px; margin: 0 auto; padding: clamp(64px, 8vw, 112px) clamp(16px, 3vw, 24px); box-sizing: border-box; display: flex; flex-direction: column; gap: clamp(32px, 4vw, 52px);">
 <h2 id="verdict-title" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(36px, 6.4vw, 100px); line-height: 0.9; letter-spacing: -0.04em; text-transform: uppercase;">AI предлагает.<br>Инженер решает.</h2>
@@ -194,18 +253,52 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 </div>
 </section>
 
+<section aria-labelledby="final-title" style="position: relative; overflow: hidden; background: linear-gradient(180deg, #0A0A0A 0%, #0B0D14 26%, #131A2A 48%, #262334 62%, #573326 77%, #A9582B 90%, #E4903F 100%);">
+<div class="n-sun" aria-hidden="true" style="position: absolute; left: 62%; bottom: -250px; width: 1400px; height: 540px; margin-left: -700px; background: radial-gradient(closest-side, rgba(255,205,130,0.62), rgba(255,150,70,0.22) 55%, rgba(255,120,40,0) 100%); pointer-events: none;"></div>
+<div style="position: relative; max-width: 1320px; margin: 0 auto; padding: clamp(96px, 12vw, 176px) clamp(16px, 3vw, 24px) 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 28px;">
+<span class="{{ rev }}" style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #9EA3A8;">05:00 · смена закрыта</span>
+<h2 id="final-title" class="{{ rev }}" style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(40px, 6.6vw, 108px); line-height: 0.9; letter-spacing: -0.04em; text-transform: uppercase;">ОКО не спит.<br><span style="color: #FFC21A;">Вы спите спокойно.</span></h2>
+<p class="{{ rev }}" style="margin: 0; max-width: 40ch; font-size: clamp(17px, 1.5vw, 21px); line-height: 1.45; color: #D2D5D8;">Ночью ОКО сверяет площадку с графиком. Утром у вас — факты, а не догадки.</p>
+<div class="{{ rev }}" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px;">
+<button type="button" class="n-btn" onClick="{{ startStory }}" style="display: inline-flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 28px; border-radius: 0; border: 0; background: #FFC21A; color: #0A0A0A; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 700; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M5 3v18l16-9z"></path></svg>Смотреть 43 ночи</button>
+<span style="font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #C4C7CA;">1 минута</span>
+</div>
+</div>
+<svg aria-hidden="true" viewBox="0 0 1440 280" preserveAspectRatio="xMidYMax slice" style="display: block; width: 100%; height: clamp(190px, 21vw, 310px); margin-top: clamp(48px, 7vw, 100px);">
+<defs>
+<radialGradient id="nGw"><stop offset="0" stop-color="#F3F7FF" stop-opacity="0.95"></stop><stop offset="0.3" stop-color="#CFE0FF" stop-opacity="0.35"></stop><stop offset="1" stop-color="#CFE0FF" stop-opacity="0"></stop></radialGradient>
+<radialGradient id="nGl"><stop offset="0" stop-color="#FFE6C8" stop-opacity="0.9"></stop><stop offset="0.4" stop-color="#FFC98A" stop-opacity="0.25"></stop><stop offset="1" stop-color="#FFC98A" stop-opacity="0"></stop></radialGradient>
+<radialGradient id="nGr"><stop offset="0" stop-color="#FF6A55" stop-opacity="0.95"></stop><stop offset="1" stop-color="#FF6A55" stop-opacity="0"></stop></radialGradient>
+</defs>
+<g fill="#3B2524" opacity="0.62"><rect x="-10" y="227" width="54" height="53"></rect><rect x="52" y="240" width="75" height="40"></rect><rect x="130" y="234" width="68" height="46"></rect><rect x="205" y="239" width="71" height="41"></rect><rect x="286" y="242" width="47" height="38"></rect><rect x="336" y="193" width="61" height="87"></rect><rect x="400" y="235" width="49" height="45"></rect><rect x="459" y="239" width="61" height="41"></rect><rect x="531" y="218" width="41" height="62"></rect><rect x="584" y="172" width="74" height="108"></rect><rect x="660" y="172" width="70" height="108"></rect><rect x="738" y="218" width="37" height="62"></rect><rect x="777" y="229" width="69" height="51"></rect><rect x="852" y="220" width="60" height="60"></rect><rect x="915" y="219" width="70" height="61"></rect><rect x="997" y="217" width="45" height="63"></rect><rect x="1053" y="231" width="74" height="49"></rect><rect x="1130" y="155" width="69" height="125"></rect><rect x="1202" y="239" width="70" height="41"></rect><rect x="1283" y="183" width="47" height="97"></rect><rect x="1342" y="192" width="68" height="88"></rect><rect x="1424" y="187" width="54" height="93"></rect></g>
+<g fill="#0B0B0D">
+<rect x="150" y="62" width="180" height="218"></rect><rect x="144" y="56" width="192" height="30"></rect>
+<rect x="352" y="18" width="5" height="262"></rect><rect x="150" y="17" width="207" height="3"></rect><rect x="357" y="17" width="84" height="3"></rect><rect x="424" y="8" width="17" height="12"></rect>
+<polygon points="349,18 360,18 354.5,3"></polygon>
+<rect x="229" y="20" width="1.2" height="72"></rect><rect x="225" y="92" width="9" height="6"></rect>
+<rect x="610" y="110" width="4" height="170"></rect><rect x="597" y="99" width="30" height="11"></rect>
+<rect x="800" y="40" width="1.6" height="240"></rect><rect x="804.4" y="40" width="1.6" height="240"></rect>
+<rect x="740" y="40" width="530" height="3.2"></rect><rect x="806" y="33.5" width="450" height="1.6"></rect><rect x="742" y="34" width="30" height="16"></rect>
+<polygon points="798,40 808,40 803,19"></polygon>
+<rect x="1009.4" y="46" width="1.2" height="34"></rect><rect x="1004" y="43" width="12" height="4"></rect><rect x="1006" y="80" width="8" height="7"></rect><rect x="986" y="88" width="48" height="3"></rect>
+<rect x="856" y="258" width="258" height="4"></rect><rect x="856" y="236" width="258" height="4"></rect><rect x="856" y="214" width="258" height="4"></rect><rect x="856" y="192" width="258" height="4"></rect><rect x="856" y="170" width="258" height="4"></rect><rect x="856" y="148" width="258" height="4"></rect><rect x="856" y="126" width="258" height="4"></rect><rect x="856" y="104" width="258" height="4"></rect><rect x="858" y="104" width="6" height="176"></rect><rect x="920" y="104" width="6" height="176"></rect><rect x="982" y="104" width="6" height="176"></rect><rect x="1044" y="104" width="6" height="176"></rect><rect x="1106" y="104" width="6" height="176"></rect><rect x="858" y="95" width="1.5" height="9"></rect><rect x="874" y="95" width="1.5" height="9"></rect><rect x="890" y="95" width="1.5" height="9"></rect><rect x="906" y="95" width="1.5" height="9"></rect><rect x="922" y="95" width="1.5" height="9"></rect><rect x="938" y="95" width="1.5" height="9"></rect><rect x="954" y="95" width="1.5" height="9"></rect><rect x="970" y="95" width="1.5" height="9"></rect><rect x="986" y="95" width="1.5" height="9"></rect><rect x="1002" y="95" width="1.5" height="9"></rect><rect x="1018" y="95" width="1.5" height="9"></rect><rect x="1034" y="95" width="1.5" height="9"></rect><rect x="1050" y="95" width="1.5" height="9"></rect><rect x="1066" y="95" width="1.5" height="9"></rect><rect x="1082" y="95" width="1.5" height="9"></rect><rect x="1098" y="95" width="1.5" height="9"></rect><rect x="856" y="94" width="258" height="1.5"></rect>
+<rect x="968" y="104" width="30" height="176"></rect>
+<rect x="0" y="266" width="1440" height="14"></rect><rect x="520" y="252" width="880" height="14"></rect>
+</g>
+<polyline points="800,40 806,48 800,56 806,64 800,72 806,80 800,88 806,96 800,104 806,112 800,120 806,128 800,136 806,144 800,152 806,160 800,168 806,176 800,184 806,192 800,200 806,208 800,216 806,224 800,232 806,240 800,248 806,256 800,264 806,272 800,280" fill="none" stroke="#0B0B0D" stroke-width="1.2"></polyline>
+<polyline points="806,43 817,34 828,43 839,34 850,43 861,34 872,43 883,34 894,43 905,34 916,43 927,34 938,43 949,34 960,43 971,34 982,43 993,34 1004,43 1015,34 1026,43 1037,34 1048,43 1059,34 1070,43 1081,34 1092,43 1103,34 1114,43 1125,34 1136,43 1147,34 1158,43 1169,34 1180,43 1191,34 1202,43 1213,34 1224,43 1235,34 1246,43" fill="none" stroke="#0B0B0D" stroke-width="1.1"></polyline>
+<circle cx="612" cy="104" r="30" fill="url(#nGw)"></circle><rect x="600" y="101.5" width="24" height="5" fill="#EEF3FF"></rect>
+<circle cx="354.5" cy="4" r="9" fill="url(#nGr)" class="n-blink"></circle><circle cx="803" cy="19" r="8" fill="url(#nGr)" class="n-blink"></circle><circle cx="1268" cy="40" r="8" fill="url(#nGr)" class="n-blink"></circle>
+<rect x="70" y="226" width="3" height="54" fill="#0B0B0D"></rect><rect x="70" y="226" width="16" height="2.5" fill="#0B0B0D"></rect><circle cx="85" cy="229" r="17" fill="url(#nGl)"></circle><circle cx="85" cy="229" r="2.2" fill="#FFF1DE"></circle><rect x="470" y="226" width="3" height="54" fill="#0B0B0D"></rect><rect x="470" y="226" width="16" height="2.5" fill="#0B0B0D"></rect><circle cx="485" cy="229" r="17" fill="url(#nGl)"></circle><circle cx="485" cy="229" r="2.2" fill="#FFF1DE"></circle><rect x="1270" y="226" width="3" height="54" fill="#0B0B0D"></rect><rect x="1270" y="226" width="16" height="2.5" fill="#0B0B0D"></rect><circle cx="1285" cy="229" r="17" fill="url(#nGl)"></circle><circle cx="1285" cy="229" r="2.2" fill="#FFF1DE"></circle><rect x="1405" y="226" width="3" height="54" fill="#0B0B0D"></rect><rect x="1405" y="226" width="16" height="2.5" fill="#0B0B0D"></rect><circle cx="1420" cy="229" r="17" fill="url(#nGl)"></circle><circle cx="1420" cy="229" r="2.2" fill="#FFF1DE"></circle>
+</svg>
+</section>
+
 <footer style="background: #0A0A0A; color: #EDEDEA;">
-<div style="max-width: 1320px; margin: 0 auto; padding: clamp(72px, 10vw, 140px) clamp(16px, 3vw, 24px) 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: clamp(40px, 6vw, 72px);">
-<div style="display: flex; flex-direction: column; gap: 34px;">
-<h2 style="margin: 0; font-family: 'Unbounded', Verdana, sans-serif; font-weight: 900; font-size: clamp(36px, 6.4vw, 100px); line-height: 0.9; letter-spacing: -0.04em; text-transform: uppercase;">Стройка под контролем.<br><span style="color: #FFC21A;">Даже ночью.</span></h2>
-<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px;">
-<button type="button" class="n-btn" onClick="{{ startStory }}" style="display: inline-flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 26px; border-radius: 0; border: 0; background: #FFC21A; color: #0A0A0A; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-weight: 700; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M5 3v18l16-9z"></path></svg>Смотреть с начала</button>
-<span style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #9EA3A8;"><span style="padding: 8px 11px; border: 1px solid #25282B;">FastAPI</span><span style="padding: 8px 11px; border: 1px solid #25282B;">Celery + Redis</span><span style="padding: 8px 11px; border: 1px solid #25282B;">PostgreSQL</span><span style="padding: 8px 11px; border: 1px solid #25282B;">Yandex Object Storage</span><a href="https://github.com/Antonoof/Intelligent-construction-site-monitoring-system/tree/main" style="padding: 8px 11px; border: 1px solid #25282B; background: rgb(255, 194, 26); color: rgb(10, 10, 10);">CV-модель команды</a></span>
-</div>
-</div>
+<div style="max-width: 1320px; margin: 0 auto; padding: 28px clamp(16px, 3vw, 24px) 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px;">
+<span style="display: flex; flex-wrap: wrap; gap: 6px; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #9EA3A8;"><span style="padding: 8px 11px; border: 1px solid #25282B;">FastAPI</span><span style="padding: 8px 11px; border: 1px solid #25282B;">Celery + Redis</span><span style="padding: 8px 11px; border: 1px solid #25282B;">PostgreSQL</span><span style="padding: 8px 11px; border: 1px solid #25282B;">Yandex Object Storage</span><a href="https://github.com/Antonoof/Intelligent-construction-site-monitoring-system/tree/main" style="padding: 8px 11px; border: 1px solid #25282B;">CV-модель команды</a></span>
 <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 28px; padding-top: 20px; border-top: 1px solid #1E2124; font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: #6E7378;">
-<span>ОКО · 2026</span>
-<a href="https://github.com/garyanikin/oko-landing/blob/main/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%85%D0%BE%D0%B4%D0%B0%20%D1%81%D1%82%D1%80%D0%BE%D0%B8%D1%82%D0%B5%D0%BB%D1%8C%D1%81%D1%82%D0%B2%D0%B0%20%E2%80%94%20%D0%B0%D1%80%D1%85%D0%B8%D1%82%D0%B5%D0%BA%D1%82%D1%83%D1%80%D0%B0%20%D1%81%D0%B8%D1%81%D1%82%D0%B5%D0%BC%D1%8B.md">архитектура системы</a>
+<span>ОКО 2026</span>
+<span> сцена демо — симуляция</span>
 </div>
 </div>
 </footer>
@@ -213,7 +306,7 @@ button:focus-visible,a:focus-visible{outline:2px solid #FFC21A;outline-offset:3p
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"startDay": {"editor": "int", "default": 36, "min": 1, "max": 43, "section": "Демо"}, "autoplay": {"editor": "boolean", "default": true, "section": "Демо"}, "$preview": {"width": 1440, "height": 3340}}'>
+<script type="text/x-dc" data-dc-script data-props='{"startDay": {"editor": "int", "default": 36, "min": 1, "max": 43, "section": "Демо"}, "autoplay": {"editor": "boolean", "default": true, "section": "Демо"}, "$preview": {"width": 1440, "height": 6200}}'>
 /* ===================== ДАННЫЕ СИМУЛЯЦИИ ===================== */
 var NDAYS = 43;
 var PLAN_TOTAL = 38;
@@ -500,7 +593,7 @@ Node.prototype.add = function (n) { this.kids.push(n); n.parent = this; return n
 
 /* ---------- GLSL ---------- */
 var GLSL_COMMON = [
-  'uniform vec3 uSun; uniform vec3 uSunCol; uniform float uTime; uniform float uOvercast; uniform float uNight;',
+  'uniform vec3 uSun; uniform vec3 uSunCol; uniform float uTime; uniform float uOvercast; uniform float uNight; uniform float uDawn;',
   'float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }',
   'float fin1(float x){ return (isnan(x) || !(x >= 0.0)) ? 0.0 : min(x, 6.0e4); }',
   'vec3 fin3(vec3 c){ return vec3(fin1(c.r), fin1(c.g), fin1(c.b)); }',
@@ -514,6 +607,13 @@ var GLSL_COMMON = [
   '  float h = exp(-max(y, 0.0) * 6.0);',
   '  vec3 c = mix(zen, glow, h);',
   '  if (y < 0.0) c = mix(glow * 0.85, vec3(0.01, 0.009, 0.009), clamp(-y * 4.0, 0.0, 1.0));',
+  '  if (uDawn > 0.0) {',
+  '    vec2 hz = d.xz / max(length(d.xz), 1e-4); float az = max(dot(hz, vec2(-0.53, -0.85)), 0.0);',
+  '    vec3 dz = vec3(0.03, 0.05, 0.1); vec3 dh = mix(vec3(0.13, 0.14, 0.19), vec3(0.95, 0.46, 0.2), pow(az, 4.0)) + vec3(0.35, 0.12, 0.03) * pow(az, 40.0);',
+  '    vec3 cd = mix(dz, dh, exp(-max(y, 0.0) * mix(3.2, 7.0, az)));',
+  '    if (y < 0.0) cd = mix(dh * 0.75, vec3(0.03, 0.028, 0.03), clamp(-y * 4.0, 0.0, 1.0));',
+  '    c = mix(c, cd, uDawn);',
+  '  }',
   '  return c;',
   '}',
   'vec3 hazeColor(vec3 d){ return skyBase(normalize(vec3(d.x, 0.03, d.z))); }',
@@ -1708,31 +1808,40 @@ function createSite(glCanvas, hudCanvas, opts) {
   var SUN = (function () { var v = [0.8, 0.29, -0.53], l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; })();
   /* погода: дождь приходит и уходит, ливень — в сюжетные дни 27–28; земля сохнет не сразу */
   var RAINS = [[4.6, 7.2, 0.4], [18.8, 21.0, 0.5], [25.7, 28.1, 1.0], [34.7, 37.2, 0.45], [40.6, 42.4, 0.35]];
-  var WX = { rain: 0, wet: 0.4 };
+  var WX = { rain: 0, wet: 0.4, dawn: 0 };
+  var DAWN_DIR = (function () { var v = [-0.53, 0.07, -0.85], l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; })();
+  var SUNV = [0, 1, 0], KEYC = [0, 0, 0];
   function rainAt(x) {
     var r = 0;
     for (var i = 0; i < RAINS.length; i++) { var w = RAINS[i]; r = Math.max(r, w[2] * sstep(w[0] - 0.4, w[0] + 0.3, x) * (1 - sstep(w[1] - 0.3, w[1] + 0.4, x))); }
     return r;
   }
   function updateWeather(dt, snapNow) {
-    var rT = rainAt(st.day - 1 + st.frac), wT = rT > 0.05 ? 1 : 0.35;
-    if (snapNow) { WX.rain = rT; WX.wet = wT; return; }
-    WX.rain += (rT - WX.rain) * (1 - Math.exp(-dt * 3));
-    WX.wet += (wT - WX.wet) * (1 - Math.exp(-dt * (wT > WX.wet ? 1.5 : 0.35)));
+    var x = st.day - 1 + st.frac, rT = rainAt(x), wT = rT > 0.05 ? 1 : 0.35, dT = sstep(NDAYS - 0.75, NDAYS - 0.05, x);
+    if (snapNow) { WX.rain = rT; WX.wet = wT; WX.dawn = dT; }
+    else {
+      WX.rain += (rT - WX.rain) * (1 - Math.exp(-dt * 3));
+      WX.wet += (wT - WX.wet) * (1 - Math.exp(-dt * (wT > WX.wet ? 1.5 : 0.35)));
+      WX.dawn += (dT - WX.dawn) * (1 - Math.exp(-dt * 2.2));
+    }
+    var dn = WX.dawn, sx = lerp(SUN[0], DAWN_DIR[0], dn), sy = lerp(SUN[1], DAWN_DIR[1], dn), sz = lerp(SUN[2], DAWN_DIR[2], dn), sl = Math.hypot(sx, sy, sz) || 1;
+    SUNV[0] = sx / sl; SUNV[1] = sy / sl; SUNV[2] = sz / sl;
+    var kk = 1 - 0.55 * dn; KEYC[0] = KEY.col[0] * kk; KEYC[1] = KEY.col[1] * kk; KEYC[2] = KEY.col[2] * kk;
   }
   function lightOf(D) {
-    var r = WX.rain, hv = sstep(0.45, 1.0, r), rain = r > 0.6;
+    var r = WX.rain, hv = sstep(0.45, 1.0, r), rain = r > 0.6, dn = WX.dawn;
+    function mx3(a, b) { return [lerp(a[0], b[0], dn), lerp(a[1], b[1], dn), lerp(a[2], b[2], dn)]; }
     return {
-      rain: rain, rainAmt: r, heavy: hv,
-      sunCol: [0.02, 0.024, 0.032],
+      rain: rain, rainAmt: r, heavy: hv, dawn: dn,
+      sunCol: mx3([0.02, 0.024, 0.032], [0.34, 0.19, 0.09]),
       overcast: 1, night: 1, wet: WX.wet,
-      ambSky: [lerp(0.018, 0.024, hv), lerp(0.02, 0.026, hv), lerp(0.027, 0.032, hv)],
-      ambGnd: [0.013, 0.01, 0.008],
-      fogCol: [lerp(0.02, 0.022, hv), lerp(0.019, 0.023, hv), lerp(0.019, 0.025, hv)],
-      fogDen: lerp(0.0085, 0.011, hv) + 0.0006 * r, fogStart: 18,
+      ambSky: mx3([lerp(0.018, 0.024, hv), lerp(0.02, 0.026, hv), lerp(0.027, 0.032, hv)], [0.05, 0.06, 0.085]),
+      ambGnd: mx3([0.013, 0.01, 0.008], [0.024, 0.02, 0.019]),
+      fogCol: mx3([lerp(0.02, 0.022, hv), lerp(0.019, 0.023, hv), lerp(0.019, 0.025, hv)], [0.05, 0.046, 0.052]),
+      fogDen: (lerp(0.0085, 0.011, hv) + 0.0006 * r) * (1 - 0.4 * dn), fogStart: 18,
       shadowK: 1,
-      exposure: lerp(2.6, 2.9, hv),
-      scat: lerp(0.0033, 0.0042, hv) + 0.0004 * r, scatG: lerp(0.0021, 0.0026, hv) + 0.0002 * r,
+      exposure: lerp(lerp(2.6, 2.9, hv), 1.75, dn),
+      scat: (lerp(0.0033, 0.0042, hv) + 0.0004 * r) * (1 - 0.6 * dn), scatG: (lerp(0.0021, 0.0026, hv) + 0.0002 * r) * (1 - 0.5 * dn),
       rainN: Math.floor(NR * r)
     };
   }
@@ -1770,7 +1879,7 @@ function createSite(glCanvas, hudCanvas, opts) {
     }
   }
   function setLightUniforms(P) {
-    gl.uniform3fv(P.u.uKeyPos, KEY.pos); gl.uniform3fv(P.u.uKeyDir, KEY.dir); gl.uniform3fv(P.u.uKeyCol, KEY.col); gl.uniform2f(P.u.uKeyCone, KEY.outer, KEY.inner);
+    gl.uniform3fv(P.u.uKeyPos, KEY.pos); gl.uniform3fv(P.u.uKeyDir, KEY.dir); gl.uniform3fv(P.u.uKeyCol, KEYC); gl.uniform2f(P.u.uKeyCone, KEY.outer, KEY.inner);
     if (P.u.uPL) { gl.uniform4fv(P.u.uPL, PLP); gl.uniform3fv(P.u.uPLC, PLC); gl.uniform1i(P.u.uPLN, plN); }
   }
 
@@ -1825,7 +1934,7 @@ function createSite(glCanvas, hudCanvas, opts) {
     gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
     gl.useProgram(PSKY.p); attribs(1); gl.bindBuffer(gl.ARRAY_BUFFER, fullTri); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
     M4.invert(INVVP, VP);
-    gl.uniformMatrix4fv(PSKY.u.uInvVP, false, INVVP); gl.uniform3fv(PSKY.u.uEye, camEyeCur); gl.uniform3fv(PSKY.u.uSun, SUN);
+    gl.uniformMatrix4fv(PSKY.u.uInvVP, false, INVVP); gl.uniform3fv(PSKY.u.uEye, camEyeCur); gl.uniform3fv(PSKY.u.uSun, SUNV); gl.uniform1f(PSKY.u.uDawn, WX.dawn);
     gl.uniform3fv(PSKY.u.uSunCol, Lt.sunCol); gl.uniform1f(PSKY.u.uTime, t); gl.uniform1f(PSKY.u.uOvercast, Lt.overcast); gl.uniform1f(PSKY.u.uNight, Lt.night);
     gl.uniform3fv(PSKY.u.uFogCol, Lt.fogCol);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -1833,7 +1942,7 @@ function createSite(glCanvas, hudCanvas, opts) {
     gl.enable(gl.DEPTH_TEST); gl.depthMask(true);
     gl.useProgram(PM.p); attribs(4);
     gl.uniformMatrix4fv(PM.u.uVP, false, VP); gl.uniformMatrix4fv(PM.u.uShadowVP, false, SVP);
-    gl.uniform3fv(PM.u.uEye, camEyeCur); gl.uniform3fv(PM.u.uSun, SUN); gl.uniform3fv(PM.u.uSunCol, Lt.sunCol);
+    gl.uniform3fv(PM.u.uEye, camEyeCur); gl.uniform3fv(PM.u.uSun, SUNV); gl.uniform3fv(PM.u.uSunCol, Lt.sunCol); gl.uniform1f(PM.u.uDawn, WX.dawn);
     gl.uniform1f(PM.u.uTime, t); gl.uniform1f(PM.u.uOvercast, Lt.overcast); gl.uniform1f(PM.u.uNight, Lt.night); gl.uniform1f(PM.u.uWet, Lt.wet);
     gl.uniform3fv(PM.u.uFogCol, Lt.fogCol); gl.uniform1f(PM.u.uFogDen, (window.__okoDbg && window.__okoDbg.fogDen != null) ? window.__okoDbg.fogDen : Lt.fogDen); gl.uniform1f(PM.u.uFogStart, Lt.fogStart); gl.uniform1f(PM.u.uShadowK, Lt.shadowK);
     gl.uniform3fv(PM.u.uAmbSky, Lt.ambSky); gl.uniform3fv(PM.u.uAmbGnd, Lt.ambGnd);
@@ -1947,7 +2056,7 @@ function createSite(glCanvas, hudCanvas, opts) {
     fullscreen(PCOMP, null, GW, GH);
     tex(0, RT.scene); tex(1, RT.depth); tex(2, RT.bloom[0].t); tex(3, bl1.t); tex(4, A1.t); tex(5, SK.t); tex(6, VO.t);
     gl.uniform1i(PCOMP.u.uScene, 0); gl.uniform1i(PCOMP.u.uDepth, 1); gl.uniform1i(PCOMP.u.uBloom, 2); gl.uniform1i(PCOMP.u.uBlur, 3); gl.uniform1i(PCOMP.u.uVol, 6);
-    gl.uniform1f(PCOMP.u.uVolK, DB.volK != null ? DB.volK : 1.0); gl.uniform1f(PCOMP.u.uSat, DB.sat != null ? DB.sat : 0.55);
+    gl.uniform1f(PCOMP.u.uVolK, DB.volK != null ? DB.volK : 1.0); gl.uniform1f(PCOMP.u.uSat, DB.sat != null ? DB.sat : lerp(0.55, 0.82, WX.dawn));
     gl.uniform1i(PCOMP.u.uAO, 4); gl.uniform1i(PCOMP.u.uStreak, 5); gl.uniform1f(PCOMP.u.uAOK, 0.75); gl.uniform1f(PCOMP.u.uStreakK, hdr ? 0.03 : 0.03);
     gl.uniform2f(PCOMP.u.uRes, GW, GH); gl.uniform1f(PCOMP.u.uTime, t); gl.uniform1f(PCOMP.u.uNear, ZNEAR); gl.uniform1f(PCOMP.u.uFar, ZFAR);
     var focus = Math.hypot(camEyeCur[0] - camTgt[0], camEyeCur[1] - camTgt[1], camEyeCur[2] - camTgt[2]);
@@ -2150,7 +2259,7 @@ function createSite(glCanvas, hudCanvas, opts) {
   }
 
   /* ---------- цикл ---------- */
-  var curDepth = 0, lastDt = 0.016, wxSnap = true;
+  var curDepth = 0, lastDt = 0.016, wxSnap = true, holdT = 0;
   function frame(now) {
     if (!alive) return;
     raf = requestAnimationFrame(frame);
@@ -2159,8 +2268,12 @@ function createSite(glCanvas, hudCanvas, opts) {
     if (needResize) { needResize = false; resize(); }
     t += dt;
     if (st.playing) {
-      st.frac += dt / dayDur(st.day);
-      if (st.frac >= 1) { st.frac = 0; st.day = st.day % NDAYS + 1; if (opts.onDay) opts.onDay(st.day); }
+      if (st.day === NDAYS && st.frac >= 1) {
+        holdT += dt; if (holdT > 4.5) { holdT = 0; st.frac = 0; st.day = 1; if (opts.onDay) opts.onDay(st.day); }
+      } else {
+        st.frac += dt / dayDur(st.day);
+        if (st.frac >= 1) { if (st.day === NDAYS) st.frac = 1; else { st.frac = 0; st.day = st.day + 1; if (opts.onDay) opts.onDay(st.day); } }
+      }
     }
     var D = DAY_DATA[st.day - 1];
     var F = cumAt(st.day, st.frac), Pp = planAt(st.day, st.frac);
@@ -2201,7 +2314,7 @@ function createSite(glCanvas, hudCanvas, opts) {
   raf = requestAnimationFrame(frame);
 
   return {
-    setDay: function (d, frac) { if (d !== st.day || frac != null) { st.day = clamp(d | 0, 1, NDAYS); st.frac = frac != null ? frac : 0.45; wxSnap = true; } },
+    setDay: function (d, frac) { if (d !== st.day || frac != null) { st.day = clamp(d | 0, 1, NDAYS); st.frac = frac != null ? clamp(frac, 0, 1) : 0.45; wxSnap = true; holdT = 0; } },
     setPlaying: function (p) { st.playing = !!p; },
     snap: function () { snapFrames = 4; },
     setCam: function (c) { st.cam = c ? 1 : 0; yawOff = 0; pitchOff = 0; },
@@ -2224,13 +2337,30 @@ var VERDICTS = {
   fp: { label: 'Ошибка распознавания', result: 'Кадр ушёл на дообучение' }
 };
 HYP[39] = HYP[40] = HYP[41] = HYP[42] = 'Срок каркаса прошёл 11.11, резерв исчерпан.';
-HYP[43] = 'Каркас готов 16.11 вместо 11.11.';
+HYP[43] = 'Каркас готов 16.11 вместо 11.11. ОКО видело отставание с 4-го дня.';
 HYP[15] = 'Камеры молчат всю ночь. Смена не идёт в расчёт.';
 
 /* ночная палитра сигналов: белый — норма, жёлтый — внимание, красный — тревога */
 var NT = {
   ok: '#EDEDEA', lack: '#FFC21A', idle: '#FFC21A', ahead: '#FFC21A', none: '#FF3B30', overdue: '#FF3B30', nodata: '#7C8186'
 };
+
+/* ключевые ночи демо: что поймал AI и чем это закончилось */
+var MOMENTS = [
+  { d: 4, out: 'Отставание → алерт руководителю' },
+  { d: 8, out: 'Простой → алерт руководителю' },
+  { d: 9, out: 'Ошибка AI → кадр на дообучение' },
+  { d: 15, out: 'Нет данных ≠ нет работ' },
+  { d: 27, out: 'Форс-мажор → инцидент в журнале' },
+  { d: 33, out: 'Отставание → алерт руководителю' },
+  { d: 43, out: 'Срыв был виден за 34 дня до срока', frac: 0.999 }
+];
+var STATS = [
+  { v: NDAYS, label: 'ночей стройки' },
+  { v: DEVS.filter(Boolean).length, label: 'сигналов AI', accent: true },
+  { v: Object.keys(CLS).length, label: 'классов техники' },
+  { v: 5, label: 'минут между кадрами' }
+];
 
 function pct(x) { return (Math.round(x * 1000) / 10) + '%'; }
 function num1(x) { return (Math.round(x * 10) / 10).toString().replace('.', ','); }
@@ -2243,15 +2373,19 @@ class Component extends DCLogic {
     var sd = parseInt(props && props.startDay, 10); if (!(sd >= 1 && sd <= NDAYS)) sd = 36;
     var ap = !(props && props.autoplay === false);
     this.state = {
-      day: sd, playing: ap && !reduced, cam: 0, showPlan: true, verdicts: {}, glError: ''
+      day: sd, playing: ap && !reduced, cam: 0, showPlan: true, verdicts: {}, glError: '', countK: 1
     };
     this._reduced = reduced; this._startDay = sd; this._autoplay = ap;
+    /* в высоком кадре холста вся страница видна сразу — появление по скроллу там не нужно */
+    var tall = false; try { tall = (window.innerHeight || 900) > 1400; } catch (e) { tall = false; }
+    this._rev = tall ? '' : 'n-rev'; this._cut = tall ? '' : 'n-cut';
     this._gl = null; this._hud = null; this._engine = null; this._applied = null;
     var self = this;
     this._setGl = function (el) { self._gl = el; };
     this._setHud = function (el) { self._hud = el; };
     this._setCard = function (el) { self._card = el; };
     this._setCopy = function (el) { self._copy = el; };
+    this._setStats = function (el) { self._stats = el; };
     this._avoid = function () {
       var out = [], base = self._gl ? self._gl.getBoundingClientRect() : null;
       if (!base) return out;
@@ -2276,6 +2410,16 @@ class Component extends DCLogic {
       self.setState({ day: 1, playing: true });
       try { var el = document.getElementById('demo'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* без прокрутки */ }
     };
+    /* «Смотреть»: демо встаёт на нужную ночь и ждёт, пока её прочитают */
+    this._goDay = function (d, frac) {
+      return function () {
+        if (self._engine) { self._engine.setDay(d, frac); self._engine.setPlaying(false); }
+        if (self._applied) { self._applied.day = d; self._applied.playing = false; }
+        self.setState({ day: d, playing: false });
+        try { var el = document.getElementById('demo'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { /* без прокрутки */ }
+      };
+    };
+    this._momentGo = MOMENTS.map(function (mo) { return self._goDay(mo.d, mo.frac != null ? mo.frac : 0.6); });
   }
 
   componentDidMount() {
@@ -2291,6 +2435,22 @@ class Component extends DCLogic {
         try { window.__okoInfo = this._engine.info; window.__okoEngine = this._engine; } catch (e2) { /* нет window */ }
       } catch (err) {
         this.setState({ glError: 'Не удалось запустить 3D-сцену: ' + (err && err.message ? err.message : err), playing: false });
+      }
+    }
+    /* цифры «43 ночей» набегают, когда блок впервые появляется на экране */
+    var box = this._stats;
+    if (box && !this._reduced && typeof IntersectionObserver !== 'undefined') {
+      var r = box.getBoundingClientRect(), vh = window.innerHeight || 800;
+      if (r.top > vh * 0.95) {
+        this.setState({ countK: 0 });
+        this._io = new IntersectionObserver(function (en) {
+          if (!en[0] || !en[0].isIntersecting) return;
+          if (self._io) { self._io.disconnect(); self._io = null; }
+          var t0 = 0;
+          var step = function (now) { if (!t0) t0 = now; var k = Math.min(1, (now - t0) / 1500); self.setState({ countK: k }); if (k < 1) self._cRaf = requestAnimationFrame(step); };
+          self._cRaf = requestAnimationFrame(step);
+        }, { threshold: 0.4 });
+        this._io.observe(box);
       }
     }
   }
@@ -2311,7 +2471,9 @@ class Component extends DCLogic {
 
   componentWillUnmount() {
     if (this._engine) this._engine.destroy();
-    this._engine = null;
+    if (this._io) this._io.disconnect();
+    if (this._cRaf) cancelAnimationFrame(this._cRaf);
+    this._engine = null; this._io = null;
   }
 
   renderVals() {
@@ -2343,6 +2505,17 @@ class Component extends DCLogic {
     function segBtn(on) {
       return on ? 'background: #EDEDEA; color: #0A0A0A; border-color: #EDEDEA;' : 'background: rgba(0,0,0,0.3); color: #C4C7CA; border-color: #33373B;';
     }
+    var ek = 1 - Math.pow(1 - Math.min(1, Math.max(0, s.countK)), 3);
+    var stats = STATS.map(function (sn) { return { value: String(Math.round(sn.v * ek)), label: sn.label, color: 'color: ' + (sn.accent ? '#FFC21A' : '#EDEDEA') + ';' }; });
+    var moments = MOMENTS.map(function (mo, i) {
+      var dv = DEVS[mo.d - 1], col = dv ? NT[dv.kind] : NT.ok, lab = dv ? dv.label : 'Без отклонений';
+      return {
+        num: String(mo.d).padStart(2, '0'), when: 'Ночь ' + mo.d + ' · ' + fmtShort(mo.d), tag: lab,
+        tagStyle: 'color: ' + col + ';', dot: 'background: ' + col + ';',
+        text: HYP[mo.d] || (dv ? dv.text : ''), outcome: mo.out, go: self._momentGo[i],
+        aria: 'Смотреть ночь ' + mo.d + ' в демо: ' + lab
+      };
+    });
 
     return {
       setGl: this._setGl, setHud: this._setHud, setCard: this._setCard, setCopy: this._setCopy, startStory: this._startStory,
@@ -2362,7 +2535,8 @@ class Component extends DCLogic {
       verdictResult: verdict ? VERDICTS[verdict].result : '',
       vDelay: this._vDelay, vForce: this._vForce, vFp: this._vFp, undo: this._undo,
       ticks: ticks, stageLabels: stageLabels,
-      glError: s.glError, hasGlError: !!s.glError
+      glError: s.glError, hasGlError: !!s.glError,
+      setStats: this._setStats, stats: stats, moments: moments, rev: this._rev, cut: this._cut
     };
   }
 }
