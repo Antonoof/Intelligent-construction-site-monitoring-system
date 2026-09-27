@@ -1,0 +1,1541 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Plan-Fact Site Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Oswald:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#EDF0F3;--surface:#FFFFFF;--surface-2:#F5F7F9;--surface-3:#E3E8ED;
+  --line:#D6DDE4;--line-2:#B8C2CD;
+  --ink:#111922;--ink-2:#434F5C;--muted:#687480;
+  --accent:#256ABF;--accent-2:#1C5CAB;--accent-soft:#E2ECF9;--on-accent:#FFFFFF;
+  --good:#0CA30C;--warn:#FAB219;--serious:#EC835A;--crit:#D03B3B;--info:#4A3AA7;--nodata:#898781;
+  --good-bg:rgba(12,163,12,.12);--warn-bg:rgba(250,178,25,.2);--serious-bg:rgba(236,131,90,.18);--crit-bg:rgba(208,59,59,.11);--info-bg:rgba(74,58,167,.1);--nodata-bg:rgba(137,135,129,.16);
+  --axis:#B8C2CD;--grid:#E4E9EE;--s1:#2A78D6;--s1-wash:rgba(42,120,214,.14);--present:#52514E;--rain:rgba(42,120,214,.09);
+  --hazard:#F2B705;--hazard-ink:#16191C;
+  --shadow:0 1px 2px rgba(17,25,34,.06),0 8px 24px rgba(17,25,34,.08);
+  --f-display:"Oswald","Arial Narrow","Roboto Condensed",sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){color-scheme:dark;
+    --bg:#0B1016;--surface:#121921;--surface-2:#172029;--surface-3:#1F2A35;--line:#25313D;--line-2:#374553;
+    --ink:#E6EBF1;--ink-2:#AAB5C2;--muted:#7E8A97;
+    --accent:#3987E5;--accent-2:#6DA7EC;--accent-soft:#16263B;--on-accent:#06101C;
+    --info:#9085E9;
+    --good-bg:rgba(12,163,12,.2);--warn-bg:rgba(250,178,25,.17);--serious-bg:rgba(236,131,90,.2);--crit-bg:rgba(208,59,59,.22);--info-bg:rgba(144,133,233,.18);--nodata-bg:rgba(137,135,129,.2);
+    --axis:#3A4756;--grid:#212C37;--s1:#3987E5;--s1-wash:rgba(57,135,229,.2);--present:#C3C2B7;--rain:rgba(57,135,229,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#0B1016;--surface:#121921;--surface-2:#172029;--surface-3:#1F2A35;--line:#25313D;--line-2:#374553;
+  --ink:#E6EBF1;--ink-2:#AAB5C2;--muted:#7E8A97;
+  --accent:#3987E5;--accent-2:#6DA7EC;--accent-soft:#16263B;--on-accent:#06101C;
+  --info:#9085E9;
+  --good-bg:rgba(12,163,12,.2);--warn-bg:rgba(250,178,25,.17);--serious-bg:rgba(236,131,90,.2);--crit-bg:rgba(208,59,59,.22);--info-bg:rgba(144,133,233,.18);--nodata-bg:rgba(137,135,129,.2);
+  --axis:#3A4756;--grid:#212C37;--s1:#3987E5;--s1-wash:rgba(57,135,229,.2);--present:#C3C2B7;--rain:rgba(57,135,229,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.app{max-width:1480px;margin:0 auto;padding-inline:16px;padding-block:0 40px}
+@media (min-width:900px){.app{padding-inline:24px}}
+body.guiding .app{padding-bottom:150px}
+
+/* header */
+.hdr{background:var(--bg);padding-block:12px 0}
+@media (min-width:900px){.hdr{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;box-shadow:0 1px 0 var(--line)}}
+.hdr-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:36px;height:36px;flex:none}
+.logo .lg-bg{fill:var(--accent)}.logo .lg-fg{fill:var(--on-accent)}.logo .lg-dim{fill:var(--on-accent);opacity:.55}
+.brand-name{font-family:var(--f-display);font-weight:600;font-size:21px;line-height:1.05;letter-spacing:.03em;text-transform:uppercase}
+.brand-sub{font-size:13px;color:var(--ink-2)}
+.hdr-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--surface-3)}
+.seg button{border:0;background:transparent;border-radius:6px;padding:5px 10px;font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;font-variant-numeric:tabular-nums}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:500;line-height:1.3;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:16px;height:16px;flex:none}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--accent-2)}
+.btn-ghost:hover{background:var(--accent-soft)}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn-icon{padding:6px}
+.link{border:0;background:none;padding:0;color:var(--accent-2);cursor:pointer;font-weight:500;text-decoration:underline;text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* time bar */
+.timebar{margin-top:12px;display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;gap:10px 18px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.tb-ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.clock{display:flex;flex-direction:column;min-width:92px}
+.clock b{font-family:var(--f-mono);font-weight:600;font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
+.clock small{font-size:11px;color:var(--muted);margin-top:4px}
+.trk{position:relative;min-width:0;padding-top:6px}
+.track{position:relative;height:28px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line)}
+.trk:focus-within .track{outline:2px solid var(--accent);outline-offset:2px}
+.t-done{position:absolute;left:0;top:0;bottom:0;background:var(--accent-soft);border-radius:5px 0 0 5px}
+.t-rain{position:absolute;top:0;bottom:0;background:var(--rain);border-inline:1px solid var(--s1-wash)}
+.t-rain span{position:absolute;left:5px;top:5px;font-size:10.5px;color:var(--ink-2);white-space:nowrap;display:flex;gap:3px;align-items:center}
+.t-rain svg{width:11px;height:11px;color:var(--s1)}
+.t-nd{position:absolute;height:5px;background:repeating-linear-gradient(135deg,var(--nodata) 0 3px,transparent 3px 6px)}
+.t-pin{position:absolute;top:-8px;width:16px;height:16px;margin-left:-8px;border:0;padding:0;background:none;cursor:pointer;z-index:3}
+.t-pin i{display:block;width:10px;height:10px;margin:3px;transform:rotate(45deg);background:var(--pc,var(--ink-2));outline:2px solid var(--surface);border-radius:2px}
+.t-head{position:absolute;top:-5px;bottom:-5px;width:3px;margin-left:-1.5px;background:var(--accent);border-radius:2px;pointer-events:none;z-index:2}
+#scrub{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.t-axis{position:relative;height:14px;margin-top:4px;font:11px/1 var(--f-mono);color:var(--muted)}
+.t-axis span{position:absolute;top:0;transform:translateX(-50%)}
+.t-axis span:first-child{transform:none}.t-axis span:last-child{transform:translateX(-100%)}
+.t-legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11px;color:var(--muted)}
+.t-legend span{display:inline-flex;align-items:center;gap:5px}
+.t-legend i{display:inline-block;width:14px;height:9px;border-radius:2px}
+.lg-rain{background:var(--rain);border:1px solid var(--s1-wash)}
+.lg-nd{background:repeating-linear-gradient(135deg,var(--nodata) 0 3px,transparent 3px 6px)}
+.t-legend i.lg-pin{width:8px;height:8px;transform:rotate(45deg);background:var(--ink-2)}
+@media (max-width:899px){.timebar{grid-template-columns:1fr auto}.trk{grid-column:1/-1}.tb-end{grid-column:1/-1;justify-self:start}}
+
+/* tabs */
+.tabs{display:flex;gap:2px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:inline-flex;align-items:center;gap:8px;border:0;border-bottom:2px solid transparent;background:none;padding:10px 12px 9px;color:var(--ink-2);font-weight:500;white-space:nowrap;cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab .n{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--surface-3);font:600 11px/1 var(--f-mono);color:var(--ink-2)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab[aria-selected="true"] .n{background:var(--accent);color:var(--on-accent)}
+.bdg{font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--surface-3);color:var(--ink-2)}
+.bdg.hot{background:var(--crit-bg);color:var(--ink)}
+.bdg.warm{background:var(--warn-bg);color:var(--ink)}
+
+/* layout */
+.layout{display:grid;gap:16px;margin-top:16px;align-items:start}
+@media (min-width:1180px){.layout{grid-template-columns:minmax(0,1fr) 336px}}
+.stack{display:grid;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.panel h2{font-family:var(--f-display);font-weight:500;font-size:15px;line-height:1.3;letter-spacing:.07em;text-transform:uppercase}
+.panel-top{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 16px;margin-bottom:12px}
+.small{font-size:12px}.muted{color:var(--muted)}.mono{font-family:var(--f-mono)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.two{display:grid;gap:16px}
+@media (min-width:980px){.two{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}}
+
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px 2px 6px;border-radius:999px;font-size:12px;font-weight:500;line-height:1.5;white-space:nowrap;background:var(--cbg,var(--surface-3));color:var(--ink)}
+.chip svg{width:13px;height:13px;flex:none;color:var(--cc,var(--muted))}
+.k-good{--cc:var(--good);--cbg:var(--good-bg)}
+.k-warn{--cc:var(--warn);--cbg:var(--warn-bg)}
+.k-serious{--cc:var(--serious);--cbg:var(--serious-bg)}
+.k-crit{--cc:var(--crit);--cbg:var(--crit-bg)}
+.k-info{--cc:var(--info);--cbg:var(--info-bg)}
+.k-nodata{--cc:var(--nodata);--cbg:var(--nodata-bg)}
+.k-plain{--cc:var(--muted);--cbg:var(--surface-3)}
+.zchip{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
+.zchip i{width:9px;height:9px;border-radius:2px;background:var(--zc)}
+
+/* cameras */
+.cams{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+.cam{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);min-width:0}
+.cam-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;font-size:12px}
+.cam-h .id{font:600 12px var(--f-mono);flex:none}
+.cam-h .nm{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.camsvg{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#0B0F14}
+.cam-f{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:7px 10px;font-size:12px;color:var(--ink-2)}
+.camsvg .osd{font:600 8.5px var(--f-mono);fill:#fff;paint-order:stroke;stroke:#000;stroke-opacity:.55;stroke-width:2.2px}
+.camsvg .bx{font:600 7px var(--f-mono);fill:#10161D}
+.camsvg .zl{font:600 7.5px var(--f-mono)}
+.camsvg .big{font:600 14px var(--f-mono);fill:#F2B705;letter-spacing:.08em}
+.camsvg .sub{font:500 8.5px var(--f-mono);fill:#C9D1D9}
+.camsvg .vtx{cursor:grab}
+.camsvg .vtx:focus{outline:none;stroke-width:3.5}
+.editor{touch-action:none}
+.editor .camsvg{border-radius:8px}
+.opts{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.tog{display:inline-flex;gap:6px;align-items:center;font-size:13px;cursor:pointer}
+.tog input{width:16px;height:16px;accent-color:var(--accent)}
+
+/* tables */
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:6px 10px;text-align:left;font-size:12px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.has-m td{border-bottom:0}
+tr.m td{padding-top:0}
+.sn{font-weight:500}.ss{font-size:12px;color:var(--muted)}
+details summary{cursor:pointer;color:var(--accent-2);font-size:12px;font-weight:500;width:max-content}
+.math{font:12px/1.65 var(--f-mono);color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-top:6px;overflow-x:auto}
+.math div{white-space:pre-wrap}
+.math b{color:var(--ink);font-weight:600}
+
+/* timeline small multiples */
+.tl-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-2);margin-bottom:8px}
+.tl-legend span,.g-legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:16px;height:10px;border-radius:2px}
+.sw-line{height:0;border-top:2px solid var(--present);border-radius:0}
+.sw-work{background:var(--s1-wash);border-top:2px solid var(--s1);border-radius:0}
+.sw-plan{height:0;border-top:1.5px dashed var(--muted);border-radius:0}
+.sw-rain{background:var(--rain);border:1px solid var(--s1-wash)}
+.sw-nd{background:var(--nodata-bg)}
+.tl-row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:4px 14px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.tl-rows .tl-row:first-child{border-top:0}
+.tl-lbl{font-size:12.5px;line-height:1.35;min-width:0}
+.tl-lbl .sn{display:block}
+.tl-plot{position:relative;height:54px;touch-action:pan-y;cursor:crosshair}
+.tl-plot svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.tl-x{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--ink-2);pointer-events:none}
+.tl-axis{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px}
+.tl-axis>div{position:relative;height:16px;font:11px/1 var(--f-mono);color:var(--muted)}
+.tl-axis span{position:absolute;top:3px;transform:translateX(-50%)}
+.tl-axis span:first-child{transform:none}.tl-axis span:last-child{transform:translateX(-100%)}
+@media (max-width:640px){.tl-row,.tl-axis{grid-template-columns:minmax(0,1fr)}.tl-axis>div:first-child{display:none}}
+.tl-rain{fill:var(--rain)}.tl-nd{fill:var(--nodata-bg)}.tl-base{stroke:var(--axis);stroke-width:1}
+.tl-plan{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3}
+.tl-warea{fill:var(--s1-wash)}
+.tl-wline{fill:none;stroke:var(--s1);stroke-width:2;stroke-linejoin:round}
+.tl-pline{fill:none;stroke:var(--present);stroke-width:1.5;stroke-linejoin:round}
+.tl-plot svg *{vector-effect:non-scaling-stroke}
+.tip{position:fixed;z-index:90;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow);padding:8px 10px;font-size:12px;min-width:180px;max-width:300px}
+.tip .th{font-weight:600;margin-bottom:4px}
+.tip .tr{display:flex;align-items:baseline;gap:10px;justify-content:space-between}
+.tip .tr b{font-variant-numeric:tabular-nums}
+.tip .tr span{color:var(--ink-2)}
+
+/* review */
+.devs{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.dev{display:grid;gap:10px;align-content:start;border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--surface);min-width:0}
+.dev.resolved{background:var(--surface-2)}
+.dev.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:0 0 0 3px transparent}}
+.dev-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.dev-t{font-weight:600;font-size:14.5px;line-height:1.3}
+.dev-st{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.lbl{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.hyp{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:13px}
+.hyp li{display:flex;gap:8px;align-items:baseline}
+.hyp .cf{flex:none;font-size:11px;color:var(--muted);min-width:64px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{border:0;padding:0;background:none;cursor:zoom-in;width:150px;max-width:100%;text-align:left;color:inherit}
+.thumb .camsvg{border-radius:6px}
+.thumb span{display:block;font-size:11px;color:var(--muted);margin-top:3px;line-height:1.3}
+.verdicts{display:flex;gap:6px;flex-wrap:wrap}
+.btn[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.fmrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.corr{display:grid;gap:8px;padding:10px;border:1px dashed var(--line-2);border-radius:8px}
+.corr label{display:flex;gap:8px;align-items:center;font-size:13px}
+.corr input[type=number]{width:92px;padding:4px 6px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);font-variant-numeric:tabular-nums}
+.corr input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none}
+.vset{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;padding:8px 10px;border-radius:8px;background:var(--surface-2)}
+.vset svg{width:15px;height:15px;color:var(--good);flex:none}
+.note{font-size:12.5px;color:var(--ink-2)}
+.approve{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.approve p{display:flex;gap:8px;align-items:center}
+.approve svg{width:16px;height:16px;color:var(--good)}
+.sup{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+
+/* aside */
+.bot{display:grid;gap:10px}
+.msg{border:1px solid var(--line);background:var(--surface-2);border-radius:4px 12px 12px 12px;padding:9px 12px;font-size:13px;line-height:1.45}
+.msg.alert-m{border-color:var(--crit);background:var(--crit-bg)}
+.msg-h{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);margin-bottom:3px}
+.msg-h b{color:var(--ink-2);font-weight:600}
+.msg-a{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.msg-a button{border:1px solid var(--line-2);background:var(--surface);color:var(--accent-2);border-radius:6px;padding:3px 10px;font-size:12px;font-weight:500;cursor:pointer}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:7px;font-size:12.5px;max-height:460px;overflow:auto}
+.log li{display:grid;grid-template-columns:42px minmax(0,1fr);gap:8px;align-items:baseline}
+.log time{font:11.5px var(--f-mono);color:var(--muted)}
+
+/* dashboard */
+.alert{position:relative;overflow:hidden;border:1px solid var(--crit);background:var(--crit-bg);border-radius:10px;padding:14px 16px 14px 28px;display:grid;gap:6px}
+.alert::before{content:"";position:absolute;left:0;top:0;bottom:0;width:10px;background:repeating-linear-gradient(-45deg,var(--hazard) 0 7px,var(--hazard-ink) 7px 14px)}
+.alert h3{font-family:var(--f-display);font-weight:600;font-size:17px;letter-spacing:.03em;text-transform:uppercase;display:flex;gap:8px;align-items:center}
+.alert h3 svg{width:18px;height:18px;color:var(--crit)}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:2px;align-content:start}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:30px;font-weight:600;line-height:1.15;display:flex;align-items:center;gap:8px}
+.kpi .v svg{width:18px;height:18px;color:var(--cc,var(--muted))}
+.kpi .s{font-size:12px;color:var(--ink-2)}
+.notice{display:flex;gap:10px;align-items:flex-start;background:var(--accent-soft);border-color:transparent}
+.notice svg{width:18px;height:18px;flex:none;color:var(--accent-2);margin-top:2px}
+.gantt-wrap{overflow-x:auto}
+.gantt{display:block;width:100%;min-width:760px;height:auto}
+.gantt text{font-family:var(--f-body);font-size:12px;fill:var(--ink)}
+.gantt .g-wbs{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.gantt .g-ax{fill:var(--muted);font-size:11px;font-family:var(--f-mono)}
+.g-grid{stroke:var(--grid);stroke-width:1}
+.g-plan{fill:var(--surface-3)}
+.g-prog{fill:var(--s1)}
+.g-fl-bg{fill:var(--surface)}.g-fl-ln{fill:var(--line-2)}
+.g-float{fill:url(#gfl);stroke:var(--line);stroke-width:1}
+.g-today{stroke:var(--accent);stroke-width:2}
+.gantt .g-today-t{fill:var(--accent-2);font-weight:600;font-size:11px}
+.g-d-high{fill:var(--crit)}.g-d-medium{fill:var(--warn)}.g-d-low{fill:var(--good)}
+.g-d-high,.g-d-medium,.g-d-low{stroke:var(--surface);stroke-width:2}
+.gantt .g-slip{font-size:11px;font-weight:600;font-family:var(--f-mono)}
+.g-ghost{fill:none;stroke:var(--crit);stroke-width:1.5;stroke-dasharray:5 3}
+.gantt .g-ghost-t{fill:var(--ink-2);font-size:11px}
+.g-hit{fill:transparent}
+.g-hit:hover{fill:var(--accent-soft);fill-opacity:.5}
+.g-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-2)}
+.sw-planb{background:var(--surface-3)}.sw-prog{background:var(--s1)}
+.sw-float{background:repeating-linear-gradient(45deg,var(--surface) 0 2px,var(--line-2) 2px 3px);border:1px solid var(--line)}
+.sw-dia{width:9px;height:9px;transform:rotate(45deg);background:var(--crit);border-radius:1px}
+.sw-today{width:2px;height:12px;background:var(--accent);border-radius:0}
+.mini-cams{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.mini-cams figure{margin:0;min-width:0}
+.mini-cams figcaption{font-size:11.5px;color:var(--ink-2);margin-top:4px}
+.mini-cams .camsvg{border-radius:6px}
+
+/* setup */
+.drop{display:grid;gap:12px;justify-items:start;padding:20px;border:1.5px dashed var(--line-2);border-radius:10px;background:var(--surface-2)}
+.file{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);margin-bottom:12px}
+.file svg{width:22px;height:22px;color:var(--good);flex:none}
+.map{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.mapchip{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--surface-2);border:1px solid var(--line);white-space:nowrap}
+.ref{font-size:11.5px;color:var(--ink);background:var(--warn-bg);padding:1px 6px;border-radius:4px;white-space:nowrap}
+.camlist{list-style:none;margin:0;padding:0;display:grid}
+.camlist li{display:grid;grid-template-columns:58px minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.camlist li:last-child{border-bottom:0}
+.camlist .u{font:11.5px var(--f-mono);color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cst{font-size:12px;display:inline-flex;gap:5px;align-items:center;white-space:nowrap}
+.cst svg{width:13px;height:13px;flex:none}
+.cst.ok svg{color:var(--good)}.cst.bad svg{color:var(--crit)}.cst.wait svg{color:var(--muted)}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.camsel{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
+.camsel button{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:3px 8px;font:500 12px var(--f-mono);cursor:pointer;color:var(--ink-2)}
+.camsel button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+/* guide, toasts, lightbox */
+.guide{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--ink);color:var(--bg);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,.2)}
+.guide-in{max-width:1100px;margin:0 auto;display:flex;gap:10px 18px;align-items:center;flex-wrap:wrap}
+.guide .ctr{font:600 12px var(--f-mono);opacity:.7;flex:none}
+.guide .cap{flex:1 1 360px;font-size:14.5px;line-height:1.45}
+.guide .btns{display:flex;gap:8px;flex:none}
+.guide .btn{border-color:transparent}
+.guide .btn-next{background:var(--hazard);color:var(--hazard-ink);font-weight:600}
+.guide .btn-next:hover{background:#FFC928}
+.guide .btn-exit{background:transparent;color:var(--bg);border-color:currentColor}
+.guide .btn-exit:hover{background:transparent;opacity:.8}
+.toasts{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;z-index:80;display:grid;gap:8px;width:min(340px,calc(100vw - 24px))}
+.toast{display:flex;gap:8px;align-items:flex-start;background:var(--surface);color:var(--ink);border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px;font-size:13px;animation:tin .25s ease-out}
+.toast svg{width:16px;height:16px;flex:none;margin-top:1px;color:var(--cc,var(--accent-2))}
+@keyframes tin{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+.lb{position:fixed;inset:0;z-index:85;display:grid;place-items:center;padding:16px;background:rgba(5,8,12,.74)}
+.lb-in{width:min(980px,100%);background:var(--surface);border-radius:12px;padding:12px;display:grid;gap:8px}
+.lb-top{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}
+.lb .camsvg{border-radius:8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="app">
+  <header class="hdr">
+    <div class="hdr-row">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 36 36" aria-hidden="true">
+          <rect class="lg-bg" x="0" y="0" width="36" height="36" rx="8"/>
+          <rect class="lg-fg" x="7" y="10" width="15" height="4" rx="2"/>
+          <rect class="lg-dim" x="12" y="17" width="17" height="4" rx="2"/>
+          <rect class="lg-fg" x="17" y="24" width="12" height="4" rx="2"/>
+          <circle class="lg-fg" cx="27" cy="11" r="3"/>
+        </svg>
+        <div>
+          <div class="brand-name" id="brandName"></div>
+          <div class="brand-sub" id="projLine"></div>
+        </div>
+      </div>
+      <div class="hdr-actions">
+        <div class="seg" role="group" aria-label="Language">
+          <button type="button" data-act="lang" data-v="en">EN</button>
+          <button type="button" data-act="lang" data-v="ru">RU</button>
+        </div>
+        <button type="button" class="btn btn-primary" id="guideBtn" data-act="guide"></button>
+      </div>
+    </div>
+    <div class="timebar">
+      <div class="tb-ctl">
+        <button type="button" class="btn btn-icon" id="restartBtn" data-act="restart"></button>
+        <button type="button" class="btn" id="playBtn" data-act="play"></button>
+        <div class="seg" role="group" id="speedSeg">
+          <button type="button" data-act="speed" data-v="1">300×</button>
+          <button type="button" data-act="speed" data-v="2">600×</button>
+          <button type="button" data-act="speed" data-v="5">1500×</button>
+        </div>
+      </div>
+      <div class="clock"><b id="clock">11:30</b><small id="clockSub"></small></div>
+      <div class="trk">
+        <div class="track" id="track"></div>
+        <input type="range" id="scrub" min="0" max="144" step="1" value="42">
+        <div class="t-axis" id="taxis"></div>
+        <div class="t-legend" id="tlegend"></div>
+      </div>
+      <button type="button" class="btn btn-ghost tb-end" id="endBtn" data-act="jump" data-t="144"></button>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </header>
+  <div class="layout">
+    <main id="main" class="stack"></main>
+    <aside id="aside" class="stack"></aside>
+  </div>
+</div>
+<div class="guide" id="guide" hidden></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="lb" id="lb" hidden role="dialog" aria-modal="true"></div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= Scenario ================= */
+const SLOTS=144,SLOTMIN=5,START=480,TODAY='2026-10-01',MODEL='machines-v3.2',RULESV='v1.2';
+const RAIN=[[30,102]];
+const SITEWIDE=new Set(['tower_crane']);
+const CLASSES={
+  excavator:{en:'Excavator',ru:'Экскаватор'},
+  dump_truck:{en:'Dump truck',ru:'Самосвал'},
+  bulldozer:{en:'Bulldozer',ru:'Бульдозер'},
+  mixer:{en:'Mixer truck',ru:'Автобетоносмеситель'},
+  pump:{en:'Concrete pump',ru:'Автобетононасос'},
+  mobile_crane:{en:'Mobile crane',ru:'Автокран'},
+  tower_crane:{en:'Tower crane',ru:'Башенный кран'},
+  manipulator:{en:'Manipulator truck',ru:'Манипулятор'}
+};
+const ZONES={
+  Z1:{c:'#2A78D6',n:{en:'Pit 2',ru:'Котлован 2'}},
+  Z2:{c:'#EB6834',n:{en:'Section 1 · slab',ru:'Секция 1 · плита'}},
+  Z3:{c:'#1BAF7A',n:{en:'Section 1 · north',ru:'Секция 1 · север'}},
+  Z4:{c:'#EDA100',n:{en:'Access road',ru:'Подъездная дорога'}},
+  Z5:{c:'#E87BA4',n:{en:'Storm drain',ru:'Ливнёвка'}},
+  Z6:{c:'#008300',n:{en:'Section 3',ru:'Секция 3'}}
+};
+const STAGES=[
+  {id:'S5',wbs:'1.2',wt:'road',zone:'Z4',start:'2026-09-21',end:'2026-10-03',float:2,req:[['bulldozer',1,8],['dump_truck',1,8]],hist:[17,17,17,17,17,17,17,17,17,17],n:{en:'Access road',ru:'Подъездная дорога'}},
+  {id:'S2',wbs:'2.1',wt:'foundation',zone:'Z2',start:'2026-09-26',end:'2026-10-05',float:1,req:[['mixer',2,8],['pump',1,8]],hist:[20,20,20,23,23.5],succ:'S7',n:{en:'Foundation slab, section 1',ru:'Фундаментная плита, секция 1'}},
+  {id:'S1',wbs:'2.2',wt:'excavation',zone:'Z1',start:'2026-09-28',end:'2026-10-05',float:3,req:[['excavator',2,10],['dump_truck',3,10]],hist:[46,48,47],n:{en:'Excavation, section 2',ru:'Разработка котлована, секция 2'}},
+  {id:'S3',wbs:'2.3',wt:'backfill',zone:'Z3',start:'2026-09-29',end:'2026-10-05',float:4,req:[['bulldozer',1,8],['dump_truck',2,8]],hist:[26,25],n:{en:'Backfill, section 1 north',ru:'Обратная засыпка, секция 1 север'}},
+  {id:'S4',wbs:'5.1',wt:'drain',zone:'Z5',start:'2026-09-29',end:'2026-10-09',float:5,req:[['excavator',1,8],['dump_truck',1,6]],fromRef:true,hist:[13,12],n:{en:'Storm drain',ru:'Ливневая канализация'}},
+  {id:'S6',wbs:'4.1',wt:'steel',zone:'Z6',start:'2026-10-06',end:'2026-10-20',float:2,req:[['mobile_crane',1,10]],hist:[],n:{en:'Steel frame, section 3',ru:'Металлокаркас, секция 3'}},
+  {id:'S7',wbs:'3.1',wt:'frame',zone:'Z2',start:'2026-10-07',end:'2026-10-25',float:0,req:[['tower_crane',1,10],['pump',1,6],['mixer',2,6]],hist:[],pred:'S2',n:{en:'Concrete frame, section 1',ru:'Монолитный каркас, секция 1'}}
+];
+const REF=[['excavation',['excavator','dump_truck','bulldozer']],['foundation',['mixer','pump']],['frame',['mobile_crane','tower_crane']],['backfill',['bulldozer','dump_truck']],['drain',['excavator','dump_truck']],['road',['bulldozer','dump_truck']],['steel',['mobile_crane']]];
+const CAMS=[
+  {id:'CAM-1',scene:'pit',n:{en:'Pit 2 · north',ru:'Котлован 2 · север'},url:'rtsp://•••@10.20.0.11:554/stream1',ms:184},
+  {id:'CAM-2',scene:'pit2',n:{en:'Pit 2 · south',ru:'Котлован 2 · юг'},url:'http://10.20.0.12/snapshot.jpg',ms:142},
+  {id:'CAM-3',scene:'slab',n:{en:'Section 1 · slab',ru:'Секция 1 · плита'},url:'rtsp://•••@10.20.0.13:554/stream1',ms:231,dark:[[72,84]]},
+  {id:'CAM-4',scene:'north',n:{en:'Section 1 · north',ru:'Секция 1 · север'},url:'http://10.20.0.14/snapshot.jpg',ms:167},
+  {id:'CAM-5',scene:'drain',n:{en:'Storm drain',ru:'Ливнёвка'},url:'rtsp://•••@10.20.0.15:554/stream1',ms:null,offline:[[0,90]]},
+  {id:'CAM-6',scene:'entrance',n:{en:'Entrance · section 3',ru:'Въезд · секция 3'},url:'rtsp://•••@10.20.0.16:554/stream1',ms:205}
+];
+const DEFAULT_POLY={
+  'CAM-1':{Z1:[[16,96],[304,96],[318,178],[2,178]]},
+  'CAM-2':{Z1:[[10,98],[310,98],[318,178],[2,178]]},
+  'CAM-3':{Z2:[[26,94],[296,94],[318,178],[2,178]]},
+  'CAM-4':{Z3:[[30,104],[292,104],[316,178],[4,178]]},
+  'CAM-5':{Z5:[[14,98],[306,98],[318,178],[2,178]]},
+  'CAM-6':{Z4:[[2,112],[146,106],[166,178],[2,178]],Z6:[[184,104],[318,100],[318,178],[192,178]]}
+};
+const ACTORS=[
+  {id:'E1',cls:'excavator',present:[[0,132]],work:[[0,30],[102,132]],views:{'CAM-1':{x:26,gy:152,s:1}}},
+  {id:'E2',cls:'excavator',present:[[0,132]],work:[[0,30],[102,132]],views:{'CAM-1':{x:118,gy:128,s:.8},'CAM-2':{x:22,gy:156,s:1.05}}},
+  {id:'T1',cls:'dump_truck',present:[[0,132]],work:[[0,30],[102,132]],views:{'CAM-1':{x:196,gy:164,s:.95,flip:1},'CAM-2':{x:126,gy:142,s:.9}}},
+  {id:'T2',cls:'dump_truck',present:[[0,132]],work:[[0,30],[102,132]],views:{'CAM-1':{x:236,gy:124,s:.7,flip:1},'CAM-2':{x:194,gy:168,s:1}}},
+  {id:'T3',cls:'dump_truck',present:[[0,132]],work:[[0,30],[102,132]],views:{'CAM-2':{x:236,gy:122,s:.72}}},
+  {id:'P1',cls:'pump',present:[[12,102]],work:[[18,39],[48,66],[84,99]],views:{'CAM-3':{x:22,gy:152,s:1}}},
+  {id:'M1',cls:'mixer',present:[[18,36],[48,60],[84,90]],work:[[18,36],[48,60],[84,90]],views:{'CAM-3':{x:150,gy:158,s:.95,flip:1}}},
+  {id:'E3',cls:'excavator',present:[[90,144]],work:[[90,144]],views:{'CAM-5':{x:40,gy:150,s:1}}},
+  {id:'T5',cls:'dump_truck',present:[[90,144]],work:[[90,144]],views:{'CAM-5':{x:200,gy:158,s:.95,flip:1}}},
+  {id:'B1',cls:'bulldozer',present:[[0,108]],work:[[0,48],[72,108]],views:{'CAM-6':{x:16,gy:148,s:.8}}},
+  {id:'T4',cls:'dump_truck',present:[[0,108]],work:[[0,48],[72,108]],views:{'CAM-6':{x:60,gy:172,s:.8}}},
+  {id:'MT',cls:'manipulator',detectAs:'mobile_crane',conf:.64,present:[[96,132]],work:[[100,124]],views:{'CAM-6':{x:214,gy:152,s:.85,flip:1}}},
+  {id:'TC',cls:'tower_crane',present:[[0,144]],work:[[0,48],[60,144]],views:{'CAM-6':{x:88,gy:104,s:.8}}}
+];
+const CONF={excavator:.91,dump_truck:.88,bulldozer:.86,mixer:.84,pump:.89,tower_crane:.93};
+const DIMS={excavator:[80,46],dump_truck:[66,32],bulldozer:[60,32],mixer:[72,36],pump:[88,32],pumpU:[88,68],manipulator:[76,42],tower_crane:[170,96]};
+const MOVERS=new Set(['dump_truck','bulldozer']);
+const MOVE=[-16,0,14,-8];
+const EVID={
+  S2:[['CAM-3',24,'evMost'],['CAM-3',66,'evIdlePump']],
+  S1:[['CAM-1',54,'evRainIdle'],['CAM-2',12,'evBefore']],
+  S3:[['CAM-4',0,'evEmpty0'],['CAM-4',36,'evEmpty11']],
+  S6:[['CAM-6',102,'evCrane']]
+};
+const MAPPING=[['Шифр','colWbs'],['Наименование работ','colStage'],['Вид работ','colType'],['Захватка','colZone'],['Начало','colStart'],['Окончание','colEnd'],['Резерв, дн','colFloat'],['Техника','colMach']];
+const EVENTS=[{t:0,k:'eCam5Off'},{t:30,k:'eRainOn'},{t:36,k:'eEarly'},{t:72,k:'eCam3Dark'},{t:84,k:'eCam3Ok'},{t:90,k:'eCam5On'},{t:96,k:'eCrane'},{t:102,k:'eRainOff'},{t:144,k:'eEnd'}];
+
+/* ================= Text ================= */
+const I18N={
+en:{
+  brand:'Plan-Fact Site Monitor',project:'Demo site · Block B',shiftOf:'{date} · shift 08:00–20:00',
+  guided:'Guided demo',guidedExit:'Exit guided demo',next:'Next',finish:'Finish',exit:'Exit',
+  play:'Play',pause:'Pause',restart:'Restart the shift',toEnd:'Jump to 20:00',clockSub:'one snapshot per camera every 5 min',
+  lgRain:'Rain',lgNoData:'Camera without data',lgEvent:'Event (click to jump)',
+  tabSetup:'Project setup',tabLive:'Live site',tabReport:'Shift report',tabReview:'Engineer review',tabDash:'PM dashboard',
+  bPrelim:'preliminary',bReady:'ready',bToReview:'{n} to review',bApproved:'approved',bAlerts:'alerts: {n}',bWaiting:'after 20:00',
+  trRain:'Rain 10:30–16:30',trOffline:'CAM-5 offline 08:00–15:30',trDark:'CAM-3 too dark 14:00–15:00',trEarly:'11:00 · early warning',trCrane:'16:00 · crane detected in Section 3',trEnd:'20:00 · shift report',
+  uD:'d',uMH:'MH',uH:'h',
+  schedH:'Schedule',loadSample:'Load sample schedule',dropHint:'The demo ships with a sample XLS schedule for Block B. A real upload is parsed the same way: columns are matched by their headers, not by position.',
+  parsed:'{n} stages parsed',fileMeta:'sheet «График» · 7 rows · 8 columns · stored in project-plans/',mapping:'Column mapping',
+  colWbs:'WBS',colStage:'Stage',colType:'Work type',colZone:'Zone',colStart:'Start',colEnd:'Finish',colFloat:'Float, d',colMach:'Machines per shift',
+  fromRef:'from reference table',perShift:'{n} × {cls}, {h} h',
+  camsH:'Cameras',checkCams:'Check all cameras',checking:'checking…',camOk:'OK · {ms} ms',camTimeout:'timeout 5 s · retrying in background',camNot:'not checked',
+  zonesH:'Zones',zonesHint:'Drag a corner to redraw a zone. A machine counts toward the zone under its ground point, the white dot.',resetZones:'Reset zones',
+  refH:'Reference table: work type → machines',
+  wt_excavation:'Excavation',wt_foundation:'Foundation',wt_frame:'Frame',wt_drain:'External networks',wt_backfill:'Backfill',wt_road:'Roads',wt_steel:'Steel frame',
+  optZones:'Zones',optBoxes:'Detections',liveNote:'Green box: working · amber: idle · dashed: confidence under 0.70',
+  stOk:'OK',stDark:'No data · too dark',stOffline:'Offline',
+  tileCount:'{n} machines · {w} working',tileCount1:'1 machine · {w} working',tileNone:'No machines in view',tileNoData:'Frame excluded from the facts',
+  boardH:'Zones at {time}',bZone:'Zone',bCams:'Cameras',bStage:'Stage',bNow:'Machines now / plan',bCov:'Coverage',bStatus:'Status so far',
+  noActive:'no active stage',startsOn:'{stage} starts {date}',siteWide:'Site-wide: tower crane, not tied to a zone',
+  dedupe:'Pit 2 is watched by CAM-1 and CAM-2. The zone count takes the maximum per class, not the sum.',
+  repTitle:'Shift report · {date}',repPrelim:'Preliminary · as of {time}',repReady:'Ready for review',repApproved:'Approved',repMeta:'rules {r} · model {m} · schedule v3 (baseline v1)',
+  cStage:'Stage',cCov:'Coverage',cMH:'MH present / plan',cStatus:'Status',cSpi:'SPI',cFc:'Forecast finish',cRisk:'Risk',
+  showMath:'Arithmetic',afterShift:'after 20:00',notScored:'not scored today',
+  mPlan:'plan {plan} MH × {c} of the shift observed = {exp} MH expected',
+  mRho:'present {p} MH → ρ = {p} ÷ {exp} = {rho}',
+  mU:'working {w} MH → u = {w} ÷ {p} = {u}',
+  mRule:'{rule}: {cond} → {st}',
+  mSpi:'EV {ev} MH ÷ PV {pv} MH → SPI = {spi}',
+  mFc:'rate {rate} MH/day (3-day average) → {rem} MH left ÷ rate = {need} d vs {left} d planned → slip {slip} d',
+  mRisk:'total float {fl} d → risk {risk}',
+  mR4:'no active stage in this zone needs these machines; {p} MH observed → R4: {st}',
+  mR0:'coverage {c} is under 60% → R0: not scored today, sent to support',
+  cond_R0:'coverage < 60%',cond_R1:'ρ < 0.1',cond_R2:'ρ < 0.7',cond_R3:'u < 0.5',cond_R4:'machines of a stage not started',cond_R5:'no rule matched',
+  tlH:'Machines in each stage’s zone, 08:00–20:00',tlPresent:'Present',tlWorking:'Working',tlPlan:'Planned count',tlRain:'Rain',tlNoData:'No data',tlTable:'Show as table',tlChart:'Show as chart',tlHour:'Hour',tlNoDataCell:'no data',
+  s_WAIT:'Collecting data',s_R0:'No data',s_R1:'Work not performed',s_R2:'Resource shortage',s_R3:'Machinery idle',s_R4:'Ahead / off-plan',s_R5:'On track',s_NS:'Not started',s_DONE:'Completed',s_RES:'Resolved by correction',
+  risk_low:'Low',risk_medium:'Medium',risk_high:'High',
+  revH:'Deviations to review',revWait:'Deviations appear when the shift ends at 20:00. Until then the engineer watches the live site and gets early warnings.',revWaitBtn:'Jump to 20:00',
+  vDelay:'Confirm delay',vFM:'Force majeure',vRecog:'Recognition error',
+  fm_weather:'Weather',fm_breakdown:'Breakdown',fm_supply:'Supply failure',fm_other:'Other',fmPick:'Cause:',
+  corrH:'Correct today’s facts',corrRemove:'Remove the “mobile_crane” detections 16:00–18:55: it is a manipulator truck',corrP:'Present machine-hours',corrW:'Working machine-hours',corrApply:'Apply and recompute',corrCancel:'Cancel',
+  feedback:'{n} frames relabelled and sent to ml-feedback-dataset/{m}/',
+  v_delay:'Delay confirmed',v_fm:'Force majeure: {t}',v_recog:'Recognition error · facts corrected',change:'Change',
+  progress:'{a} of {b} deviations have a verdict',approve:'Approve report',approvedAt:'Approved at {time}. The PM has been notified.',
+  supportH:'Sent to support, not to the PM',supportRow:'{stage}: coverage {c}. {cam} was offline 08:00–15:30, so the stage is not scored today.',
+  auditH:'Audit log',evidence:'Evidence frames',hypH:'Likely causes',conf_high:'high',conf_medium:'medium',conf_low:'low',
+  resolvedNote:'No deviation after the correction, so it never reaches the PM.',
+  cm1:'plan {plan} MH · present {p} MH · coverage {c} → ρ = {rho}, u = {u} → {rule}',
+  cm2:'SPI {spi} · forecast {fc} ({slip} d, float {fl} d)',
+  cm4:'stage starts {date} · {p} MH of {cls} observed → R4',
+  cmWas:'before the correction: {rule} · {st}',
+  hAbsent:'No machines since the shift started at 08:00: contractor absent',
+  hFront:'No work front or permit',
+  hShort:'At most {have} of {need} × {cls} on site at any time',
+  hSupply:'Mixer trucks on site {h} h of {plan} h planned: concrete supply gaps',
+  hRain:'Rain 10:30–16:30 in the weather feed; machines stood idle through it',
+  hEarly:'Early mobilisation for a stage that starts {date}',
+  hLowConf:'Detection confidence {conf} is under 0.70: check the frame',
+  evMost:'{t} · pump and 1 mixer truck',evIdlePump:'{t} · pump idle, no mixer',evRainIdle:'{t} · idle in the rain',evBefore:'{t} · working before the rain',evEmpty0:'{t} · empty at shift start',evEmpty11:'{t} · still empty',evCrane:'{t} · “mobile_crane” 0.64',
+  dashH:'Project manager dashboard',dashWait:'Today’s report is waiting for the engineer. The dashboard shows verified data only, so today’s forecast appears after approval.',
+  alertH:'High risk of missing the deadline',alertBody:'{stage}: forecast finish {fc} against {pl} in the plan ({slip} d, float {fl} d).',alertSucc:'{succ} would start {ns} instead of {os}.',alertCause:'Cause confirmed by the engineer: {c}',
+  kCP:'Critical path impact',kCPsub:'from “{stage}”',kCPnone:'no critical stage affected',kHigh:'High-risk stages',kIssues:'Open issues',kIssuesSub:'confirmed by the engineer',kCov:'Data coverage today',kCovSub:'across active zones',kCams:'Cameras online',kCamsSub:'at {time}',
+  ganttH:'Schedule: plan, progress, forecast',gPlan:'Plan',gProg:'Progress by machine-hours',gFloat:'Float',gFc:'Forecast finish',gToday:'Today',gShift:'shifted start',
+  gTipPlan:'Plan {a} – {b}',gTipFloat:'Float {n} d',gTipFc:'Forecast {fc} · slip {slip} d · risk {risk}',gTipSpi:'SPI {spi}',
+  issuesH:'Issues from the approved report',iStage:'Stage',iIssue:'Issue',iVerdict:'Verdict',iRisk:'Risk',closedByCorr:'closed: recognition error',
+  camsNowH:'Cameras at {time}',
+  botH:'Bot notifications',botSub:'Telegram bot · mock-up',to_engineer:'to engineer',to_pm:'to PM',to_support:'to support',
+  bCamOff:'{cam} is not responding (timeout 5 s). Retrying with back-off; its zone shows “no data”.',
+  bEarly:'Early warning · {stage}: no machines since 08:00. Plan: {plan}.',
+  bCamBack:'{cam} is back online.',
+  bReady:'Shift report for {date} is ready: {n} deviations to review.',
+  bAlert:'Risk HIGH · {stage}: slip {slip} d against {fl} d float.',
+  bDigest:'Also today: {list}.',
+  bTicket:'Ticket: {cam} offline 08:00–15:30, “{zone}” coverage {c}.',
+  bOpenLive:'Open live site',bOpenReview:'Review now',bOpenDash:'Open dashboard',
+  logH:'Event log',eRainOn:'Weather feed: rain started',eRainOff:'Weather feed: rain stopped',eCam5Off:'CAM-5: timeout 5 s, retrying with back-off',eCam5On:'CAM-5: back online',eCam3Dark:'CAM-3: frame too dark (brightness 3%), excluded',eCam3Ok:'CAM-3: image restored',eCrane:'CAM-6: “mobile_crane” 0.64 in Section 3; its stage starts {date}',eEarly:'Early warning sent: {stage}',eEnd:'Shift ended: report built, engineer notified',
+  noSignal:'NO SIGNAL',noSignalSub:'timeout 5 s · retry with back-off',qgFail:'QUALITY GATE: TOO DARK',qgFailSub:'brightness 3% · counted as no data',
+  toastEarly:'Early warning sent to the engineer',toastEnd:'Shift ended. The report is ready for review.',toastRecomputed:'Report recomputed',toastApproved:'Report approved. The PM has been notified.',
+  auditVerdict:'{stage}: {v}',auditRecompute:'Report recomputed after the correction',auditApprove:'Report approved',
+  lbClose:'Close',
+  g:[
+    'The PM uploads the XLS schedule. Columns are matched by their headers, and the storm drain gets its machines from the reference table.',
+    'All six camera URLs are checked in parallel. CAM-5 times out and keeps retrying in the background; nothing waits for it.',
+    'Zones are polygons drawn on each camera frame. Drag a corner and the counts follow each machine’s ground point.',
+    'The shift replays at 300×: one snapshot per camera every 5 minutes, each detected once. Watch Pit 2 when rain starts at 10:30.',
+    '11:00. The backfill zone has had no machines since 08:00, so the engineer gets an early warning the same morning.',
+    '14:00. CAM-3 goes dark. Its frames fail the quality gate and count as “no data”, never as “no machines”.',
+    '16:00. The detector reports a mobile crane in Section 3, whose stage starts next week. Confidence is only 0.64.',
+    'The shift ends. The engine maps the facts to stages, and every status shows the arithmetic behind it.',
+    'The engineer confirms the foundation slab delay: one mixer truck instead of two all day.',
+    'The backfill delay is confirmed too.',
+    'Pit 2 stood idle in the rain, so the engineer marks it as force majeure: weather.',
+    'The “crane” is a manipulator truck. The engineer rejects it, the report recomputes, and 36 frames go to the retraining set.',
+    'The engineer approves the report. Only verified findings reach the PM.',
+    'The PM gets one alert: the slab slips 3 days against 1 day of float, which pushes the concrete frame by 2 days.',
+    'The same design runs 4,000 cameras on 16 vCPU of inference, and every correction improves the next model.'
+  ]
+},
+ru:{
+  brand:'План-Факт · мониторинг стройки',project:'Демо-объект · Корпус Б',shiftOf:'{date} · смена 08:00–20:00',
+  guided:'Демо по шагам',guidedExit:'Выйти из демо',next:'Далее',finish:'Готово',exit:'Выйти',
+  play:'Пуск',pause:'Пауза',restart:'Начать смену заново',toEnd:'К 20:00',clockSub:'снимок с камеры раз в 5 мин',
+  lgRain:'Дождь',lgNoData:'Камера без данных',lgEvent:'Событие (нажмите, чтобы перейти)',
+  tabSetup:'Настройка проекта',tabLive:'Площадка онлайн',tabReport:'Отчёт за смену',tabReview:'Проверка инженером',tabDash:'Дашборд РП',
+  bPrelim:'предварительный',bReady:'готов',bToReview:'на проверку: {n}',bApproved:'утверждён',bAlerts:'уведомлений: {n}',bWaiting:'после 20:00',
+  trRain:'Дождь 10:30–16:30',trOffline:'CAM-5 недоступна 08:00–15:30',trDark:'CAM-3: темно 14:00–15:00',trEarly:'11:00 · раннее предупреждение',trCrane:'16:00 · кран в секции 3',trEnd:'20:00 · отчёт за смену',
+  uD:'дн',uMH:'маш.-ч',uH:'ч',
+  schedH:'Календарный график',loadSample:'Загрузить пример графика',dropHint:'В демо встроен пример графика в XLS для корпуса Б. Настоящий файл разбирается так же: столбцы определяются по заголовкам, а не по порядку.',
+  parsed:'Распознано этапов: {n}',fileMeta:'лист «График» · 7 строк · 8 столбцов · сохранён в project-plans/',mapping:'Сопоставление столбцов',
+  colWbs:'Шифр',colStage:'Этап',colType:'Вид работ',colZone:'Зона',colStart:'Начало',colEnd:'Окончание',colFloat:'Резерв, дн',colMach:'Техника на смену',
+  fromRef:'из справочника',perShift:'{n} × {cls}, {h} ч',
+  camsH:'Камеры',checkCams:'Проверить камеры',checking:'проверка…',camOk:'ОК · {ms} мс',camTimeout:'таймаут 5 с · повтор в фоне',camNot:'не проверена',
+  zonesH:'Зоны',zonesHint:'Перетащите угол, чтобы изменить зону. Машина относится к зоне, в которую попадает её точка опоры — белая точка.',resetZones:'Сбросить зоны',
+  refH:'Справочник: вид работ → техника',
+  wt_excavation:'Котлован',wt_foundation:'Фундамент',wt_frame:'Каркас',wt_drain:'Наружные сети',wt_backfill:'Обратная засыпка',wt_road:'Дороги',wt_steel:'Металлокаркас',
+  optZones:'Зоны',optBoxes:'Детекции',liveNote:'Зелёная рамка — работает · жёлтая — простой · пунктир — уверенность ниже 0,70',
+  stOk:'ОК',stDark:'Нет данных · темно',stOffline:'Нет связи',
+  tileCount:'машин: {n} · в работе: {w}',tileCount1:'машин: 1 · в работе: {w}',tileNone:'Техники в кадре нет',tileNoData:'Кадр исключён из факта',
+  boardH:'Зоны на {time}',bZone:'Зона',bCams:'Камеры',bStage:'Этап',bNow:'Техника сейчас / план',bCov:'Покрытие',bStatus:'Статус за смену',
+  noActive:'нет активного этапа',startsOn:'«{stage}» начнётся {date}',siteWide:'Общеплощадочная техника: башенный кран, не привязан к зоне',
+  dedupe:'Котлован 2 видят CAM-1 и CAM-2. Для зоны берётся максимум по каждому классу, а не сумма.',
+  repTitle:'Отчёт за смену · {date}',repPrelim:'Предварительный · на {time}',repReady:'Ожидает проверки',repApproved:'Утверждён',repMeta:'правила {r} · модель {m} · график v3 (базовый v1)',
+  cStage:'Этап',cCov:'Покрытие',cMH:'Маш.-ч факт / план',cStatus:'Статус',cSpi:'SPI',cFc:'Прогноз окончания',cRisk:'Риск',
+  showMath:'Расчёт',afterShift:'после 20:00',notScored:'сегодня не оценивается',
+  mPlan:'план {plan} маш.-ч × наблюдаемая доля смены {c} = ожидается {exp} маш.-ч',
+  mRho:'на площадке {p} маш.-ч → ρ = {p} ÷ {exp} = {rho}',
+  mU:'в работе {w} маш.-ч → u = {w} ÷ {p} = {u}',
+  mRule:'{rule}: {cond} → {st}',
+  mSpi:'EV {ev} маш.-ч ÷ PV {pv} маш.-ч → SPI = {spi}',
+  mFc:'темп {rate} маш.-ч/день (среднее за 3 дня) → осталось {rem} маш.-ч ÷ темп = {need} дн против {left} дн по плану → отставание {slip} дн',
+  mRisk:'общий резерв {fl} дн → риск: {risk}',
+  mR4:'ни одному активному этапу в этой зоне эта техника не нужна; наблюдалось {p} маш.-ч → R4: {st}',
+  mR0:'покрытие {c} ниже 60% → R0: сегодня не оценивается, передано в поддержку',
+  cond_R0:'покрытие < 60%',cond_R1:'ρ < 0,1',cond_R2:'ρ < 0,7',cond_R3:'u < 0,5',cond_R4:'техника неначатого этапа',cond_R5:'ни одно правило не сработало',
+  tlH:'Техника в зоне каждого этапа, 08:00–20:00',tlPresent:'На площадке',tlWorking:'В работе',tlPlan:'По плану',tlRain:'Дождь',tlNoData:'Нет данных',tlTable:'Показать таблицей',tlChart:'Показать графиком',tlHour:'Час',tlNoDataCell:'нет данных',
+  s_WAIT:'Сбор данных',s_R0:'Нет данных',s_R1:'Работы не ведутся',s_R2:'Недостаток ресурсов',s_R3:'Простой техники',s_R4:'Опережение / вне графика',s_R5:'По графику',s_NS:'Не начат',s_DONE:'Завершён',s_RES:'Снято после исправления',
+  risk_low:'Низкий',risk_medium:'Средний',risk_high:'Высокий',
+  revH:'Отклонения на проверку',revWait:'Отклонения появятся после окончания смены в 20:00. До этого инженер следит за площадкой онлайн и получает ранние предупреждения.',revWaitBtn:'К 20:00',
+  vDelay:'Подтвердить отставание',vFM:'Форс-мажор',vRecog:'Ошибка распознавания',
+  fm_weather:'Погода',fm_breakdown:'Поломка техники',fm_supply:'Срыв поставок',fm_other:'Другое',fmPick:'Причина:',
+  corrH:'Исправить факт за сегодня',corrRemove:'Удалить детекции «mobile_crane» 16:00–18:55: это манипулятор',corrP:'Маш.-ч на площадке',corrW:'Маш.-ч в работе',corrApply:'Применить и пересчитать',corrCancel:'Отмена',
+  feedback:'Кадров переразмечено и отправлено в ml-feedback-dataset/{m}/: {n}',
+  v_delay:'Отставание подтверждено',v_fm:'Форс-мажор: {t}',v_recog:'Ошибка распознавания · факт исправлен',change:'Изменить',
+  progress:'Решение принято по {a} из {b} отклонений',approve:'Утвердить отчёт',approvedAt:'Утверждён в {time}. РП уведомлён.',
+  supportH:'Передано в поддержку, а не РП',supportRow:'{stage}: покрытие {c}. {cam} была недоступна 08:00–15:30, поэтому этап сегодня не оценивается.',
+  auditH:'Журнал проверки',evidence:'Кадры-доказательства',hypH:'Вероятные причины',conf_high:'высокая',conf_medium:'средняя',conf_low:'низкая',
+  resolvedNote:'После исправления отклонения нет, до РП оно не дойдёт.',
+  cm1:'план {plan} маш.-ч · факт {p} маш.-ч · покрытие {c} → ρ = {rho}, u = {u} → {rule}',
+  cm2:'SPI {spi} · прогноз {fc} ({slip} дн, резерв {fl} дн)',
+  cm4:'этап начнётся {date} · {cls}: {p} маш.-ч → R4',
+  cmWas:'до исправления: {rule} · {st}',
+  hAbsent:'Техники нет с начала смены в 08:00: подрядчик отсутствует',
+  hFront:'Нет фронта работ или допуска',
+  hShort:'{cls}: одновременно не больше {have} из {need}',
+  hSupply:'Миксеры на площадке {h} ч из {plan} ч по плану: перебои с поставкой бетона',
+  hRain:'Дождь 10:30–16:30 по метеоданным; всё это время техника простаивала',
+  hEarly:'Ранняя мобилизация: этап начинается {date}',
+  hLowConf:'Уверенность детекции {conf} ниже 0,70: проверьте кадр',
+  evMost:'{t} · насос и один миксер',evIdlePump:'{t} · насос простаивает, миксера нет',evRainIdle:'{t} · простой в дождь',evBefore:'{t} · работа до дождя',evEmpty0:'{t} · пусто в начале смены',evEmpty11:'{t} · по-прежнему пусто',evCrane:'{t} · «mobile_crane» 0,64',
+  dashH:'Дашборд руководителя проекта',dashWait:'Отчёт за сегодня ждёт проверки инженером. На дашборде только проверенные данные, поэтому прогноз на сегодня появится после утверждения.',
+  alertH:'Высокий риск срыва сроков',alertBody:'{stage}: прогноз окончания {fc} при плане {pl} ({slip} дн, резерв {fl} дн).',alertSucc:'«{succ}» начнётся {ns} вместо {os}.',alertCause:'Причина подтверждена инженером: {c}',
+  kCP:'Сдвиг критического пути',kCPsub:'из-за этапа «{stage}»',kCPnone:'критические этапы не затронуты',kHigh:'Этапы с высоким риском',kIssues:'Открытые проблемы',kIssuesSub:'подтверждены инженером',kCov:'Покрытие данными за день',kCovSub:'по активным зонам',kCams:'Камер в сети',kCamsSub:'на {time}',
+  ganttH:'График: план, выполнение, прогноз',gPlan:'План',gProg:'Выполнение по маш.-ч',gFloat:'Резерв',gFc:'Прогноз окончания',gToday:'Сегодня',gShift:'сдвиг начала',
+  gTipPlan:'План {a} – {b}',gTipFloat:'Резерв {n} дн',gTipFc:'Прогноз {fc} · отставание {slip} дн · риск: {risk}',gTipSpi:'SPI {spi}',
+  issuesH:'Проблемы из утверждённого отчёта',iStage:'Этап',iIssue:'Проблема',iVerdict:'Решение',iRisk:'Риск',closedByCorr:'закрыто: ошибка распознавания',
+  camsNowH:'Камеры на {time}',
+  botH:'Уведомления бота',botSub:'Telegram-бот · макет',to_engineer:'инженеру',to_pm:'РП',to_support:'поддержке',
+  bCamOff:'{cam} не отвечает (таймаут 5 с). Повторяем с увеличением интервала; её зона — «нет данных».',
+  bEarly:'Раннее предупреждение · {stage}: техники нет с 08:00. План: {plan}.',
+  bCamBack:'{cam} снова в сети.',
+  bReady:'Отчёт за {date} готов. Отклонений на проверку: {n}.',
+  bAlert:'Риск ВЫСОКИЙ · {stage}: отставание {slip} дн при резерве {fl} дн.',
+  bDigest:'Также сегодня: {list}.',
+  bTicket:'Заявка: {cam} недоступна 08:00–15:30, покрытие зоны «{zone}» {c}.',
+  bOpenLive:'Открыть площадку',bOpenReview:'Проверить',bOpenDash:'Открыть дашборд',
+  logH:'Журнал событий',eRainOn:'Метеоданные: начался дождь',eRainOff:'Метеоданные: дождь закончился',eCam5Off:'CAM-5: таймаут 5 с, повтор с увеличением интервала',eCam5On:'CAM-5: снова в сети',eCam3Dark:'CAM-3: кадр слишком тёмный (яркость 3%), исключён',eCam3Ok:'CAM-3: изображение восстановлено',eCrane:'CAM-6: «mobile_crane» 0,64 в секции 3; этап начнётся {date}',eEarly:'Отправлено раннее предупреждение: {stage}',eEnd:'Смена окончена: отчёт сформирован, инженер уведомлён',
+  noSignal:'НЕТ СИГНАЛА',noSignalSub:'таймаут 5 с · повтор с увеличением интервала',qgFail:'КОНТРОЛЬ КАЧЕСТВА: ТЕМНО',qgFailSub:'яркость 3% · считается «нет данных»',
+  toastEarly:'Инженеру отправлено раннее предупреждение',toastEnd:'Смена окончена. Отчёт готов к проверке.',toastRecomputed:'Отчёт пересчитан',toastApproved:'Отчёт утверждён. РП уведомлён.',
+  auditVerdict:'{stage}: {v}',auditRecompute:'Отчёт пересчитан после исправления',auditApprove:'Отчёт утверждён',
+  lbClose:'Закрыть',
+  g:[
+    'РП загружает календарный график в XLS. Столбцы сопоставляются по заголовкам, а для ливнёвки техника берётся из справочника.',
+    'Все шесть камер проверяются параллельно. CAM-5 не отвечает и повторяет попытки в фоне — никто её не ждёт.',
+    'Зоны — это многоугольники на кадре каждой камеры. Перетащите угол, и подсчёт пойдёт по точкам опоры машин.',
+    'Смена воспроизводится в 300 раз быстрее: снимок с каждой камеры раз в 5 минут, каждый распознаётся один раз. Следите за котлованом 2, когда в 10:30 начнётся дождь.',
+    '11:00. В зоне обратной засыпки нет техники с 08:00 — инженер получает раннее предупреждение в то же утро.',
+    '14:00. CAM-3 темнеет. Кадры не проходят контроль качества и считаются «нет данных», а не «нет техники».',
+    '16:00. Детектор видит автокран в секции 3, хотя её этап начнётся только на следующей неделе. Уверенность всего 0,64.',
+    'Смена закончилась. Движок сопоставляет факт с этапами, и у каждого статуса виден расчёт.',
+    'Инженер подтверждает отставание по фундаментной плите: весь день один миксер вместо двух.',
+    'Отставание по обратной засыпке тоже подтверждено.',
+    'Котлован 2 простаивал из-за дождя — инженер отмечает форс-мажор: погода.',
+    '«Автокран» оказался манипулятором. Инженер отклоняет детекцию, отчёт пересчитывается, а 36 кадров уходят в набор для дообучения.',
+    'Инженер утверждает отчёт. До РП доходят только проверенные выводы.',
+    'РП получает одно уведомление: плита отстаёт на 3 дня при резерве 1 день, и монолитный каркас сдвигается на 2 дня.',
+    'Та же архитектура обслуживает 4000 камер на 16 vCPU для инференса, а каждое исправление улучшает следующую модель.'
+  ]
+}};
+
+/* ================= Helpers ================= */
+function $(s,r){return (r||document).querySelector(s);}
+function $$(s,r){return Array.from((r||document).querySelectorAll(s));}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function inR(t,rs){return !!rs&&rs.some(r=>t>=r[0]&&t<r[1]);}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function hstr(s){let h=0;for(const ch of s)h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h);}
+function rnd(n){const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);}
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function D(iso){const p=iso.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]));}
+const DAY=86400000;
+function dd(a,b){return Math.round((b-a)/DAY);}
+function addDays(d,n){return new Date(d.getTime()+n*DAY);}
+const TODAY_D=D(TODAY);
+
+let saved=null;try{saved=localStorage.getItem('pf-lang');}catch(e){}
+const state={
+  lang:saved==='ru'?'ru':'ru',tab:'live',T:42,playing:false,speed:1,stopAt:null,
+  schedLoaded:true,camCheck:'done',camRes:Object.fromEntries(CAMS.map(c=>[c.id,c.ms?'ok':'timeout'])),
+  poly:clone(DEFAULT_POLY),editCam:'CAM-6',showZones:true,showBoxes:true,
+  report:null,report0:null,devIds:[],verdicts:{},fmType:{},corr:{removed:new Set(),override:{}},openCorr:null,openFM:null,
+  approved:false,approvedAt:null,audit:[],clockMin:20*60+32,guided:null,tlTable:false,feedbackN:{}
+};
+
+function loc(){return state.lang==='ru'?'ru-RU':'en-GB';}
+function fDate(d,o){return new Intl.DateTimeFormat(loc(),Object.assign({timeZone:'UTC'},o)).format(d);}
+function fLong(d){return fDate(d,{weekday:'short',day:'numeric',month:'short',year:'numeric'});}
+function fShort(d){return fDate(d,{day:'numeric',month:'short'});}
+function num(v,dg){if(dg==null)dg=2;return Number(v).toLocaleString(loc(),{minimumFractionDigits:dg,maximumFractionDigits:dg});}
+function pct(v){return Number(v).toLocaleString(loc(),{style:'percent',maximumFractionDigits:0});}
+function signed(v,dg){if(dg==null)dg=1;const r=Number(v.toFixed(dg));return (r>0?'+':r<0?'−':'±')+num(Math.abs(r),dg);}
+function hhmm(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+function slotTime(t){return hhmm(START+SLOTMIN*t);}
+function L(o){return o==null?'':typeof o==='string'?o:(o[state.lang]!=null?o[state.lang]:o.en);}
+function tr(k,v){let s=I18N[state.lang][k];if(s==null)s=I18N.en[k];if(s==null)s=k;if(v)s=s.replace(/\{(\w+)\}/g,(_,x)=>v[x]!=null?v[x]:'');return s;}
+function clsName(c){return L(CLASSES[c]);}
+function S(id){return STAGES.find(s=>s.id===id);}
+function activeOn(s,day){return D(s.start)<=day&&day<=D(s.end);}
+function planText(s){return s.req.map(([c,n])=>n+' × '+clsName(c)).join(', ');}
+
+/* ================= Detection model (scripted) ================= */
+function camStatus(cam,t){if(inR(t,cam.offline))return 'offline';if(inR(t,cam.dark))return 'dark';return 'ok';}
+function pose(a,t){if(!inR(t,a.present))return null;return {working:inR(t,a.work),k:(t*7+hstr(a.id))%4};}
+function place(a,camId,st){
+  const v=a.views[camId];const key=(a.cls==='pump'&&st.working)?'pumpU':a.cls;const dm=DIMS[key];
+  let x=v.x;if(st.working&&MOVERS.has(a.cls))x+=MOVE[st.k]*v.s;
+  const w=dm[0]*v.s,h=dm[1]*v.s;return {x,y:v.gy-h,w,h,s:v.s,flip:!!v.flip};
+}
+function pip(x,y,pts){let ins=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins;}return ins;}
+function zoneAt(camId,gp){const P=state.poly[camId];for(const z in P){if(pip(gp[0],gp[1],P[z]))return z;}return null;}
+function detect(cam,t){
+  const out=[];if(camStatus(cam,t)!=='ok')return out;
+  for(const a of ACTORS){
+    if(!a.views[cam.id])continue;const st=pose(a,t);if(!st)continue;
+    const p=place(a,cam.id,st);const cls=a.detectAs||a.cls;
+    const conf=a.conf!=null?a.conf:clamp(CONF[a.cls]+(rnd(t*13+hstr(a.id+cam.id))-.5)*.06,.5,.99);
+    const gp=[p.x+p.w/2,p.y+p.h];const zone=SITEWIDE.has(cls)?null:zoneAt(cam.id,gp);
+    out.push({a,cls,conf,working:st.working,st,p,gp,zone});
+  }
+  return out;
+}
+
+/* ================= Facts & engine ================= */
+const EMPTY=new Set();
+function simulate(P,removed,track){
+  removed=removed||EMPTY;
+  const acc={cov:{},pres:{},work:{},maxc:{},minconf:{}};const series=[],trans=[],stat=[];let prev=null;
+  for(let t=0;t<P;t++){
+    const zc={};
+    for(const cam of CAMS){
+      const zs=Object.keys(state.poly[cam.id]);
+      for(const z of zs)if(!zc[z])zc[z]={cov:false,p:{},w:{}};
+      if(camStatus(cam,t)!=='ok')continue;
+      const per={};for(const z of zs)per[z]={p:{},w:{}};
+      for(const d of detect(cam,t)){
+        if(removed.has(d.a.id)||!d.zone||!per[d.zone])continue;
+        const e=per[d.zone];e.p[d.cls]=(e.p[d.cls]||0)+1;if(d.working)e.w[d.cls]=(e.w[d.cls]||0)+1;
+        const mc=acc.minconf[d.zone]||(acc.minconf[d.zone]={});mc[d.cls]=Math.min(mc[d.cls]!=null?mc[d.cls]:1,d.conf);
+      }
+      for(const z of zs){const e=zc[z];e.cov=true;for(const c in per[z].p)e.p[c]=Math.max(e.p[c]||0,per[z].p[c]);for(const c in per[z].w)e.w[c]=Math.max(e.w[c]||0,per[z].w[c]);}
+    }
+    for(const z in zc){
+      const e=zc[z];if(!e.cov)continue;acc.cov[z]=(acc.cov[z]||0)+1;
+      const pr=acc.pres[z]||(acc.pres[z]={}),wk=acc.work[z]||(acc.work[z]={}),mx=acc.maxc[z]||(acc.maxc[z]={});
+      for(const c in e.p){pr[c]=(pr[c]||0)+e.p[c];mx[c]=Math.max(mx[c]||0,e.p[c]);}
+      for(const c in e.w)wk[c]=(wk[c]||0)+e.w[c];
+    }
+    series.push(zc);
+    if(track){
+      const ev=evalStages(acc,t+1);const cur={};for(const id in ev)cur[id]=ev[id].rule;stat.push(cur);
+      if(prev){for(const id in cur)if(cur[id]!==prev[id])trans.push({t,id,from:prev[id],to:cur[id]});}
+      prev=cur;
+    }
+  }
+  return {acc,series,trans,stat,P};
+}
+function claimed(z,c){return STAGES.some(x=>x.zone===z&&activeOn(x,TODAY_D)&&x.req.some(r=>r[0]===c));}
+function share(s,c){
+  const act=STAGES.filter(x=>x.zone===s.zone&&activeOn(x,TODAY_D)&&x.req.some(r=>r[0]===c));
+  const tot=act.reduce((m,x)=>m+x.req.find(r=>r[0]===c)[1],0);const mine=s.req.find(r=>r[0]===c)[1];return tot?mine/tot:0;
+}
+function evalStages(acc,P,ov){
+  ov=ov||{};const out={};
+  for(const s of STAGES){
+    const r={s,active:activeOn(s,TODAY_D)};const cov=acc.cov[s.zone]||0;
+    r.cov=cov;r.c=P?cov/P:0;r.planMH=s.req.reduce((m,q)=>m+q[1]*q[2],0);
+    if(r.active){
+      let p=0,w=0;
+      for(const q of s.req){const c=q[0];if(SITEWIDE.has(c))continue;const f=share(s,c);p+=f*((acc.pres[s.zone]||{})[c]||0);w+=f*((acc.work[s.zone]||{})[c]||0);}
+      r.pMH=p*SLOTMIN/60;r.wMH=w*SLOTMIN/60;
+      if(ov[s.id]){r.pMH=ov[s.id].p;r.wMH=ov[s.id].w;r.corrected=true;}
+      r.expMH=r.planMH*cov/SLOTS;r.rho=r.expMH>0?r.pMH/r.expMH:0;r.u=r.pMH>0?r.wMH/r.pMH:0;
+      r.rule=P<12?'WAIT':r.c<.6?'R0':r.rho<.1?'R1':r.rho<.7?'R2':r.u<.5?'R3':'R5';
+    }else{
+      let p=0;r.obs=[];
+      for(const q of s.req){const c=q[0];if(SITEWIDE.has(c)||claimed(s.zone,c))continue;const v=(acc.pres[s.zone]||{})[c]||0;if(v){p+=v;r.obs.push(c);}}
+      r.pMH=p*SLOTMIN/60;r.rule=p>0?'R4':(TODAY_D<D(s.start)?'NS':'DONE');
+    }
+    out[s.id]=r;
+  }
+  return out;
+}
+function pace(r){
+  const s=r.s,dayIdx=dd(D(s.start),TODAY_D)+1,dur=dd(D(s.start),D(s.end))+1,daily=r.planMH,total=daily*dur;
+  const series=s.hist.concat([r.wMH]);const EV=series.reduce((a,b)=>a+b,0),PV=daily*dayIdx,spi=EV/PV;
+  const last=series.slice(-3);const rate=last.reduce((a,b)=>a+b,0)/last.length;
+  const remaining=Math.max(0,total-EV);const need=rate>0?remaining/rate:99;const left=dd(TODAY_D,D(s.end));const slip=need-left;
+  const risk=slip<=1e-9?'low':slip<=s.float+1e-9?'medium':'high';const fc=addDays(TODAY_D,Math.ceil(need-1e-9));
+  return {dayIdx,dur,total,EV,PV,spi,rate,remaining,need,left,slip,risk,fc};
+}
+function buildReport(){
+  const sim=simulate(SLOTS,state.corr.removed,false);const ev=evalStages(sim.acc,SLOTS,state.corr.override);
+  for(const id in ev){const r=ev[id];if(r.active&&['R1','R2','R3','R5'].includes(r.rule))r.pace=pace(r);}
+  return {sim,ev};
+}
+function devOrder(rep){
+  const rr={high:3,medium:2,low:1},ru={R1:4,R2:3,R3:2,R4:1};
+  return STAGES.filter(s=>ru[rep.ev[s.id].rule]).sort((a,b)=>{const A=rep.ev[a.id],B=rep.ev[b.id];return (((B.pace&&rr[B.pace.risk])||0)-((A.pace&&rr[A.pace.risk])||0))||(ru[B.rule]-ru[A.rule]);}).map(s=>s.id);
+}
+function hyps(r,sim){
+  const s=r.s,H=[],mx=sim.acc.maxc[s.zone]||{},pr=sim.acc.pres[s.zone]||{},mc=sim.acc.minconf[s.zone]||{};
+  if(r.rule==='R1'){H.push(['medium',tr('hAbsent')]);H.push(['low',tr('hFront')]);}
+  if(r.rule==='R2'){
+    for(const q of s.req){const have=mx[q[0]]||0;if(have<q[1])H.push(['high',tr('hShort',{have,need:q[1],cls:clsName(q[0])})]);}
+    const mix=s.req.find(q=>q[0]==='mixer');if(mix)H.push(['medium',tr('hSupply',{h:num((pr.mixer||0)*SLOTMIN/60,1),plan:num(mix[1]*mix[2],0)})]);
+  }
+  if(r.rule==='R3'){H.push(['high',tr('hRain')]);H.push(['low',tr('hFront')]);}
+  if(r.rule==='R4'){H.push(['medium',tr('hEarly',{date:fShort(D(s.start))})]);const lo=Math.min.apply(null,Object.values(mc).concat([1]));if(lo<.7)H.push(['high',tr('hLowConf',{conf:num(lo,2)})]);}
+  return H;
+}
+
+/* ================= Drawing: machines & scenes ================= */
+const COL={y:'#E1A21C',yd:'#B7811A',dk:'#2B2F33',st:'#5A6068',gl:'#9FC3D8',rd:'#C4502E',rdd:'#9B3E24',wh:'#E7E9EB',dr:'#D2D6DA',drs:'#A9B1B8',so:'#8C6B49',bl:'#3E6FA8'};
+function wheels(xs,cy,r){return xs.map(x=>`<circle cx="${x}" cy="${cy}" r="${r}" fill="${COL.dk}"/><circle cx="${x}" cy="${cy}" r="${(r*.4).toFixed(1)}" fill="#7B8087"/>`).join('');}
+function dExc(pose){
+  const P=pose<0?[52,12,64,38]:[[60,6,74,32],[58,3,70,17],[54,9,64,25]][pose];const ex=P[0],ey=P[1],tx=P[2],ty=P[3],bb=Math.min(8,46-ty);
+  return `<rect x="2" y="36" width="46" height="10" rx="5" fill="${COL.dk}"/><circle cx="8" cy="41" r="3" fill="#565B61"/><circle cx="42" cy="41" r="3" fill="#565B61"/>`+
+  `<rect x="4" y="21" width="36" height="15" rx="2" fill="${COL.y}"/><rect x="2" y="23" width="8" height="12" rx="1" fill="${COL.yd}"/>`+
+  `<rect x="25" y="10" width="15" height="13" rx="2" fill="${COL.y}"/><rect x="28" y="12.5" width="9.5" height="7" rx="1" fill="${COL.gl}"/>`+
+  `<polyline points="36,22 ${ex},${ey} ${tx},${ty}" fill="none" stroke="${COL.y}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`+
+  `<path d="M${tx-6},${ty} h11 l-2.5,${bb} h-7 z" fill="#474B50"/>`;
+}
+function dTruck(loaded){
+  return `<rect x="3" y="21" width="60" height="5" fill="${COL.dk}"/><path d="M3,7 L42,7 L44,21 L5,21 Z" fill="${COL.rd}"/><path d="M3,7 L42,7 L42.6,11 L3.5,11 Z" fill="${COL.rdd}"/>`+
+  (loaded?`<path d="M7,7 Q22,0 38,7 Z" fill="${COL.so}"/>`:'')+
+  `<path d="M46,9 L58,9 L63,17 L63,24 L46,24 Z" fill="${COL.rd}"/><path d="M49,11 L57,11 L60.5,17 L49,17 Z" fill="${COL.gl}"/>`+wheels([13,25,55],27,5);
+}
+function dDozer(up){
+  const b=up?-4:0;
+  return `<rect x="3" y="22" width="40" height="10" rx="5" fill="${COL.dk}"/><circle cx="9" cy="27" r="2.5" fill="#565B61"/><circle cx="37" cy="27" r="2.5" fill="#565B61"/>`+
+  `<rect x="6" y="12" width="34" height="11" rx="2" fill="${COL.y}"/><rect x="10" y="3" width="15" height="10" rx="1.5" fill="${COL.y}"/><rect x="12.5" y="5" width="10" height="6" rx="1" fill="${COL.gl}"/><rect x="31" y="5" width="2.4" height="8" fill="${COL.dk}"/>`+
+  `<path d="M40,18 L50,${20+b}" stroke="${COL.yd}" stroke-width="3"/><path d="M50,${13+b} Q55.5,${22+b} 50,${31+b} L58,${31+b} L58,${13+b} Z" fill="${COL.yd}"/>`;
+}
+function dMixer(){
+  return `<rect x="3" y="25" width="64" height="5" fill="${COL.dk}"/><g transform="rotate(-10 26 15)"><ellipse cx="26" cy="15" rx="22" ry="10.5" fill="${COL.dr}"/><path d="M10,9 L16,21 M20,5.5 L26,24 M31,5 L36,24 M41,7 L44,20" stroke="${COL.drs}" stroke-width="2"/></g>`+
+  `<path d="M3,17 L8,24" stroke="${COL.st}" stroke-width="2.5"/><path d="M50,11 L62,11 L68,19 L68,28 L50,28 Z" fill="${COL.wh}"/><path d="M53,13 L61,13 L65,19 L53,19 Z" fill="${COL.gl}"/>`+wheels([14,27,59],31,5);
+}
+function dPump(u){
+  const o=u?36:0;
+  let g=`<rect x="3" y="${o+21}" width="80" height="5" fill="${COL.dk}"/><rect x="6" y="${o+10}" width="52" height="12" rx="2" fill="${COL.y}"/>`+
+  `<path d="M62,${o+8} L74,${o+8} L80,${o+16} L80,${o+24} L62,${o+24} Z" fill="${COL.y}"/><path d="M65,${o+10} L73,${o+10} L77,${o+16} L65,${o+16} Z" fill="${COL.gl}"/>`+wheels([14,28,44,70],o+27,5);
+  if(!u)g+=`<path d="M10,${o+8} H58 M13,${o+5} H55 M16,${o+2} H52" stroke="${COL.yd}" stroke-width="2.4" stroke-linecap="round"/>`;
+  else g+=`<polyline points="38,${o+10} 24,5 60,11 84,30" fill="none" stroke="${COL.yd}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M84,30 V60" stroke="${COL.dk}" stroke-width="1.6"/>`;
+  return g;
+}
+function dManip(up){
+  const arm=up?'48,15 33,3 19,9':'48,15 37,10 25,18',hk=up?[19,9,21]:[25,18,25];
+  return `<rect x="3" y="31" width="64" height="5" fill="${COL.dk}"/><rect x="4" y="26" width="42" height="5" fill="#6E747B"/><rect x="6" y="21.5" width="36" height="3.5" fill="#8C939B"/><rect x="6" y="17.5" width="36" height="3.5" fill="#7E858D"/>`+
+  `<path d="M53,17 L64,17 L70,25 L70,34 L53,34 Z" fill="${COL.bl}"/><path d="M56,19 L63,19 L66.5,25 L56,25 Z" fill="${COL.gl}"/><rect x="46" y="13" width="4" height="18" fill="${COL.bl}"/>`+
+  `<polyline points="${arm}" fill="none" stroke="${COL.bl}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M${hk[0]},${hk[1]} V${hk[2]}" stroke="${COL.dk}" stroke-width="1"/>`+wheels([14,27,61],37,5);
+}
+function dTower(t,w){
+  const tx=w?92+((t*23)%64):124,hy=w?28+((t*17)%34):44;
+  let z='';for(let y=16;y<94;y+=8)z+=`M70,${y}L78,${y+8}`;
+  let j='';for(let x=4;x<166;x+=8)j+=`M${x},10L${x+4},15`;
+  return `<g fill="none" stroke="#D39B1E" stroke-width="1.4"><path d="M70,96V14M78,96V14${z}"/><path d="M0,10H170M0,15H170${j}"/><path d="M74,2L20,10M74,2L150,10"/></g>`+
+  `<rect x="4" y="15" width="14" height="8" fill="#6B7178"/><rect x="68" y="14" width="12" height="7" fill="#D39B1E"/><path d="M${tx},15V${hy}" stroke="${COL.dk}" stroke-width="1"/><rect x="${tx-2.5}" y="${hy}" width="5" height="4" fill="${COL.dk}"/>`;
+}
+function drawActor(d,t){
+  const a=d.a,p=d.p,st=d.st;let g='';
+  if(a.cls==='excavator')g=dExc(st.working?(t+hstr(a.id))%3:-1);
+  else if(a.cls==='dump_truck')g=dTruck(st.working&&st.k%2===0);
+  else if(a.cls==='bulldozer')g=dDozer(!st.working);
+  else if(a.cls==='mixer')g=dMixer();
+  else if(a.cls==='pump')g=dPump(st.working);
+  else if(a.cls==='manipulator')g=dManip(st.working);
+  else if(a.cls==='tower_crane')g=dTower(t,st.working);
+  const tf=p.flip?`translate(${(p.x+p.w).toFixed(1)},${p.y.toFixed(1)}) scale(${-p.s},${p.s})`:`translate(${p.x.toFixed(1)},${p.y.toFixed(1)}) scale(${p.s})`;
+  return `<g transform="${tf}">${g}</g>`;
+}
+const POSTS=(()=>{let d='';for(let x=4;x<320;x+=16)d+=`M${x},80V89`;return d;})();
+function rebar(){let d='';for(let i=0;i<=12;i++){const x1=26+i*22.5,x2=2+i*26.3;d+=`M${x1.toFixed(1)},94L${x2.toFixed(1)},180`;}for(const y of [104,116,130,146,164]){const f=(y-94)/86;d+=`M${(26-24*f).toFixed(1)},${y}H${(296+22*f).toFixed(1)}`;}return d;}
+const REBAR=rebar();
+const SCENE={
+  pit:()=>`<g fill="#8F98A3"><rect x="6" y="50" width="36" height="40"/><rect x="46" y="62" width="24" height="28"/><rect x="232" y="44" width="46" height="46"/><rect x="282" y="58" width="32" height="32"/></g><rect y="86" width="320" height="94" fill="#A8896A"/><path d="M0,88H320${POSTS}" stroke="#6D6860" stroke-width="1.2" fill="none"/><path d="M16,96H304L318,180H2Z" fill="#8A6B4C"/><path d="M24,118H300M10,146H310" stroke="#76593D" stroke-width="1.2" opacity=".75"/><path d="M246,90Q268,72 298,90Z" fill="#9B7D5B"/>`,
+  pit2:()=>`<g fill="#8F98A3"><rect x="20" y="56" width="50" height="34"/><rect x="250" y="50" width="40" height="40"/></g><rect y="86" width="320" height="94" fill="#A8896A"/><path d="M0,88H320${POSTS}" stroke="#6D6860" stroke-width="1.2" fill="none"/><path d="M10,98H310L318,180H2Z" fill="#8A6B4C"/><path d="M230,98H310L316,140Z" fill="#9C7E5C"/><path d="M20,124H300M8,154H312" stroke="#76593D" stroke-width="1.2" opacity=".75"/>`,
+  slab:()=>`<g fill="#8F98A3"><rect x="200" y="40" width="60" height="50"/><rect x="266" y="56" width="40" height="34"/></g><rect y="86" width="320" height="94" fill="#9C9990"/><path d="M26,94H296L318,180H2Z" fill="#B5B8BA"/><path d="${REBAR}" stroke="#80746A" stroke-width=".6" opacity=".75" fill="none"/><path d="M26,94H296" stroke="#C4904C" stroke-width="3"/><g fill="#C4904C"><rect x="250" y="84" width="40" height="4"/><rect x="252" y="80" width="36" height="4"/></g>`,
+  north:()=>`<rect y="60" width="320" height="42" fill="#A6AAAD"/><path d="M0,74H320M0,88H320M60,60V102M140,60V102M220,60V102" stroke="#8E9296" stroke-width="1"/><rect y="100" width="320" height="80" fill="#A8896A"/><path d="M0,102H320V116H0Z" fill="#6E583F"/><path d="M200,158Q244,122 296,158Z" fill="#CCAC78"/>`,
+  drain:()=>`<g fill="#8F98A3"><rect x="10" y="54" width="44" height="36"/><rect x="264" y="48" width="44" height="42"/></g><rect y="86" width="320" height="94" fill="#A58868"/><path d="M0,88H320${POSTS}" stroke="#6D6860" stroke-width="1.2" fill="none"/><path d="M120,180L178,96H192L150,180Z" fill="#5C4936"/><g fill="#A9B1B7" stroke="#79828A" stroke-width="1"><circle cx="252" cy="126" r="7"/><circle cx="266" cy="126" r="7"/><circle cx="259" cy="114" r="7"/></g>`,
+  entrance:()=>`<g fill="#8F98A3"><rect x="4" y="58" width="40" height="32"/><rect x="286" y="52" width="30" height="38"/></g><rect y="86" width="320" height="94" fill="#A08869"/><path d="M0,112L146,106L166,180H0Z" fill="#5E6165"/><path d="M30,146L52,144M84,141L106,139M126,136L140,135" stroke="#E8E4D8" stroke-width="2"/><path d="M184,104L318,100V180H192Z" fill="#9C8263"/><g fill="#8B939B"><rect x="262" y="112" width="44" height="4"/><rect x="262" y="117" width="44" height="4"/><rect x="264" y="107" width="40" height="4"/></g><path d="M172,104V180" stroke="#6D6860" stroke-width="1.5"/>`
+};
+function mix(a,b,f){const pa=parseInt(a.slice(1),16),pb=parseInt(b.slice(1),16);const ch=s=>Math.round(((pa>>s)&255)*(1-f)+((pb>>s)&255)*f);return '#'+((1<<24)+(ch(16)<<16)+(ch(8)<<8)+ch(0)).toString(16).slice(1);}
+function lighting(t){
+  let top='#8DB6E2',bot='#DCE8F3';
+  if(t<8){top=mix('#A9C4DF',top,t/8);bot=mix('#EADFD2',bot,t/8);}
+  if(inR(t,RAIN)){top='#7E8A96';bot='#B7C0C8';}
+  const n=clamp((t-114)/16,0,1);
+  if(n>0){top=mix(top,'#131B2E',n);bot=mix(bot,'#2A3550',n);}
+  return {top,bot,n};
+}
+function lum(hex){const v=[1,3,5].map(i=>{const c=parseInt(hex.substr(i,2),16)/255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4);});return .2126*v[0]+.7152*v[1]+.0722*v[2];}
+function inkOn(hex){const l=lum(hex);return (l+.05)/.05>1.05/(l+.05)?'#10161D':'#FFFFFF';}
+let UID=0;
+function camSVG(cam,t,o){
+  o=o||{};const id='c'+(++UID);const st=camStatus(cam,t);const lt=lighting(t);
+  let s=`<svg class="camsvg" viewBox="0 0 320 180" role="img" aria-label="${esc(cam.id+' · '+slotTime(t))}"><defs>`+
+    `<linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${lt.top}"/><stop offset="1" stop-color="${lt.bot}"/></linearGradient>`+
+    `<pattern id="${id}r" width="7" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(16)"><path d="M3.5 0V5" stroke="#DDE6EF" stroke-opacity=".6" stroke-width=".8"/></pattern>`+
+    `<pattern id="${id}h" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#15181B"/><rect width="5" height="10" fill="#F2B705"/></pattern>`+
+    `<radialGradient id="${id}f" cx=".5" cy=".25" r=".75"><stop offset="0" stop-color="#FFD59A" stop-opacity=".35"/><stop offset="1" stop-color="#FFD59A" stop-opacity="0"/></radialGradient></defs>`;
+  if(st==='offline'){
+    s+=`<rect width="320" height="180" fill="#171B20"/><rect width="320" height="8" fill="url(#${id}h)"/><rect y="172" width="320" height="8" fill="url(#${id}h)"/>`+
+      `<text x="160" y="88" text-anchor="middle" class="big">${esc(tr('noSignal'))}</text><text x="160" y="104" text-anchor="middle" class="sub">${esc(tr('noSignalSub'))}</text>`;
+    return s+osd(cam,t)+'</svg>';
+  }
+  s+=`<rect width="320" height="110" fill="url(#${id}s)"/>`+SCENE[cam.scene]();
+  const dets=detect(cam,t);
+  const order=dets.slice().sort((a,b)=>((a.cls==='tower_crane')?-1:0)-((b.cls==='tower_crane')?-1:0)||a.gp[1]-b.gp[1]);
+  for(const d of order)s+=drawActor(d,t);
+  if(inR(t,RAIN))s+=`<rect width="320" height="180" fill="#3C4650" fill-opacity=".16"/><rect width="320" height="180" fill="url(#${id}r)"/>`;
+  if(lt.n>0)s+=`<rect width="320" height="180" fill="#081022" fill-opacity="${(.5*lt.n).toFixed(2)}"/><rect width="320" height="180" fill="url(#${id}f)" opacity="${lt.n.toFixed(2)}"/>`;
+  if(st==='dark'){
+    s+=`<rect width="320" height="180" fill="#050607" fill-opacity=".94"/><text x="160" y="88" text-anchor="middle" class="big">${esc(tr('qgFail'))}</text><text x="160" y="104" text-anchor="middle" class="sub">${esc(tr('qgFailSub'))}</text>`;
+  }else{
+    if(o.zones)s+=zonesOverlay(cam,o.editor);
+    if(o.boxes)s+=boxesOverlay(dets,o.zones);
+  }
+  return s+osd(cam,t)+'</svg>';
+}
+function osd(cam,t){return `<text x="6" y="12" class="osd">${cam.id}  01.10.2026  ${slotTime(t)}</text>`;}
+function zonesOverlay(cam,editor){
+  const P=state.poly[cam.id];let s='';
+  for(const z in P){
+    const pts=P[z],c=ZONES[z].c;
+    s+=`<polygon points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="${c}" fill-opacity=".1" stroke="${c}" stroke-width="1.3" stroke-dasharray="5 3"/>`;
+    const lab=z+' '+L(ZONES[z].n),lw=lab.length*4.6+8;const minY=Math.min.apply(null,pts.map(p=>p[1]));const top=pts.filter(p=>p[1]===minY)[0];
+    const tx=clamp(top[0],2,318-lw),ty=clamp(minY-13,16,166);
+    s+=`<rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${lw.toFixed(1)}" height="11" rx="2" fill="${c}"/><text x="${(tx+4).toFixed(1)}" y="${(ty+8).toFixed(1)}" class="zl" fill="${inkOn(c)}">${esc(lab)}</text>`;
+    if(editor)pts.forEach((p,i)=>{s+=`<circle class="vtx" data-cam="${cam.id}" data-zone="${z}" data-i="${i}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="6" fill="#FFFFFF" stroke="${c}" stroke-width="2.2" tabindex="0" role="slider" aria-label="${esc(z+' · '+(i+1))}" aria-valuetext="${Math.round(p[0])}, ${Math.round(p[1])}"/>`;});
+  }
+  return s;
+}
+function boxesOverlay(dets,showGp){
+  let s='';
+  for(const d of dets){
+    const p=d.p,col=d.working?'#0CA30C':'#FAB219',low=d.conf<.7;
+    s+=`<rect x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" width="${p.w.toFixed(1)}" height="${p.h.toFixed(1)}" fill="none" stroke="${col}" stroke-width="1.4"${low?' stroke-dasharray="4 2.5"':''}/>`;
+    const lbl=d.cls+' '+d.conf.toFixed(2),lw=lbl.length*4.35+6,lx=clamp(p.x,1,319-lw),ly=p.y>24?p.y-9:p.y+1;
+    s+=`<rect x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" width="${lw.toFixed(1)}" height="9" fill="${col}"/><text x="${(lx+3).toFixed(1)}" y="${(ly+6.8).toFixed(1)}" class="bx">${esc(lbl)}</text>`;
+    if(showGp&&d.cls!=='tower_crane')s+=`<circle cx="${d.gp[0].toFixed(1)}" cy="${d.gp[1].toFixed(1)}" r="2.3" fill="#FFFFFF" stroke="#111111" stroke-width=".8"/>`;
+  }
+  return s;
+}
+
+/* ================= UI atoms ================= */
+const IC={
+  play:'<path d="M5 3.2v9.6l7.6-4.8z" fill="currentColor"/>',
+  pause:'<path d="M4.6 3h2.4v10H4.6zM9 3h2.4v10H9z" fill="currentColor"/>',
+  restart:'<path d="M3.2 2.8v4.1h4.1" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.7 6.7A5 5 0 1 1 4.9 11.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  check:'<path d="M3.2 8.4l3.1 3.1 6.5-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  x:'<path d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  idle:'<path d="M5 3.4h2.1v9.2H5zM8.9 3.4H11v9.2H8.9z" fill="currentColor"/>',
+  minus:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 8h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  arrow:'<path d="M2.8 8h9.4M8.6 4.4 12.2 8l-3.6 3.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  slash:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.9 12.1l8.2-8.2" stroke="currentColor" stroke-width="1.6"/>',
+  clock:'<circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.8V8l2.2 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  ring:'<circle cx="8" cy="8" r="5.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.6 2"/>',
+  low:'<circle cx="8" cy="8" r="4" fill="currentColor"/>',
+  med:'<path d="M8 2.8l5.6 9.8H2.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  high:'<path d="M8 1.8l6.6 11.6H1.4z" fill="currentColor"/><path d="M8 6.2v3.4M8 11.3v.1" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round"/>',
+  file:'<path d="M4 1.8h5.2L12.4 5v9.2H4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M9 1.8V5h3.4M6 8.5h4.5M6 11h4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+  drop:'<path d="M8 2.2C6.1 5 4.6 7.2 4.6 9.4a3.4 3.4 0 0 0 6.8 0C11.4 7.2 9.9 5 8 2.2z" fill="currentColor"/>',
+  spin:'<path d="M8 2a6 6 0 1 1-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  bell:'<path d="M4.2 11.2V7.4a3.8 3.8 0 0 1 7.6 0v3.8l1.2 1.3H3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6.6 13.6a1.5 1.5 0 0 0 2.8 0" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  info:'<circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 7.2v4M8 4.8v.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>'
+};
+function icon(n,cls){return `<svg viewBox="0 0 16 16" aria-hidden="true"${cls?` class="${cls}"`:''}>${IC[n]}</svg>`;}
+const ST={R5:['good','check'],R4:['info','arrow'],R3:['warn','idle'],R2:['serious','minus'],R1:['crit','x'],R0:['nodata','slash'],WAIT:['nodata','clock'],NS:['plain','ring'],DONE:['plain','check'],RES:['good','check']};
+function chip(rule){const m=ST[rule];return `<span class="chip k-${m[0]}">${icon(m[1])}${esc(tr('s_'+rule))}</span>`;}
+const RK={low:['good','low'],medium:['warn','med'],high:['crit','high']};
+function riskChip(r){const m=RK[r];return `<span class="chip k-${m[0]}">${icon(m[1])}${esc(tr('risk_'+r))}</span>`;}
+function pill(k,ic,text){return `<span class="chip k-${k}">${icon(ic)}${esc(text)}</span>`;}
+function zoneChip(z){return `<span class="zchip" style="--zc:${ZONES[z].c}"><i></i>${esc(L(ZONES[z].n))}</span>`;}
+function frameSlot(){return Math.min(state.T,SLOTS-1);}
+function procCount(){return Math.min(state.T+1,SLOTS);}
+
+/* ================= Views ================= */
+let C=null;
+function vSetup(){
+  let h='';
+  h+=`<section class="panel"><div class="panel-top"><h2>${esc(tr('schedH'))}</h2>${state.schedLoaded?`<span class="small muted">${esc(tr('parsed',{n:STAGES.length}))}</span>`:''}</div>`;
+  if(!state.schedLoaded){
+    h+=`<div class="drop"><p class="note">${esc(tr('dropHint'))}</p><button type="button" class="btn btn-primary" data-act="load-sched">${icon('file')}${esc(tr('loadSample'))}</button></div>`;
+  }else{
+    h+=`<div class="file">${icon('file')}<div><b class="mono">schedule_block-B_v3.xlsx</b><div class="small muted">${esc(tr('fileMeta'))}</div></div></div>`;
+    h+=`<div class="map"><span class="small muted">${esc(tr('mapping'))}</span>${MAPPING.map(m=>`<span class="mapchip">«${esc(m[0])}» → ${esc(tr(m[1]))}</span>`).join('')}</div>`;
+    h+=`<div class="tbl"><table><thead><tr><th>${esc(tr('colWbs'))}</th><th>${esc(tr('colStage'))}</th><th>${esc(tr('colType'))}</th><th>${esc(tr('colZone'))}</th><th>${esc(tr('colStart'))}</th><th>${esc(tr('colEnd'))}</th><th class="num">${esc(tr('colFloat'))}</th><th>${esc(tr('colMach'))}</th></tr></thead><tbody>`;
+    for(const s of STAGES){
+      h+=`<tr><td class="mono">${s.wbs}</td><td class="sn">${esc(L(s.n))}</td><td>${esc(tr('wt_'+s.wt))}</td><td>${zoneChip(s.zone)}</td><td class="num">${esc(fShort(D(s.start)))}</td><td class="num">${esc(fShort(D(s.end)))}</td><td class="num">${s.float}</td><td>${s.req.map(q=>esc(tr('perShift',{n:q[1],cls:clsName(q[0]),h:q[2]}))).join('<br>')}${s.fromRef?` <span class="ref">${esc(tr('fromRef'))}</span>`:''}</td></tr>`;
+    }
+    h+=`</tbody></table></div>`;
+  }
+  h+=`</section><div class="two">`;
+  h+=`<section class="panel"><div class="panel-top"><h2>${esc(tr('camsH'))}</h2><button type="button" class="btn btn-sm" data-act="check-cams"${state.camCheck==='running'?' disabled':''}>${esc(tr('checkCams'))}</button></div><ul class="camlist">`;
+  for(const c of CAMS){
+    const r=state.camRes[c.id];let stx;
+    if(r==='ok')stx=`<span class="cst ok">${icon('check')}${esc(tr('camOk',{ms:c.ms}))}</span>`;
+    else if(r==='timeout')stx=`<span class="cst bad">${icon('x')}${esc(tr('camTimeout'))}</span>`;
+    else if(state.camCheck==='running')stx=`<span class="cst wait">${icon('spin','spin')}${esc(tr('checking'))}</span>`;
+    else stx=`<span class="cst wait">${icon('ring')}${esc(tr('camNot'))}</span>`;
+    const zs=Object.keys(state.poly[c.id]);
+    h+=`<li><span class="mono small"><b>${c.id}</b></span><div style="min-width:0"><div class="small">${esc(L(c.n))} · ${zs.map(zoneChip).join(' ')}</div><div class="u">${esc(c.url)}</div></div>${stx}</li>`;
+  }
+  h+=`</ul></section>`;
+  const cam=CAMS.find(c=>c.id===state.editCam);const refSlot=cam.id==='CAM-5'?100:12;
+  h+=`<section class="panel"><div class="panel-top"><h2>${esc(tr('zonesH'))}</h2><button type="button" class="btn btn-sm" data-act="reset-zones">${esc(tr('resetZones'))}</button></div>`;
+  h+=`<div class="camsel" role="group">${CAMS.map(c=>`<button type="button" data-act="edit-cam" data-v="${c.id}" aria-pressed="${c.id===state.editCam}">${c.id}</button>`).join('')}</div>`;
+  h+=`<div class="editor" id="editor">${camSVG(cam,refSlot,{zones:true,boxes:true,editor:true})}</div><p class="small muted" style="margin-top:8px">${esc(tr('zonesHint'))}</p></section></div>`;
+  h+=`<section class="panel"><h2 style="margin-bottom:10px">${esc(tr('refH'))}</h2><div class="tbl"><table><tbody>${REF.map(r=>`<tr><td class="sn">${esc(tr('wt_'+r[0]))}</td><td>${r[1].map(clsName).map(esc).join(', ')}</td></tr>`).join('')}</tbody></table></div></section>`;
+  return h;
+}
+function camTile(c,f){
+  const st=camStatus(c,f),dets=detect(c,f),n=dets.length,w=dets.filter(d=>d.working).length;
+  const stc=st==='ok'?pill('good','check',tr('stOk')):st==='dark'?pill('nodata','slash',tr('stDark')):pill('crit','x',tr('stOffline'));
+  const foot=st!=='ok'?esc(tr('tileNoData')):n?esc(tr(n===1?'tileCount1':'tileCount',{n,w})):esc(tr('tileNone'));
+  return `<article class="cam"><div class="cam-h"><span class="id">${c.id}</span><span class="nm">${esc(L(c.n))}</span>${stc}</div>${camSVG(c,f,{zones:state.showZones,boxes:state.showBoxes})}<div class="cam-f">${Object.keys(state.poly[c.id]).map(zoneChip).join('')}<span>${foot}</span></div></article>`;
+}
+function vLive(){
+  const f=frameSlot();
+  let h=`<section class="panel"><div class="opts"><div class="row"><label class="tog"><input type="checkbox" id="optZones" data-opt="zones"${state.showZones?' checked':''}>${esc(tr('optZones'))}</label><label class="tog"><input type="checkbox" id="optBoxes" data-opt="boxes"${state.showBoxes?' checked':''}>${esc(tr('optBoxes'))}</label></div><span class="small muted">${esc(tr('liveNote'))}</span></div></section>`;
+  h+=`<div class="cams">${CAMS.map(c=>camTile(c,f)).join('')}</div>`;
+  h+=zoneBoard(f);
+  return h;
+}
+function zoneBoard(f){
+  const e=C.sim.series[f]||{};
+  let h=`<section class="panel"><div class="panel-top"><h2>${esc(tr('boardH',{time:slotTime(f)}))}</h2></div><div class="tbl"><table><thead><tr><th>${esc(tr('bZone'))}</th><th>${esc(tr('bCams'))}</th><th>${esc(tr('bStage'))}</th><th>${esc(tr('bNow'))}</th><th class="num">${esc(tr('bCov'))}</th><th>${esc(tr('bStatus'))}</th></tr></thead><tbody>`;
+  for(const z in ZONES){
+    const cams=CAMS.filter(c=>state.poly[c.id][z]);
+    const act=STAGES.filter(s=>s.zone===z&&activeOn(s,TODAY_D));
+    const nxt=STAGES.filter(s=>s.zone===z&&!activeOn(s,TODAY_D)&&D(s.start)>TODAY_D);
+    const zc=e[z];const cov=(C.sim.acc.cov[z]||0)/C.P;
+    let now='';
+    if(!zc||!zc.cov)now=`<span class="muted">${esc(tr('tlNoDataCell'))}</span>`;
+    else{
+      const need={};for(const s of act)for(const q of s.req)if(!SITEWIDE.has(q[0]))need[q[0]]=(need[q[0]]||0)+q[1];
+      const cls=new Set(Object.keys(need).concat(Object.keys(zc.p)));
+      now=cls.size?Array.from(cls).map(c=>`${esc(clsName(c))}: <b>${zc.p[c]||0}</b>${need[c]!=null?' / '+need[c]:''}${zc.w[c]?` <span class="muted">(${zc.w[c]} ${esc(tr('tlWorking').toLowerCase())})</span>`:''}`).join('<br>'):`<span class="muted">—</span>`;
+    }
+    const stg=act.length?act.map(s=>`<span class="sn">${esc(L(s.n))}</span>`).join('<br>'):`<span class="muted">${esc(tr('noActive'))}</span>${nxt.length?`<div class="ss">${esc(tr('startsOn',{stage:L(nxt[0].n),date:fShort(D(nxt[0].start))}))}</div>`:''}`;
+    const sts=act.length?act.map(s=>chip(C.ev[s.id].rule)).join('<br>'):(nxt.length?chip(C.ev[nxt[0].id].rule):'');
+    h+=`<tr><td>${zoneChip(z)}</td><td class="mono small">${cams.map(c=>c.id).join('<br>')}</td><td>${stg}</td><td class="small">${now}</td><td class="num">${pct(cov)}</td><td>${sts}</td></tr>`;
+  }
+  const tc=ACTORS.find(a=>a.id==='TC'),tst=pose(tc,f);
+  h+=`</tbody></table></div><p class="small muted" style="margin-top:10px">${esc(tr('siteWide'))}${tst?` · ${tst.working?esc(tr('tlWorking')):esc(tr('s_R3'))}`:''}</p><p class="small muted">${esc(tr('dedupe'))}</p></section>`;
+  return h;
+}
+function mathLines(r){
+  const s=r.s,U=tr('uMH');const out=[];
+  if(!r.active){if(r.rule==='R4')out.push(tr('mR4',{p:num(r.pMH,1),st:tr('s_R4')}));return out;}
+  if(r.rule==='WAIT')return out;
+  out.push(tr('mPlan',{plan:num(r.planMH,1),c:pct(r.c),exp:num(r.expMH,1)}));
+  if(r.rule==='R0'){out.push(tr('mR0',{c:pct(r.c)}));return out;}
+  out.push(tr('mRho',{p:num(r.pMH,1),exp:num(r.expMH,1),rho:num(r.rho,2)}));
+  out.push(tr('mU',{w:num(r.wMH,1),p:num(r.pMH,1),u:num(r.u,2)}));
+  out.push(tr('mRule',{rule:r.rule,cond:tr('cond_'+r.rule),st:tr('s_'+r.rule)}));
+  if(r.pace){const p=r.pace;out.push(tr('mSpi',{ev:num(p.EV,1),pv:num(p.PV,0),spi:num(p.spi,2)}));out.push(tr('mFc',{rate:num(p.rate,1),rem:num(p.remaining,0),need:num(p.need,1),left:p.left,slip:signed(p.slip,1)}));out.push(tr('mRisk',{fl:s.float,risk:tr('risk_'+p.risk)}));}
+  return out;
+}
+function vReport(){
+  const fin=!!state.report;const rep=fin?state.report:{sim:C.sim,ev:C.ev};
+  const stp=fin?(state.approved?pill('good','check',tr('repApproved')):pill('warn','clock',tr('repReady'))):pill('plain','clock',tr('repPrelim',{time:slotTime(state.T)}));
+  let h=`<section class="panel"><div class="panel-top"><div><h2>${esc(tr('repTitle',{date:fLong(TODAY_D)}))}</h2><div class="small muted">${esc(tr('repMeta',{r:RULESV,m:MODEL}))}</div></div>${stp}</div>`;
+  h+=`<div class="tbl"><table><thead><tr><th>${esc(tr('cStage'))}</th><th class="num">${esc(tr('cCov'))}</th><th class="num">${esc(tr('cMH'))}</th><th class="num">ρ</th><th class="num">u</th><th>${esc(tr('cStatus'))}</th><th class="num">${esc(tr('cSpi'))}</th><th>${esc(tr('cFc'))}</th><th>${esc(tr('cRisk'))}</th></tr></thead><tbody>`;
+  for(const s of STAGES){
+    const r=rep.ev[s.id];const ml=mathLines(r);const scored=r.active&&r.rule!=='R0'&&r.rule!=='WAIT';
+    const cov=r.active?pct(r.c):'—';
+    const mh=r.active?`${num(r.pMH,1)} / ${num(r.planMH*(fin?1:C.P/SLOTS),1)}`:(r.rule==='R4'?num(r.pMH,1):'—');
+    const rho=scored?num(r.rho,2):'—',u=scored?num(r.u,2):'—';
+    let spi='—',fc=`<span class="muted small">${r.active&&r.rule!=='R0'?esc(tr('afterShift')):r.rule==='R0'?esc(tr('notScored')):''}</span>`,risk='';
+    if(r.pace){spi=num(r.pace.spi,2);fc=`${esc(fShort(r.pace.fc))} <span class="small muted">(${signed(r.pace.slip,1)} ${esc(tr('uD'))})</span>`;risk=riskChip(r.pace.risk);}
+    else if(!r.active){fc='';}
+    h+=`<tr class="${ml.length?'has-m':''}"><td><span class="sn">${esc(L(s.n))}</span><div class="ss">${s.wbs} · ${zoneChip(s.zone)}</div></td><td class="num">${cov}</td><td class="num">${mh}</td><td class="num">${rho}</td><td class="num">${u}</td><td>${chip(r.rule)}</td><td class="num">${spi}</td><td>${fc}</td><td>${risk}</td></tr>`;
+    if(ml.length)h+=`<tr class="m"><td colspan="9"><details${s.id==='S2'?' open':''}><summary>${esc(tr('showMath'))}</summary><div class="math">${ml.map(x=>`<div>${esc(x)}</div>`).join('')}</div></details></td></tr>`;
+  }
+  h+=`</tbody></table></div></section>`;
+  h+=timelinePanel(rep.sim,fin?SLOTS:C.P);
+  return h;
+}
+function stageCounts(sim,s,t){
+  const e=sim.series[t]&&sim.series[t][s.zone];const act=activeOn(s,TODAY_D);
+  const plan=act?s.req.reduce((m,q)=>m+(SITEWIDE.has(q[0])?0:q[1]),0):0;
+  if(!e||!e.cov)return {cov:false,p:0,w:0,plan};
+  let p=0,w=0;for(const q of s.req){const c=q[0];if(SITEWIDE.has(c))continue;const f=act?share(s,c):(claimed(s.zone,c)?0:1);p+=f*(e.p[c]||0);w+=f*(e.w[c]||0);}
+  return {cov:true,p,w,plan};
+}
+function tlStages(){return STAGES.filter(s=>activeOn(s,TODAY_D)||s.id==='S6');}
+function tlSVG(sim,s,P){
+  const W=720,H=54,top=6,ph=H-10;const vals=[];let mx=0;
+  for(let t=0;t<P;t++){const v=stageCounts(sim,s,t);vals.push(v);mx=Math.max(mx,v.p);}
+  const plan=activeOn(s,TODAY_D)?s.req.reduce((m,q)=>m+(SITEWIDE.has(q[0])?0:q[1]),0):0;
+  const yMax=Math.max(1,plan,mx)*1.18;const X=t=>t/SLOTS*W,Y=v=>top+ph-(v/yMax)*ph,base=top+ph;
+  let g=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><rect class="tl-rain" x="${X(30)}" y="0" width="${X(102)-X(30)}" height="${H}"/>`;
+  let run=null;for(let t=0;t<=P;t++){const nd=t<P&&!vals[t].cov;if(nd&&run==null)run=t;if(!nd&&run!=null){g+=`<rect class="tl-nd" x="${X(run).toFixed(1)}" y="0" width="${(X(t)-X(run)).toFixed(1)}" height="${H}"/>`;run=null;}}
+  g+=`<line class="tl-base" x1="0" x2="${W}" y1="${base}" y2="${base}"/>`;
+  if(plan>0)g+=`<line class="tl-plan" x1="0" x2="${W}" y1="${Y(plan).toFixed(1)}" y2="${Y(plan).toFixed(1)}"/>`;
+  let area='',wl='',pl='',open=false;
+  for(let t=0;t<P;t++){const v=vals[t];
+    if(!v.cov){if(open){area+=`V${base}Z`;open=false;}continue;}
+    const yw=Y(v.w).toFixed(1),yp=Y(v.p).toFixed(1),x0=X(t).toFixed(1),x1=X(t+1).toFixed(1);
+    if(!open){area+=`M${x0},${base}V${yw}H${x1}`;wl+=`M${x0},${yw}H${x1}`;pl+=`M${x0},${yp}H${x1}`;open=true;}
+    else{area+=`V${yw}H${x1}`;wl+=`V${yw}H${x1}`;pl+=`V${yp}H${x1}`;}
+  }
+  if(open)area+=`V${base}Z`;
+  g+=`<path class="tl-warea" d="${area}"/><path class="tl-wline" d="${wl}"/><path class="tl-pline" d="${pl}"/></svg>`;
+  return g;
+}
+function timelinePanel(sim,P){
+  const st=tlStages();
+  let h=`<section class="panel"><div class="panel-top"><h2>${esc(tr('tlH'))}</h2><button type="button" class="btn btn-sm" data-act="tl-table">${esc(state.tlTable?tr('tlChart'):tr('tlTable'))}</button></div>`;
+  if(state.tlTable){
+    h+=`<div class="tbl"><table><thead><tr><th>${esc(tr('tlHour'))}</th>${st.map(s=>`<th class="num">${esc(s.wbs)}</th>`).join('')}</tr></thead><tbody>`;
+    for(let hr=0;hr<12;hr++){
+      h+=`<tr><td class="mono">${hhmm(START+hr*60)}</td>`;
+      for(const s of st){let n=0,p=0,w=0;for(let t=hr*12;t<Math.min(P,hr*12+12);t++){const v=stageCounts(sim,s,t);if(v.cov){n++;p+=v.p;w+=v.w;}}h+=`<td class="num">${n?`${num(p/n,1)} / ${num(w/n,1)}`:`<span class="muted">${hr*12<P?esc(tr('tlNoDataCell')):'—'}</span>`}</td>`;}
+      h+=`</tr>`;
+    }
+    h+=`</tbody></table></div><p class="small muted" style="margin-top:8px">${st.map(s=>esc(s.wbs+' '+L(s.n))).join(' · ')} — ${esc(tr('tlPresent'))} / ${esc(tr('tlWorking'))}</p></section>`;
+    return h;
+  }
+  h+=`<div class="tl-legend"><span><i class="sw sw-line"></i>${esc(tr('tlPresent'))}</span><span><i class="sw sw-work"></i>${esc(tr('tlWorking'))}</span><span><i class="sw sw-plan"></i>${esc(tr('tlPlan'))}</span><span><i class="sw sw-rain"></i>${esc(tr('tlRain'))}</span><span><i class="sw sw-nd"></i>${esc(tr('tlNoData'))}</span></div><div class="tl-rows">`;
+  for(const s of st){
+    const r=(state.report&&P===SLOTS?state.report:{ev:C.ev}).ev[s.id];
+    h+=`<div class="tl-row"><div class="tl-lbl"><span class="sn">${esc(s.wbs+' '+L(s.n))}</span>${chip(r.rule)}</div><div class="tl-plot" data-sid="${s.id}" data-p="${P}" tabindex="0">${tlSVG(sim,s,P)}<i class="tl-x" hidden></i></div></div>`;
+  }
+  h+=`</div><div class="tl-axis"><div></div><div>${[0,24,48,72,96,120,144].map(t=>`<span style="left:${(t/SLOTS*100).toFixed(2)}%">${slotTime(t)}</span>`).join('')}</div></div></section>`;
+  return h;
+}
+function verdictText(sid){const v=state.verdicts[sid];if(v==='delay')return tr('v_delay');if(v==='fm')return tr('v_fm',{t:tr('fm_'+(state.fmType[sid]||'other'))});if(v==='recog')return tr('v_recog');return '';}
+function cardMath(r){
+  const s=r.s;
+  if(r.rule==='R4'){return `<div>${esc(tr('cm4',{date:fShort(D(s.start)),p:num(r.pMH,1),cls:r.obs.map(clsName).join(', ')}))}</div>`;}
+  if(!r.active)return `<div>${esc(tr('s_'+r.rule))}</div>`;
+  let h=`<div>${esc(tr('cm1',{plan:num(r.planMH,0),p:num(r.pMH,1),c:pct(r.c),rho:num(r.rho,2),u:num(r.u,2),rule:r.rule}))}</div>`;
+  if(r.pace)h+=`<div>${esc(tr('cm2',{spi:num(r.pace.spi,2),fc:fShort(r.pace.fc),slip:signed(r.pace.slip,1),fl:s.float}))}</div>`;
+  return h;
+}
+function devCard(sid){
+  const rep=state.report,r=rep.ev[sid],r0=state.report0.ev[sid],s=r.s;
+  const resolved=!['R1','R2','R3','R4'].includes(r.rule);const v=state.verdicts[sid];
+  let h=`<article class="dev${resolved?' resolved':''}" id="dev-${sid}"><div class="dev-h"><div><div class="dev-t">${esc(L(s.n))}</div><div class="small muted">${s.wbs} · ${zoneChip(s.zone)}</div></div><div class="dev-st">${resolved?chip('RES'):chip(r.rule)}${(!resolved&&r.pace)?riskChip(r.pace.risk):''}</div></div>`;
+  h+=`<div class="math">${resolved?`<div>${esc(tr('cmWas',{rule:r0.rule,st:tr('s_'+r0.rule)}))}</div>`+cardMath(r0):cardMath(r)}</div>`;
+  if(resolved){
+    h+=`<p class="note">${esc(tr('resolvedNote'))}</p>`;
+    if(state.feedbackN[sid])h+=`<p class="small mono muted">${esc(tr('feedback',{n:state.feedbackN[sid],m:MODEL}))}</p>`;
+  }else{
+    const H=hyps(r,rep.sim);
+    if(H.length)h+=`<div><div class="lbl">${esc(tr('hypH'))}</div><ul class="hyp">${H.map(x=>`<li><span class="cf">${esc(tr('conf_'+x[0]))}</span><span>${esc(x[1])}</span></li>`).join('')}</ul></div>`;
+  }
+  const ev=EVID[sid];
+  if(ev&&!resolved)h+=`<div><div class="lbl">${esc(tr('evidence'))}</div><div class="thumbs">${ev.map(e=>{const cam=CAMS.find(c=>c.id===e[0]);const cap=tr(e[2],{t:e[0]+' '+slotTime(e[1])});return `<button type="button" class="thumb" data-act="lb" data-cam="${e[0]}" data-slot="${e[1]}" data-cap="${esc(cap)}">${camSVG(cam,e[1],{boxes:true})}<span>${esc(cap)}</span></button>`;}).join('')}</div></div>`;
+  if(v&&state.openCorr!==sid&&state.openFM!==sid){
+    h+=`<div class="vset">${icon('check')}<b>${esc(verdictText(sid))}</b>${state.approved?'':`<button type="button" class="link" data-act="change" data-sid="${sid}">${esc(tr('change'))}</button>`}</div>`;
+  }else if(!state.approved){
+    h+=`<div class="verdicts"><button type="button" class="btn" data-act="v-delay" data-sid="${sid}">${esc(tr('vDelay'))}</button><button type="button" class="btn" data-act="v-fm" data-sid="${sid}" aria-expanded="${state.openFM===sid}">${esc(tr('vFM'))}</button><button type="button" class="btn" data-act="v-recog" data-sid="${sid}" aria-expanded="${state.openCorr===sid}">${esc(tr('vRecog'))}</button></div>`;
+    if(state.openFM===sid)h+=`<div class="fmrow"><span class="small muted">${esc(tr('fmPick'))}</span>${['weather','breakdown','supply','other'].map(k=>`<button type="button" class="btn btn-sm" data-act="fm" data-sid="${sid}" data-v="${k}">${esc(tr('fm_'+k))}</button>`).join('')}</div>`;
+    if(state.openCorr===sid)h+=corrForm(sid);
+  }
+  return h+`</article>`;
+}
+function corrForm(sid){
+  const r0=state.report0.ev[sid],r=state.report.ev[sid];
+  let h=`<div class="corr"><div class="lbl">${esc(tr('corrH'))}</div>`;
+  if(r0.rule==='R4')h+=`<label><input type="checkbox" id="corr-rm-${sid}" checked>${esc(tr('corrRemove'))}</label>`;
+  else h+=`<label>${esc(tr('corrP'))}<input type="number" id="corr-p-${sid}" min="0" step="0.5" value="${r.pMH.toFixed(1)}"></label><label>${esc(tr('corrW'))}<input type="number" id="corr-w-${sid}" min="0" step="0.5" value="${r.wMH.toFixed(1)}"></label>`;
+  return h+`<div class="row"><button type="button" class="btn btn-primary btn-sm" data-act="corr-apply" data-sid="${sid}">${esc(tr('corrApply'))}</button><button type="button" class="btn btn-sm" data-act="corr-cancel" data-sid="${sid}">${esc(tr('corrCancel'))}</button></div></div>`;
+}
+function vReview(){
+  if(!state.report)return `<section class="panel"><h2 style="margin-bottom:8px">${esc(tr('revH'))}</h2><p class="note" style="margin-bottom:12px">${esc(tr('revWait'))}</p><button type="button" class="btn btn-primary" data-act="jump" data-t="144">${esc(tr('revWaitBtn'))}</button></section>`;
+  const rep=state.report,done=state.devIds.filter(id=>state.verdicts[id]).length,tot=state.devIds.length;
+  let h=`<section class="panel"><div class="panel-top"><h2>${esc(tr('revH'))}</h2><span class="small muted">${esc(tr('progress',{a:done,b:tot}))}</span></div><div class="devs">${state.devIds.map(devCard).join('')}</div></section>`;
+  const sup=STAGES.filter(s=>rep.ev[s.id].rule==='R0');
+  if(sup.length)h+=`<section class="panel"><h2 style="margin-bottom:10px">${esc(tr('supportH'))}</h2>${sup.map(s=>`<p class="sup">${chip('R0')}<span>${esc(tr('supportRow',{stage:L(s.n),c:pct(rep.ev[s.id].c),cam:'CAM-5'}))}</span></p>`).join('')}</section>`;
+  h+=`<section class="panel approve">${state.approved?`<p>${icon('check')}<span>${esc(tr('approvedAt',{time:state.approvedAt}))}</span></p>`:`<button type="button" class="btn btn-primary" data-act="approve"${done<tot?' disabled':''}>${esc(tr('approve'))}</button><span class="small muted">${esc(tr('progress',{a:done,b:tot}))}</span>`}</section>`;
+  if(state.audit.length)h+=`<section class="panel"><h2 style="margin-bottom:10px">${esc(tr('auditH'))}</h2><ul class="log">${state.audit.slice().reverse().map(a=>`<li><time>${a.time}</time><span>${esc(a.txt())}</span></li>`).join('')}</ul></section>`;
+  return h;
+}
+function pmAlerts(){
+  if(!state.approved||!state.report)return [];
+  return STAGES.map(s=>state.report.ev[s.id]).filter(r=>r.pace&&r.pace.risk==='high'&&state.verdicts[r.s.id]!=='recog');
+}
+function succShift(r){if(!r.s.succ||!r.pace)return 0;return Math.max(0,Math.ceil(r.pace.slip-r.s.float-1e-9));}
+function causeText(r){
+  const v=state.verdicts[r.s.id];if(v==='fm')return verdictText(r.s.id);
+  const H=hyps(r,state.report.sim);return H.length?H[0][1]:tr('s_'+r.rule);
+}
+function vDash(){
+  const f=frameSlot();let h='';
+  if(!state.approved){h+=`<section class="panel notice">${icon('info')}<p>${esc(tr('dashWait'))}</p></section>`;}
+  else{
+    for(const r of pmAlerts()){
+      const s=r.s,sh=succShift(r),su=s.succ?S(s.succ):null;
+      h+=`<section class="alert" role="alert"><h3>${icon('high')}${esc(tr('alertH'))}</h3><p>${esc(tr('alertBody',{stage:L(s.n),fc:fShort(r.pace.fc),pl:fShort(D(s.end)),slip:signed(r.pace.slip,1),fl:s.float}))}${su&&sh?' '+esc(tr('alertSucc',{succ:L(su.n),ns:fShort(addDays(D(su.start),sh)),os:fShort(D(su.start))})):''}</p><p class="small">${esc(tr('alertCause',{c:causeText(r)}))}</p></section>`;
+    }
+    h+=kpis(f);
+  }
+  h+=`<section class="panel"><div class="panel-top"><h2>${esc(tr('ganttH'))}</h2><div class="g-legend"><span><i class="sw sw-planb"></i>${esc(tr('gPlan'))}</span><span><i class="sw sw-prog"></i>${esc(tr('gProg'))}</span><span><i class="sw sw-float"></i>${esc(tr('gFloat'))}</span>${state.approved?`<span><i class="sw sw-dia"></i>${esc(tr('gFc'))}</span>`:''}<span><i class="sw sw-today"></i>${esc(tr('gToday'))}</span></div></div><div class="gantt-wrap">${ganttSVG()}</div></section>`;
+  if(state.approved)h+=issuesPanel();
+  h+=`<section class="panel"><h2 style="margin-bottom:10px">${esc(tr('camsNowH',{time:slotTime(f)}))}</h2><div class="mini-cams">${CAMS.map(c=>`<figure>${camSVG(c,f,{boxes:true})}<figcaption><b class="mono">${c.id}</b> ${esc(L(c.n))}</figcaption></figure>`).join('')}</div></section>`;
+  return h;
+}
+function kpis(f){
+  const rep=state.report,al=pmAlerts();let cp=0,cps=null;
+  for(const r of al){const d=succShift(r);if(d>cp){cp=d;cps=r.s;}}
+  const issues=state.devIds.filter(id=>state.verdicts[id]&&state.verdicts[id]!=='recog').length;
+  const act=STAGES.filter(s=>activeOn(s,TODAY_D));const cov=act.reduce((m,s)=>m+rep.ev[s.id].c,0)/act.length;
+  const online=CAMS.filter(c=>camStatus(c,f)!=='offline').length;
+  const tile=(l,v,s,k,ic)=>`<div class="kpi${k?' k-'+k:''}"><span class="l">${esc(l)}</span><span class="v">${ic?icon(ic):''}${v}</span><span class="s">${esc(s)}</span></div>`;
+  return `<div class="kpis">${tile(tr('kCP'),(cp?'+'+cp:'0')+' '+esc(tr('uD')),cps?tr('kCPsub',{stage:L(cps.n)}):tr('kCPnone'),cp?'crit':'good',cp?'high':'check')}${tile(tr('kHigh'),String(al.length),al.map(r=>L(r.s.n)).join(', ')||'—',al.length?'crit':'good',al.length?'high':'check')}${tile(tr('kIssues'),String(issues),tr('kIssuesSub'),'','')}${tile(tr('kCov'),pct(cov),tr('kCovSub'),'','')}${tile(tr('kCams'),online+' / '+CAMS.length,tr('kCamsSub',{time:slotTime(f)}),'','')}</div>`;
+}
+function issuesPanel(){
+  const rep=state.report;
+  let h=`<section class="panel"><h2 style="margin-bottom:10px">${esc(tr('issuesH'))}</h2><div class="tbl"><table><thead><tr><th>${esc(tr('iStage'))}</th><th>${esc(tr('iIssue'))}</th><th>${esc(tr('iVerdict'))}</th><th>${esc(tr('iRisk'))}</th></tr></thead><tbody>`;
+  for(const id of state.devIds){
+    const r=rep.ev[id],r0=state.report0.ev[id],v=state.verdicts[id];
+    h+=`<tr><td class="sn">${esc(L(r.s.n))}</td><td>${chip(r0.rule)}</td><td>${v==='recog'?`<span class="muted">${esc(tr('closedByCorr'))}</span>`:esc(verdictText(id))}</td><td>${v!=='recog'&&r.pace?riskChip(r.pace.risk):''}</td></tr>`;
+  }
+  for(const s of STAGES.filter(s=>rep.ev[s.id].rule==='R0'))h+=`<tr><td class="sn">${esc(L(s.n))}</td><td>${chip('R0')}</td><td class="muted">${esc(tr('to_support'))}</td><td></td></tr>`;
+  return h+`</tbody></table></div></section>`;
+}
+function ganttSVG(){
+  const rep=state.report,appr=state.approved;const D0=D('2026-09-21'),N=36,X0=286,X1=948,W=960,dx=(X1-X0)/N;
+  const xOf=d=>X0+dd(D0,d)*dx;const top=40,rh=36,H=top+STAGES.length*rh+8;
+  let s=`<svg class="gantt" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(tr('ganttH'))}"><defs><pattern id="gfl" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" class="g-fl-bg"/><rect width="2" height="6" class="g-fl-ln"/></pattern></defs>`;
+  for(let i=0;i<=5;i++){const d=addDays(D0,i*7),x=xOf(d);s+=`<line class="g-grid" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${top-8}" y2="${H-4}"/><text class="g-ax" x="${(x+4).toFixed(1)}" y="${top-14}">${esc(fShort(d))}</text>`;}
+  const s2=rep&&appr?rep.ev.S2:null,shift=s2&&s2.pace&&s2.pace.risk==='high'&&state.verdicts.S2!=='recog'?succShift(s2):0;
+  STAGES.forEach((st,i)=>{
+    const y=top+i*rh,yb=y+10,bh=16,x=xOf(D(st.start)),w=(dd(D(st.start),D(st.end))+1)*dx;
+    const r=rep?rep.ev[st.id]:null,total=st.req.reduce((m,q)=>m+q[1]*q[2],0)*(dd(D(st.start),D(st.end))+1);
+    let ev=st.hist.reduce((a,b)=>a+b,0);if(appr&&r&&r.active&&r.rule!=='R0')ev+=r.wMH;
+    const frac=total?clamp(ev/total,0,1):0;
+    s+=`<text x="8" y="${y+23}"><tspan class="g-wbs">${st.wbs}</tspan> ${esc(L(st.n))}</text>`;
+    s+=`<rect class="g-plan" x="${x.toFixed(1)}" y="${yb}" width="${w.toFixed(1)}" height="${bh}" rx="4"/>`;
+    if(frac>0)s+=`<rect class="g-prog" x="${x.toFixed(1)}" y="${yb+5}" width="${(w*frac).toFixed(1)}" height="6" rx="3"/>`;
+    if(st.float>0)s+=`<rect class="g-float" x="${(x+w).toFixed(1)}" y="${yb+3}" width="${(st.float*dx).toFixed(1)}" height="${bh-6}" rx="2"/>`;
+    if(st.id==='S7'&&shift){const gx=xOf(addDays(D(st.start),shift));s+=`<rect class="g-ghost" x="${gx.toFixed(1)}" y="${yb-2}" width="${w.toFixed(1)}" height="${bh+4}" rx="5"/><text class="g-ghost-t" x="${(gx+6).toFixed(1)}" y="${yb+bh+13}">${esc(tr('gShift'))} ${esc(fShort(addDays(D(st.start),shift)))}</text>`;}
+    if(appr&&r&&r.pace&&state.verdicts[st.id]!=='recog'){
+      const xf=xOf(r.pace.fc)+dx,cy=yb+bh/2;
+      s+=`<path class="g-d-${r.pace.risk}" d="M${xf.toFixed(1)},${cy-8}L${(xf+8).toFixed(1)},${cy}L${xf.toFixed(1)},${cy+8}L${(xf-8).toFixed(1)},${cy}Z"/><text class="g-slip" x="${(xf+11).toFixed(1)}" y="${cy+4}">${signed(r.pace.slip,1)} ${esc(tr('uD'))}</text>`;
+    }
+    s+=`<rect class="g-hit" data-sid="${st.id}" x="0" y="${y+2}" width="${W}" height="${rh-4}"/>`;
+  });
+  const xt=xOf(TODAY_D)+dx*(20/24);
+  s+=`<line class="g-today" x1="${xt.toFixed(1)}" x2="${xt.toFixed(1)}" y1="${top-8}" y2="${H-4}"/><text class="g-today-t" x="${(xt+4).toFixed(1)}" y="${top-26}">${esc(tr('gToday'))}</text>`;
+  return s+`</svg>`;
+}
+function botMsgs(){
+  const T=state.T,M=[];
+  M.push({time:'08:00',to:'support',txt:tr('bCamOff',{cam:'CAM-5'})});
+  if(T>=36){for(const id of earlyList())M.push({time:'11:00',to:'engineer',txt:tr('bEarly',{stage:L(S(id).n),plan:planText(S(id))}),acts:[['live','bOpenLive']]});}
+  if(T>=90)M.push({time:'15:30',to:'support',txt:tr('bCamBack',{cam:'CAM-5'})});
+  if(state.report)M.push({time:'20:00',to:'engineer',txt:tr('bReady',{date:fShort(TODAY_D),n:state.devIds.length}),acts:[['review','bOpenReview']]});
+  if(state.approved){
+    const al=pmAlerts();
+    for(const r of al){const su=r.s.succ?S(r.s.succ):null,sh=succShift(r);M.push({time:state.approvedAt,to:'pm',alert:true,txt:tr('bAlert',{stage:L(r.s.n),slip:signed(r.pace.slip,1),fl:r.s.float})+(su&&sh?' '+tr('alertSucc',{succ:L(su.n),ns:fShort(addDays(D(su.start),sh)),os:fShort(D(su.start))}):''),acts:[['dash','bOpenDash']]});}
+    const other=state.devIds.filter(id=>state.verdicts[id]&&state.verdicts[id]!=='recog'&&!al.some(r=>r.s.id===id)).map(id=>L(S(id).n)+' — '+verdictText(id).toLowerCase());
+    if(other.length)M.push({time:state.approvedAt,to:'pm',txt:tr('bDigest',{list:other.join('; ')})});
+    const r4=STAGES.find(s=>state.report.ev[s.id].rule==='R0');
+    if(r4)M.push({time:state.approvedAt,to:'support',txt:tr('bTicket',{cam:'CAM-5',zone:L(ZONES[r4.zone].n),c:pct(state.report.ev[r4.id].c)})});
+  }
+  return M.reverse();
+}
+function earlyList(){const st=C&&C.sim.stat[36];if(!st)return [];return Object.keys(st).filter(id=>st[id]==='R1');}
+function logEntries(){
+  const T=state.T,P=C.P,out=[];
+  for(const e of EVENTS){
+    if(e.t>T||(e.t===144&&!state.report))continue;
+    let txt;if(e.k==='eEarly'){const ids=earlyList();if(!ids.length)continue;txt=tr('eEarly',{stage:ids.map(id=>L(S(id).n)).join(', ')});}
+    else if(e.k==='eCrane')txt=tr('eCrane',{date:fShort(D(S('S6').start))});else txt=tr(e.k);
+    out.push({t:e.t,time:slotTime(e.t),html:esc(txt)});
+  }
+  for(const x of C.sim.trans){if(x.t>=P)continue;out.push({t:x.t+.5,time:slotTime(x.t),html:`${esc(L(S(x.id).n))}: ${chip(x.from)} → ${chip(x.to)}`});}
+  return out.sort((a,b)=>b.t-a.t);
+}
+function vAside(){
+  const M=botMsgs();
+  let h=`<section class="panel"><div class="panel-top"><h2>${esc(tr('botH'))}</h2><span class="small muted">${esc(tr('botSub'))}</span></div><div class="bot">`;
+  h+=M.map(m=>`<div class="msg${m.alert?' alert-m':''}"><div class="msg-h"><b>${esc(tr('to_'+m.to))}</b><span class="mono">${esc(m.time)}</span></div><div>${esc(m.txt)}</div>${m.acts?`<div class="msg-a">${m.acts.map(a=>`<button type="button" data-act="tab" data-v="${a[0]}">${esc(tr(a[1]))}</button>`).join('')}</div>`:''}</div>`).join('');
+  h+=`</div></section><section class="panel"><h2 style="margin-bottom:10px">${esc(tr('logH'))}</h2><ul class="log">${logEntries().map(e=>`<li><time>${e.time}</time><span>${e.html}</span></li>`).join('')}</ul></section>`;
+  return h;
+}
+
+/* ================= Render ================= */
+const TABS=[['setup','tabSetup'],['live','tabLive'],['report','tabReport'],['review','tabReview'],['dash','tabDash']];
+function badge(id){
+  if(id==='report')return state.report?(state.approved?`<span class="bdg">${esc(tr('bApproved'))}</span>`:`<span class="bdg warm">${esc(tr('bReady'))}</span>`):`<span class="bdg">${esc(tr('bPrelim'))}</span>`;
+  if(id==='review'){if(!state.report)return `<span class="bdg">${esc(tr('bWaiting'))}</span>`;if(state.approved)return `<span class="bdg">${esc(tr('bApproved'))}</span>`;const n=state.devIds.filter(x=>!state.verdicts[x]).length;return n?`<span class="bdg warm">${esc(tr('bToReview',{n}))}</span>`:'';}
+  if(id==='dash'){const n=pmAlerts().length;return n?`<span class="bdg hot">${esc(tr('bAlerts',{n}))}</span>`:'';}
+  return '';
+}
+let dragging=null;
+function render(){
+  const sim=simulate(procCount(),EMPTY,true);C={sim,P:sim.P,ev:evalStages(sim.acc,sim.P)};
+  document.documentElement.lang=state.lang;
+  $('#brandName').textContent=tr('brand');
+  $('#projLine').textContent=tr('project')+' · '+tr('shiftOf',{date:fLong(TODAY_D)});
+  $$('[data-act="lang"]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===state.lang)));
+  $('#guideBtn').innerHTML=icon('play')+esc(state.guided?tr('guidedExit'):tr('guided'));
+  $('#restartBtn').innerHTML=icon('restart');$('#restartBtn').setAttribute('aria-label',tr('restart'));$('#restartBtn').title=tr('restart');
+  $('#playBtn').innerHTML=icon(state.playing?'pause':'play')+`<span>${esc(state.playing?tr('pause'):tr('play'))}</span>`;
+  $$('#speedSeg button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.v)===state.speed)));
+  $('#speedSeg').setAttribute('aria-label',state.lang==='ru'?'Скорость':'Speed');
+  $('#clock').textContent=state.T>=SLOTS?'20:00':slotTime(state.T);
+  $('#clockSub').textContent=tr('clockSub');
+  const X=t=>(t/SLOTS*100).toFixed(3)+'%';
+  $('#track').innerHTML=`<div class="t-done" style="width:${X(state.T)}"></div><div class="t-rain" style="left:${X(30)};width:${X(72)}"><span>${icon('drop')}${esc(tr('lgRain'))}</span></div><div class="t-nd" style="left:0;width:${X(90)};bottom:0" title="${esc(tr('trOffline'))}"></div><div class="t-nd" style="left:${X(72)};width:${X(12)};bottom:6px" title="${esc(tr('trDark'))}"></div>`+
+    [[36,'trEarly','var(--crit)'],[96,'trCrane','var(--info)'],[144,'trEnd','var(--ink-2)']].map(p=>`<button type="button" class="t-pin" style="left:${p[0]===144?'calc(100% - 8px)':X(p[0])};--pc:${p[2]}" data-act="jump" data-t="${p[0]}" title="${esc(tr(p[1]))}" aria-label="${esc(tr(p[1]))}"><i></i></button>`).join('')+
+    `<div class="t-head" style="left:${X(state.T)}"></div>`;
+  const sc=$('#scrub');if(Number(sc.value)!==state.T)sc.value=state.T;sc.setAttribute('aria-valuetext',state.T>=SLOTS?'20:00':slotTime(state.T));sc.setAttribute('aria-label',state.lang==='ru'?'Время смены':'Shift time');
+  $('#taxis').innerHTML=[0,24,48,72,96,120,144].map(t=>`<span style="left:${X(t)}">${slotTime(t)}</span>`).join('');
+  $('#tlegend').innerHTML=`<span><i class="lg-rain"></i>${esc(tr('lgRain'))}</span><span><i class="lg-nd"></i>${esc(tr('lgNoData'))}</span><span><i class="lg-pin"></i>${esc(tr('lgEvent'))}</span>`;
+  $('#endBtn').innerHTML=icon('play')+esc(tr('toEnd'));
+  $('#tabs').innerHTML=TABS.map((t,i)=>`<button type="button" class="tab" role="tab" aria-selected="${state.tab===t[0]}" data-act="tab" data-v="${t[0]}"><span class="n">${i+1}</span>${esc(tr(t[1]))}${badge(t[0])}</button>`).join('');
+  if(!(dragging&&state.tab==='setup')){
+    const V={setup:vSetup,live:vLive,report:vReport,review:vReview,dash:vDash}[state.tab];
+    $('#main').innerHTML=V();
+  }
+  $('#aside').innerHTML=vAside();
+  renderGuide();
+}
+function renderGuide(){
+  const g=$('#guide');
+  if(!state.guided){g.hidden=true;document.body.classList.remove('guiding');return;}
+  const i=state.guided.i,n=GSTEPS.length,last=i>=n-1;
+  g.hidden=false;document.body.classList.add('guiding');
+  g.innerHTML=`<div class="guide-in"><span class="ctr">${i+1}/${n}</span><p class="cap">${esc(I18N[state.lang].g[i])}</p><div class="btns"><button type="button" class="btn btn-next" data-act="g-next">${esc(last?tr('finish'):tr('next'))} ›</button><button type="button" class="btn btn-exit" data-act="guide">${esc(tr('exit'))}</button></div></div>`;
+}
+
+/* ================= Actions ================= */
+let timer=null;
+function startPlay(){if(state.T>=SLOTS){restart();}state.playing=true;clearInterval(timer);timer=setInterval(tick,1000/state.speed);render();}
+function stopPlay(){state.playing=false;clearInterval(timer);timer=null;}
+function tick(){
+  if(state.T>=SLOTS){stopPlay();render();return;}
+  const prev=state.T;state.T++;afterAdvance(prev);
+  if(state.stopAt!=null&&state.T>=state.stopAt){stopPlay();state.stopAt=null;}
+  if(state.T>=SLOTS)stopPlay();
+  render();
+}
+function afterAdvance(prev){
+  if(prev<36&&state.T>=36&&state.T<40)toast(tr('toastEarly'),'bell','crit');
+  if(prev<SLOTS&&state.T>=SLOTS)onShiftEnd();
+}
+function setT(v){const prev=state.T;state.T=clamp(v,0,SLOTS);afterAdvance(prev);render();}
+function onShiftEnd(){
+  if(!state.report0){state.report0=buildReport();state.report=state.report0;state.devIds=devOrder(state.report0);}
+  toast(tr('toastEnd'),'check','good');
+}
+function restart(){
+  stopPlay();state.T=0;state.stopAt=null;state.report=null;state.report0=null;state.devIds=[];state.verdicts={};state.fmType={};
+  state.corr={removed:new Set(),override:{}};state.openCorr=null;state.openFM=null;state.approved=false;state.approvedAt=null;state.audit=[];state.clockMin=20*60+32;state.feedbackN={};
+}
+function nowStamp(){const t=hhmm(state.clockMin);state.clockMin+=2;return t;}
+function audit(fn){state.audit.push({time:nowStamp(),txt:fn});}
+function rebuild(){state.report=buildReport();}
+function setVerdict(sid,v,fm){
+  state.verdicts[sid]=v;if(fm)state.fmType[sid]=fm;state.openFM=null;state.openCorr=null;
+  audit(()=>tr('auditVerdict',{stage:L(S(sid).n),v:verdictText(sid)}));
+}
+function applyCorr(sid){
+  const r0=state.report0.ev[sid],s=S(sid);
+  if(r0.rule==='R4'){
+    const cb=$('#corr-rm-'+sid);if(cb&&!cb.checked){state.openCorr=null;return;}
+    const ids=ACTORS.filter(a=>Object.keys(a.views).some(cid=>{const v=a.views[cid];const gp=[v.x+DIMS[a.cls][0]*v.s/2,v.gy];return zoneAt(cid,gp)===s.zone;})&&s.req.some(q=>q[0]===(a.detectAs||a.cls))).map(a=>a.id);
+    let n=0;for(const id of ids){state.corr.removed.add(id);const a=ACTORS.find(x=>x.id===id);for(let t=0;t<SLOTS;t++)if(inR(t,a.present))n++;}
+    state.feedbackN[sid]=n;
+  }else{
+    const p=parseFloat(($('#corr-p-'+sid)||{}).value),w=parseFloat(($('#corr-w-'+sid)||{}).value);
+    if(!isFinite(p)||!isFinite(w)||p<0||w<0)return;
+    state.corr.override[sid]={p,w:Math.min(w,p)};state.feedbackN[sid]=0;
+  }
+  state.verdicts[sid]='recog';state.openCorr=null;rebuild();
+  audit(()=>tr('auditVerdict',{stage:L(s.n),v:tr('v_recog')}));audit(()=>tr('auditRecompute'));
+  toast(tr('toastRecomputed'),'check','good');
+}
+function changeVerdict(sid){
+  const v=state.verdicts[sid];delete state.verdicts[sid];
+  if(v==='recog'){delete state.corr.override[sid];const s=S(sid);for(const a of ACTORS){if(s.req.some(q=>q[0]===(a.detectAs||a.cls))&&Object.keys(a.views).some(cid=>{const vv=a.views[cid];return zoneAt(cid,[vv.x+DIMS[a.cls][0]*vv.s/2,vv.gy])===s.zone;}))state.corr.removed.delete(a.id);}delete state.feedbackN[sid];rebuild();}
+}
+function approve(){
+  if(!state.report||state.devIds.some(id=>!state.verdicts[id]))return;
+  state.approved=true;state.approvedAt=nowStamp();audit(()=>tr('auditApprove'));toast(tr('toastApproved'),'bell','good');
+}
+function checkCams(){
+  state.camCheck='running';state.camRes={};
+  CAMS.forEach((c,i)=>setTimeout(()=>{state.camRes[c.id]=c.ms?'ok':'timeout';if(Object.keys(state.camRes).length===CAMS.length)state.camCheck='done';render();},c.ms?260+i*170:1900));
+}
+function toast(text,ic,k){
+  const el=document.createElement('div');el.className='toast';el.style.setProperty('--cc',`var(--${k||'accent-2'})`);el.innerHTML=icon(ic||'info')+`<span>${esc(text)}</span>`;
+  $('#toasts').appendChild(el);setTimeout(()=>el.remove(),4200);
+}
+function playTo(target,speed){if(speed)state.speed=speed;if(state.T>=target){setT(target);return;}state.stopAt=target;startPlay();}
+function focusCard(sid){requestAnimationFrame(()=>{const el=$('#dev-'+sid);if(el){el.scrollIntoView({block:'center',behavior:reduced()?'auto':'smooth'});el.classList.add('flash');}});}
+function reduced(){return window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;}
+const GSTEPS=[
+  {tab:'setup',run(){state.schedLoaded=true;}},
+  {tab:'setup',run(){checkCams();}},
+  {tab:'setup',run(){state.editCam='CAM-6';}},
+  {tab:'live',run(){playTo(30,1);}},
+  {tab:'live',run(){playTo(36,1);}},
+  {tab:'live',run(){playTo(72,2);}},
+  {tab:'live',run(){playTo(96,2);}},
+  {tab:'report',run(){playTo(144,4);}},
+  {tab:'review',run(){setVerdict('S2','delay');focusCard('S2');}},
+  {tab:'review',run(){setVerdict('S3','delay');focusCard('S3');}},
+  {tab:'review',run(){setVerdict('S1','fm','weather');focusCard('S1');}},
+  {tab:'review',run(){state.openCorr='S6';render();applyCorr('S6');focusCard('S6');}},
+  {tab:'review',run(){approve();}},
+  {tab:'dash',run(){}},
+  {tab:'dash',run(){}}
+];
+function startGuided(){
+  restart();state.schedLoaded=false;state.camCheck='idle';state.camRes={};state.poly=clone(DEFAULT_POLY);state.speed=1;state.guided={i:0};runStep();
+}
+function runStep(){
+  const st=GSTEPS[state.guided.i];state.tab=st.tab;render();st.run();render();
+  if(st.tab!=='review')window.scrollTo({top:0,behavior:reduced()?'auto':'smooth'});
+}
+function guideNext(){
+  if(!state.guided)return;
+  if(state.stopAt!=null){const s=state.stopAt;stopPlay();state.stopAt=null;setT(s);}
+  if(state.guided.i>=GSTEPS.length-1){state.guided=null;render();return;}
+  state.guided.i++;runStep();
+}
+function openLb(camId,slot,cap){
+  const cam=CAMS.find(c=>c.id===camId);const lb=$('#lb');
+  lb.innerHTML=`<div class="lb-in"><div class="lb-top"><b>${esc(cap)}</b><button type="button" class="btn btn-sm" data-act="lb-close">${esc(tr('lbClose'))}</button></div>${camSVG(cam,slot,{boxes:true,zones:true})}</div>`;
+  lb.hidden=false;$('[data-act="lb-close"]',lb).focus();
+}
+
+/* ================= Events ================= */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');
+  if(!b){if(e.target.id==='lb')$('#lb').hidden=true;return;}
+  const a=b.dataset.act,sid=b.dataset.sid,v=b.dataset.v;
+  switch(a){
+    case 'lang':state.lang=v;try{localStorage.setItem('pf-lang',v);}catch(err){}render();break;
+    case 'guide':if(state.guided){state.guided=null;stopPlay();state.stopAt=null;render();}else startGuided();break;
+    case 'g-next':guideNext();break;
+    case 'play':if(state.playing){stopPlay();state.stopAt=null;render();}else startPlay();break;
+    case 'restart':restart();render();break;
+    case 'speed':state.speed=Number(v);if(state.playing){clearInterval(timer);timer=setInterval(tick,1000/state.speed);}render();break;
+    case 'jump':stopPlay();state.stopAt=null;setT(Number(b.dataset.t));break;
+    case 'tab':state.tab=v;render();window.scrollTo({top:0});break;
+    case 'load-sched':state.schedLoaded=true;render();break;
+    case 'check-cams':checkCams();render();break;
+    case 'edit-cam':state.editCam=v;render();break;
+    case 'reset-zones':state.poly=clone(DEFAULT_POLY);render();break;
+    case 'tl-table':state.tlTable=!state.tlTable;render();break;
+    case 'v-delay':setVerdict(sid,'delay');render();break;
+    case 'v-fm':state.openFM=state.openFM===sid?null:sid;state.openCorr=null;render();break;
+    case 'fm':setVerdict(sid,'fm',v);render();break;
+    case 'v-recog':state.openCorr=state.openCorr===sid?null:sid;state.openFM=null;render();break;
+    case 'corr-apply':applyCorr(sid);render();break;
+    case 'corr-cancel':state.openCorr=null;render();break;
+    case 'change':changeVerdict(sid);render();break;
+    case 'approve':approve();render();break;
+    case 'lb':openLb(b.dataset.cam,Number(b.dataset.slot),b.dataset.cap);break;
+    case 'lb-close':$('#lb').hidden=true;break;
+  }
+});
+document.addEventListener('change',e=>{
+  const o=e.target.dataset&&e.target.dataset.opt;if(!o)return;
+  if(o==='zones')state.showZones=e.target.checked;if(o==='boxes')state.showBoxes=e.target.checked;render();
+});
+$('#scrub').addEventListener('input',e=>{stopPlay();state.stopAt=null;setT(Number(e.target.value));});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(!$('#lb').hidden){$('#lb').hidden=true;return;}if(state.guided){state.guided=null;stopPlay();state.stopAt=null;render();}return;}
+  const tg=e.target;const typing=tg&&(tg.tagName==='INPUT'||tg.tagName==='TEXTAREA'||tg.isContentEditable);
+  if(tg&&tg.classList&&tg.classList.contains('vtx')&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+    e.preventDefault();const P=state.poly[tg.dataset.cam][tg.dataset.zone][Number(tg.dataset.i)];const st=e.shiftKey?8:2;
+    if(e.key==='ArrowLeft')P[0]=clamp(P[0]-st,0,320);if(e.key==='ArrowRight')P[0]=clamp(P[0]+st,0,320);if(e.key==='ArrowUp')P[1]=clamp(P[1]-st,0,180);if(e.key==='ArrowDown')P[1]=clamp(P[1]+st,0,180);
+    const sel=`.vtx[data-cam="${tg.dataset.cam}"][data-zone="${tg.dataset.zone}"][data-i="${tg.dataset.i}"]`;render();const n=$(sel);if(n)n.focus();return;
+  }
+  if(state.guided&&!typing&&(e.key==='ArrowRight'||e.key==='PageDown')){e.preventDefault();guideNext();}
+});
+/* zone editor dragging */
+function svgPoint(svg,cx,cy){const pt=svg.createSVGPoint();pt.x=cx;pt.y=cy;const m=svg.getScreenCTM();if(!m)return null;const r=pt.matrixTransform(m.inverse());return [clamp(r.x,0,320),clamp(r.y,0,180)];}
+document.addEventListener('pointerdown',e=>{
+  const c=e.target.closest&&e.target.closest('.vtx');if(!c)return;e.preventDefault();
+  dragging={cam:c.dataset.cam,zone:c.dataset.zone,i:Number(c.dataset.i),svg:c.ownerSVGElement,el:c};
+  try{c.setPointerCapture(e.pointerId);}catch(err){}
+});
+document.addEventListener('pointermove',e=>{
+  if(dragging){
+    const p=svgPoint(dragging.svg,e.clientX,e.clientY);if(!p)return;
+    state.poly[dragging.cam][dragging.zone][dragging.i]=p;dragging.el.setAttribute('cx',p[0].toFixed(1));dragging.el.setAttribute('cy',p[1].toFixed(1));
+    const poly=dragging.svg.querySelectorAll('polygon');const zs=Object.keys(state.poly[dragging.cam]);const k=zs.indexOf(dragging.zone);
+    if(poly[k])poly[k].setAttribute('points',state.poly[dragging.cam][dragging.zone].map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' '));
+    return;
+  }
+  const plot=e.target.closest&&e.target.closest('.tl-plot');
+  if(plot){showTl(plot,e.clientX,e.clientY);return;}
+  const hit=e.target.closest&&e.target.closest('.g-hit');
+  if(hit){showGanttTip(hit.dataset.sid,e.clientX,e.clientY);return;}
+  hideTip();
+});
+document.addEventListener('pointerup',()=>{if(dragging){dragging=null;render();}});
+document.addEventListener('pointerleave',hideTip);
+function hideTip(){const t=$('#tip');if(!t.hidden)t.hidden=true;$$('.tl-x').forEach(x=>x.hidden=true);}
+function placeTip(cx,cy){const t=$('#tip');t.hidden=false;const r=t.getBoundingClientRect();let x=cx+14,y=cy+14;if(x+r.width>window.innerWidth-8)x=cx-r.width-14;if(y+r.height>window.innerHeight-8)y=cy-r.height-14;t.style.left=Math.max(8,x)+'px';t.style.top=Math.max(8,y)+'px';}
+function showTl(plot,cx,cy){
+  const rect=plot.getBoundingClientRect();const P=Number(plot.dataset.p);let t=Math.floor((cx-rect.left)/rect.width*SLOTS);t=clamp(t,0,SLOTS-1);
+  const pctX=((t+.5)/SLOTS*100).toFixed(2)+'%';$$('.tl-x').forEach(x=>{x.hidden=false;x.style.left=pctX;});
+  const sim=(state.report&&P===SLOTS)?state.report.sim:C.sim;
+  let h=`<div class="th">${slotTime(t)}–${slotTime(t+1)}</div>`;
+  if(t>=P)h+=`<div class="tr"><span>${esc(tr('afterShift'))}</span></div>`;
+  else for(const s of tlStages()){const v=stageCounts(sim,s,t);h+=`<div class="tr"><span>${esc(s.wbs+' '+L(s.n))}</span><b>${v.cov?`${num(v.p,0)} / ${num(v.w,0)}`:esc(tr('tlNoDataCell'))}</b></div>`;}
+  h+=`<div class="tr" style="margin-top:4px"><span class="small">${esc(tr('tlPresent'))} / ${esc(tr('tlWorking'))}</span></div>`;
+  $('#tip').innerHTML=h;placeTip(cx,cy);
+}
+function showGanttTip(sid,cx,cy){
+  const s=S(sid),r=state.report&&state.approved?state.report.ev[sid]:null;
+  let h=`<div class="th">${esc(s.wbs+' '+L(s.n))}</div><div class="tr"><span>${esc(tr('gTipPlan',{a:fShort(D(s.start)),b:fShort(D(s.end))}))}</span></div><div class="tr"><span>${esc(tr('gTipFloat',{n:s.float}))}</span></div>`;
+  if(r&&r.pace&&state.verdicts[sid]!=='recog')h+=`<div class="tr"><span>${esc(tr('gTipSpi',{spi:num(r.pace.spi,2)}))}</span></div><div class="tr"><span>${esc(tr('gTipFc',{fc:fShort(r.pace.fc),slip:signed(r.pace.slip,1),risk:tr('risk_'+r.pace.risk)}))}</span></div>`;
+  $('#tip').innerHTML=h;placeTip(cx,cy);
+}
+document.addEventListener('focusin',e=>{const p=e.target.closest&&e.target.closest('.tl-plot');if(p){const r=p.getBoundingClientRect();showTl(p,r.left+r.width*frameSlot()/SLOTS,r.top+r.height);}});
+document.addEventListener('focusout',e=>{if(e.target.closest&&e.target.closest('.tl-plot'))hideTip();});
+
+render();
+})();
+</script>
+
+</body></html>

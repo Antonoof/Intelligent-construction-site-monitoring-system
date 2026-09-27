@@ -1,0 +1,443 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Окупаемость контроля стройки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Oswald:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#EDF0F3;--surface:#FFFFFF;--surface-2:#F5F7F9;--surface-3:#E3E8ED;
+  --line:#D6DDE4;--line-2:#B8C2CD;
+  --ink:#111922;--ink-2:#434F5C;--muted:#65717E;
+  --accent:#256ABF;--accent-2:#1C5CAB;--accent-soft:#E2ECF9;--on-accent:#FFFFFF;
+  --good:#0CA30C;--crit:#D03B3B;--good-bg:rgba(12,163,12,.12);--crit-bg:rgba(208,59,59,.11);
+  --s1:#2A78D6;--s2:#EB6834;--s3:#1BAF7A;--cost:#26323F;--neg:#E34948;--pos:#2A78D6;
+  --hazard:#F2B705;--hazard-ink:#16191C;--hazard-soft:#FFF4CF;--be-rule:#16191C;
+  --shadow:0 1px 2px rgba(17,25,34,.06),0 8px 24px rgba(17,25,34,.08);
+  --f-display:"Oswald","Arial Narrow",Arial,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){color-scheme:dark;
+    --bg:#0B1016;--surface:#121921;--surface-2:#172029;--surface-3:#1F2A35;--line:#25313D;--line-2:#374553;
+    --ink:#E6EBF1;--ink-2:#AAB5C2;--muted:#8A96A3;
+    --accent:#3987E5;--accent-2:#6DA7EC;--accent-soft:#16263B;--on-accent:#06101C;
+    --good-bg:rgba(12,163,12,.2);--crit-bg:rgba(208,59,59,.22);
+    --s1:#3987E5;--s2:#D95926;--s3:#199E70;--cost:#C3CCD6;--neg:#E66767;--pos:#3987E5;
+    --hazard-soft:#2B2410;--be-rule:#F2B705;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#0B1016;--surface:#121921;--surface-2:#172029;--surface-3:#1F2A35;--line:#25313D;--line-2:#374553;
+  --ink:#E6EBF1;--ink-2:#AAB5C2;--muted:#8A96A3;
+  --accent:#3987E5;--accent-2:#6DA7EC;--accent-soft:#16263B;--on-accent:#06101C;
+  --good-bg:rgba(12,163,12,.2);--crit-bg:rgba(208,59,59,.22);
+  --s1:#3987E5;--s2:#D95926;--s3:#199E70;--cost:#C3CCD6;--neg:#E66767;--pos:#3987E5;
+  --hazard-soft:#2B2410;--be-rule:#F2B705;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.app{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:grid;gap:20px}
+@media (min-width:900px){.app{padding-inline:28px;padding-block:28px 56px}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.hdr{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px 24px}
+.brand{display:flex;gap:14px;align-items:center;min-width:0}
+.logo{width:40px;height:40px;flex:none}
+.logo .a{fill:var(--accent)}.logo .b{fill:var(--on-accent)}.logo .c{fill:var(--hazard)}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-2)}
+h1{font-family:var(--f-display);font-weight:600;font-size:clamp(26px,3.4vw,36px);line-height:1.05;letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--surface-3);align-items:center}
+.seg button{border:0;background:transparent;border-radius:7px;padding:6px 12px;font-size:13.5px;font-weight:500;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.seg .custom{font-size:12.5px;color:var(--muted);padding:0 10px 0 6px;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);border-radius:9px;padding:7px 13px;font-size:13.5px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--accent-2)}
+.btn-ghost:hover{background:var(--accent-soft)}
+.lead{max-width:72ch;color:var(--ink-2);font-size:14.5px}
+
+/* layout */
+.main{display:grid;gap:20px;align-items:start}
+@media (min-width:1000px){
+  .main{grid-template-columns:minmax(0,1fr) minmax(380px,460px)}
+  .results{grid-column:2;grid-row:1;position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}
+  .inputs{grid-column:1;grid-row:1}
+}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 18px 20px;min-width:0}
+.card h2{font-family:var(--f-display);font-weight:500;font-size:16px;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.card h2 i{width:11px;height:11px;border-radius:3px;background:var(--gc,var(--ink-2));flex:none}
+.inputs{display:grid;gap:16px}
+
+/* fields */
+.field{display:grid;gap:6px;padding:12px 0;border-top:1px solid var(--line)}
+.field:first-of-type{border-top:0}
+.f-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.f-top label{font-size:13.5px;line-height:1.35;color:var(--ink-2)}
+.num{display:inline-flex;align-items:center;gap:6px;flex:none}
+.num input{width:108px;text-align:right;padding:5px 8px;border:1px solid var(--line-2);border-radius:7px;background:var(--surface);font-variant-numeric:tabular-nums;font-weight:600}
+.num input:focus{border-color:var(--accent)}
+.num .u{font-size:12.5px;color:var(--muted);min-width:38px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0;height:22px}
+.echo{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.derived{display:flex;justify-content:space-between;gap:12px;margin-top:8px;padding:10px 12px;border-radius:8px;background:var(--surface-2);font-size:13.5px}
+.derived b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+/* results */
+.results{display:grid;gap:14px}
+.hero{display:grid;gap:10px}
+.verdict{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 7px;border-radius:999px;font-size:12.5px;font-weight:600;width:max-content}
+.verdict svg{width:14px;height:14px}
+.verdict.ok{background:var(--good-bg);color:var(--ink)}.verdict.ok svg{color:var(--good)}
+.verdict.bad{background:var(--crit-bg);color:var(--ink)}.verdict.bad svg{color:var(--crit)}
+.hero-l{font-size:15px;color:var(--ink-2)}
+.hero-v{font-size:clamp(46px,6vw,64px);font-weight:700;line-height:1;letter-spacing:-.01em}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--surface-2);border-radius:10px;padding:10px 12px;display:grid;gap:2px;align-content:start;min-width:0}
+.tile .l{font-size:12px;color:var(--muted);line-height:1.3}
+.tile .v{font-size:21px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.tile .s{font-size:12px;color:var(--ink-2);line-height:1.35}
+.be{background:var(--hazard-soft);border:1px solid var(--hazard);border-radius:12px;padding:14px 16px;display:grid;gap:10px}
+.be h3{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.be-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.be-i{display:grid;gap:2px;border-top:3px solid var(--be-rule);padding-top:8px;min-width:0}
+.be-v{font-size:22px;font-weight:700;line-height:1.15;font-variant-numeric:normal}
+.be-l{font-size:12px;color:var(--ink-2);line-height:1.3}
+.be-n{font-size:12px;display:flex;gap:4px;align-items:center;color:var(--ink-2)}
+.be-n svg{width:13px;height:13px;flex:none}
+.be-n.ok svg{color:var(--good)}.be-n.no svg{color:var(--crit)}
+
+/* stacked bar */
+.sb{display:grid;gap:10px}
+.sb-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sb-h h3{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.sb-row{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:10px;align-items:center}
+.sb-l{font-size:12.5px;color:var(--ink-2)}
+.sb-track{height:26px;position:relative}
+.sb-fill{display:flex;gap:2px;height:100%;min-width:2px}
+.sb-seg{min-width:2px;cursor:default;position:relative}
+.sb-seg:last-child{border-radius:0 4px 4px 0}
+.sb-seg:hover,.sb-seg:focus-visible{filter:brightness(1.12);outline-offset:1px}
+.sb-seg.s1{background:var(--s1)}.sb-seg.s2{background:var(--s2)}.sb-seg.s3{background:var(--s3)}.sb-seg.c{background:var(--cost)}
+.sb-v{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;min-width:92px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:10px;border-radius:2px;background:var(--lc)}
+
+/* sensitivity */
+.sens-h{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;align-items:flex-end;margin-bottom:12px}
+.sens-h p{max-width:70ch;color:var(--ink-2);font-size:13.5px}
+.tor{display:grid;gap:0}
+.tor-row{display:grid;grid-template-columns:minmax(150px,280px) minmax(0,1fr);gap:14px;align-items:center;padding:5px 0;border-top:1px solid var(--line)}
+.tor-row:first-child{border-top:0}
+.tor-l{font-size:13px;line-height:1.3;color:var(--ink-2)}
+.tor-plot{position:relative;height:30px;cursor:default}
+.tor-bar{position:absolute;top:7px;height:16px}
+.tor-bar.neg{background:var(--neg);border-radius:4px 0 0 4px}
+.tor-bar.pos{background:var(--pos);border-radius:0 4px 4px 0}
+.tor-t{position:absolute;top:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--ink)}
+.tor-base{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--ink);margin-left:-1px}
+.tor-one{position:absolute;top:-6px;bottom:-6px;width:0;border-left:1.5px dashed var(--crit)}
+.tor-axis{display:grid;grid-template-columns:minmax(150px,280px) minmax(0,1fr);gap:14px;margin-top:6px}
+.tor-axis>div{position:relative;height:18px;font-size:11.5px;color:var(--muted)}
+.tor-axis span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+@media (max-width:640px){.tor-row,.tor-axis{grid-template-columns:minmax(0,1fr)}.tor-axis>div:first-child{display:none}}
+
+/* formulas */
+.fx{font:13px/1.8 var(--f-mono);color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;overflow-x:auto}
+.fx div{white-space:nowrap}
+.fx b{color:var(--ink);font-weight:600}
+.links{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:13.5px}
+.links a{color:var(--accent-2);font-weight:500;text-underline-offset:3px}
+.copybox{display:grid;gap:8px}
+.copybox textarea{width:100%;min-height:150px;border:1px solid var(--line-2);border-radius:8px;padding:10px;background:var(--surface);font:13px/1.5 var(--f-mono);resize:vertical}
+.tip{position:fixed;z-index:90;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow);padding:8px 10px;font-size:12.5px;max-width:280px}
+.tip b{font-variant-numeric:tabular-nums}
+.toast{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;z-index:95;background:var(--surface);border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:10px 14px;font-size:13.5px;display:flex;gap:8px;align-items:center}
+.toast svg{width:16px;height:16px;color:var(--good)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <header class="hdr">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true"><rect class="a" width="40" height="40" rx="9"/><rect class="b" x="8" y="24" width="6" height="9" rx="1.5"/><rect class="b" x="17" y="17" width="6" height="16" rx="1.5"/><rect class="c" x="26" y="9" width="6" height="24" rx="1.5"/></svg>
+      <div>
+        <p class="eyebrow">Контроль хода строительства по камерам</p>
+        <h1>Калькулятор окупаемости</h1>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="seg" role="group" aria-label="Сценарий" id="presets">
+        <button type="button" data-preset="base">Базовый</button>
+        <button type="button" data-preset="pess">Пессимистичный</button>
+        <span class="custom" id="customTag" hidden>Свои цифры</span>
+      </div>
+      <button type="button" class="btn" id="copyBtn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 10.5V3.8C3 3.4 3.4 3 3.8 3h6.7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Скопировать расчёт</button>
+      <button type="button" class="btn btn-ghost" id="resetBtn">Сбросить</button>
+    </div>
+  </header>
+  <p class="lead">Значения по умолчанию — условный пример из презентации. Подставьте цифры заказчика: расчёт на один объект обновляется сразу, а ваши значения сохраняются в этом браузере.</p>
+  <div class="copybox card" id="copyBox" hidden>
+    <label for="copyText" class="note">Браузер не дал скопировать автоматически. Текст выделен — нажмите Ctrl+C или ⌘C.</label>
+    <textarea id="copyText" readonly></textarea>
+  </div>
+  <div class="main">
+    <section class="results card" id="results" aria-label="Результат расчёта"></section>
+    <div class="inputs" id="inputs"></div>
+  </div>
+  <section class="card" id="sens"></section>
+  <section class="card" id="formulas"></section>
+</div>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(function(){
+'use strict';
+const GROUPS=[
+  {id:'labor',title:'Время инженеров',c:'var(--s1)',fields:[
+    {k:'hBefore',label:'Часов в день на контроль сейчас',u:'ч',min:0,max:8,step:0.25},
+    {k:'hAfter',label:'Часов в день с системой, включая проверку отчёта',u:'ч',min:0,max:8,step:0.25},
+    {k:'rateH',label:'Стоимость часа инженера с налогами',u:'₽',min:300,max:5000,step:50},
+    {k:'days',label:'Рабочих дней в месяц',u:'дн',min:15,max:31,step:1}]},
+  {id:'mh',title:'Машино-часы',c:'var(--s2)',fields:[
+    {k:'mh',label:'Оплаченных машино-часов в месяц (акты, рапорты ЭСМ-2)',u:'маш.-ч',min:0,max:10000,step:50},
+    {k:'mhRate',label:'Средняя ставка аренды техники',u:'₽/маш.-ч',min:500,max:15000,step:100},
+    {k:'mhShare',label:'Доля машино-часов, не подтверждённых камерами',u:'%',min:0,max:20,step:0.5}]},
+  {id:'delay',title:'Сроки',c:'var(--s3)',fields:[
+    {k:'dayCost',label:'Стоимость дня задержки: проценты, расходы площадки, неустойки',u:'₽',min:0,max:10000000,step:50000,big:1},
+    {k:'devs',label:'Существенных отклонений от графика в год',u:'шт',min:0,max:24,step:1},
+    {k:'lead',label:'На сколько дней раньше система замечает отставание',u:'дн',min:0,max:30,step:0.5},
+    {k:'fix',label:'Доля отклонений, которые успевают исправить',u:'%',min:0,max:100,step:2.5}]},
+  {id:'cost',title:'Затраты на систему',c:'var(--cost)',fields:[
+    {k:'license',label:'Лицензия и поддержка в месяц',u:'₽',min:0,max:300000,step:1000,big:1},
+    {k:'cams',label:'Камер на объекте',u:'шт',min:1,max:40,step:1},
+    {k:'camCost',label:'Облако на одну камеру в месяц',u:'₽',min:0,max:5000,step:50},
+    {k:'impl',label:'Разовое внедрение на объект',u:'₽',min:0,max:2000000,step:10000,big:1},
+    {k:'objects',label:'Объектов в портфеле',u:'шт',min:1,max:200,step:1}]}
+];
+const FIELDS={};GROUPS.forEach(g=>g.fields.forEach(f=>{f.g=g.id;FIELDS[f.k]=f;}));
+const BASE={hBefore:2,hAfter:0.5,rateH:1500,days:22,mh:1500,mhRate:3000,mhShare:3,dayCost:1000000,devs:4,lead:5,fix:10,license:36000,cams:8,camCost:500,impl:150000,objects:1};
+const PRESETS={base:BASE,pess:Object.assign({},BASE,{hAfter:1.25,mhShare:1,fix:2.5})};
+const SENS=['hBefore','hAfter','rateH','mh','mhRate','mhShare','dayCost','devs','lead','fix','license','camCost'];
+const SHORT={hBefore:'Часы на контроль сейчас',hAfter:'Часы с системой',rateH:'Стоимость часа инженера',mh:'Оплаченные машино-часы',mhRate:'Ставка аренды техники',mhShare:'Доля неподтверждённых маш.-ч',dayCost:'Стоимость дня задержки',devs:'Отклонений в год',lead:'Опережение обнаружения',fix:'Доля исправленных отклонений',license:'Лицензия и поддержка',camCost:'Облако на камеру'};
+const KEY='pf-payback-v1';
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const ICON={
+  ok:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.4l3.1 3.1 6.5-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  no:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+};
+
+let v=Object.assign({},BASE);
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')for(const k in BASE)if(typeof s[k]==='number'&&isFinite(s[k])&&s[k]>=0)v[k]=s[k];}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(v));}catch(e){}}
+
+function fx(x,d){return Number(x).toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function fAuto(x){const d=Math.abs(x-Math.round(x))<1e-9?0:(Math.abs(x*10-Math.round(x*10))<1e-9?1:2);return fx(x,d);}
+function rub(x){return fx(Math.round(x),0)+' ₽';}
+function short(x){const a=Math.abs(x);if(a>=1e9)return fx(x/1e9,a>=1e10?0:1)+' млрд ₽';if(a>=1e6)return fx(x/1e6,a>=1e7?0:1)+' млн ₽';if(a>=1e4)return fx(x/1e3,0)+' тыс. ₽';return rub(x);}
+function times(r){
+  if(!isFinite(r))return '—';
+  const d=r<10?1:0,s=fx(r,d);
+  if(d===1)return s+' раза';
+  const n=Math.round(r),m10=n%10,m100=n%100;
+  return s+((m10>=2&&m10<=4&&(m100<12||m100>14))?' раза':' раз');
+}
+
+function pl(n,a,b,c){n=Math.abs(Math.round(n));const m10=n%10,m100=n%100;if(m10===1&&m100!==11)return a;if(m10>=2&&m10<=4&&(m100<12||m100>14))return b;return c;}
+function calc(o){
+  const labor=Math.max(0,o.hBefore-o.hAfter)*o.rateH*o.days;
+  const mh=o.mh*o.mhRate*o.mhShare/100;
+  const prevDays=o.devs*o.lead*o.fix/100;
+  const delay=prevDays*o.dayCost/12;
+  const effect=labor+mh+delay;
+  const cost=o.license+o.cams*o.camCost;
+  const net=effect-cost;
+  const ratio=cost>0?effect/cost:Infinity;
+  const payback=net>0?o.impl/net:Infinity;
+  const year1=(net*12-o.impl)*o.objects,yearN=net*12*o.objects;
+  const beH=o.rateH*o.days>0?cost/(o.rateH*o.days):Infinity;
+  const beS=o.mh*o.mhRate>0?cost/(o.mh*o.mhRate)*100:Infinity;
+  const beD=o.dayCost>0?cost*12/o.dayCost:Infinity;
+  return {labor,mh,prevDays,delay,effect,cost,net,ratio,payback,year1,yearN,beH,beS,beD};
+}
+
+/* ---------- inputs ---------- */
+function buildInputs(){
+  $('#inputs').innerHTML=GROUPS.map(g=>`<section class="card${g.id==='cost'?' wide':''}" aria-labelledby="g-${g.id}"><h2 id="g-${g.id}" style="--gc:${g.c}"><i></i>${g.title}</h2>${g.fields.map(f=>`<div class="field"><div class="f-top"><label for="n-${f.k}">${f.label}</label><span class="num"><input type="number" inputmode="decimal" id="n-${f.k}" data-k="${f.k}" min="0" step="${f.step}"><span class="u">${f.u}</span></span></div><input type="range" id="r-${f.k}" data-k="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}" aria-label="${f.label}">${f.big?`<div class="echo" id="e-${f.k}"></div>`:''}</div>`).join('')}<div class="derived" id="d-${g.id}"></div>${g.id==='labor'?'<p class="note">Проверка отчёта инженером входит в часы «с системой».</p>':''}${g.id==='mh'?'<p class="note">Считается прямо по данным системы: факт камер против актов подрядчика.</p>':''}${g.id==='delay'?'<p class="note">Отклонения в год × опережение × доля исправленных = предотвращённые дни задержки.</p>':''}</section>`).join('');
+  syncInputs();
+}
+function syncInputs(skip){
+  for(const k in FIELDS){
+    const f=FIELDS[k],n=$('#n-'+k),r=$('#r-'+k);
+    if(n&&n!==skip)n.value=String(v[k]);
+    if(r&&r!==skip)r.value=String(clamp(v[k],f.min,f.max));
+    const e=$('#e-'+k);if(e)e.textContent='≈ '+short(v[k]);
+  }
+}
+function onInput(el){
+  const k=el.dataset.k;if(!k||!(k in FIELDS))return;
+  let x=parseFloat(String(el.value).replace(',','.'));
+  if(!isFinite(x))return;
+  if(x<0)x=0;
+  if(k==='cams'||k==='objects')x=Math.max(1,Math.round(x));
+  v[k]=x;syncInputs(el);save();render();
+}
+
+/* ---------- results ---------- */
+function presetName(){for(const p in PRESETS){const P=PRESETS[p];if(Object.keys(BASE).every(k=>Math.abs(P[k]-v[k])<1e-9))return p;}return null;}
+function render(){
+  const r=calc(v);
+  const p=presetName();
+  $$('#presets button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preset===p)));
+  $('#customTag').hidden=!!p;
+
+  let hero;
+  if(r.cost<=0)hero=`<span class="verdict bad">${ICON.no}Затраты не заданы</span><p class="hero-l">Укажите стоимость лицензии или облака, чтобы сравнить эффект с затратами.</p>`;
+  else if(r.ratio>=1)hero=`<span class="verdict ok">${ICON.ok}Окупается</span><p class="hero-l">Эффект больше затрат в</p><p class="hero-v">${times(r.ratio)}</p>`;
+  else hero=`<span class="verdict bad">${ICON.no}Не окупается</span><p class="hero-l">Эффект покрывает</p><p class="hero-v">${fx(r.ratio*100,0)} % затрат</p>`;
+
+  const pay=v.impl<=0?'сразу':r.net<=0?'не окупается':r.payback<1?`≈ ${Math.max(1,Math.round(r.payback*30.4))} дн`:`${fx(r.payback,1)} мес`;
+  const objTxt=`на ${fx(v.objects,0)} ${pl(v.objects,'объект','объекта','объектов')}`;
+  const tiles=`<div class="tiles">
+    <div class="tile"><span class="l">Эффект в месяц</span><span class="v">${rub(r.effect)}</span><span class="s">на один объект</span></div>
+    <div class="tile"><span class="l">Затраты в месяц</span><span class="v">${rub(r.cost)}</span><span class="s">лицензия, поддержка, облако</span></div>
+    <div class="tile"><span class="l">Окупаемость внедрения</span><span class="v">${pay}</span><span class="s">${rub(v.impl)} разово</span></div>
+    <div class="tile"><span class="l">Чистый эффект за первый год</span><span class="v">${short(r.year1)}</span><span class="s">${objTxt}, с учётом внедрения; дальше ${short(r.yearN)} в год</span></div>
+  </div>`;
+
+  const saved=Math.max(0,v.hBefore-v.hAfter);
+  const beItem=(val,dg,unit,label,cur,curTxt)=>{
+    if(!isFinite(val))return `<div class="be-i"><span class="be-v">—</span><span class="be-l">${label}</span></div>`;
+    const ok=cur>=val-1e-9;
+    return `<div class="be-i"><span class="be-v">${val>100&&unit==='%'?'> 100 %':fx(val,dg)+' '+unit}</span><span class="be-l">${label}</span><span class="be-n ${ok?'ok':'no'}">${ok?ICON.ok:ICON.no}сейчас ${curTxt}</span></div>`;
+  };
+  const be=r.cost>0?`<div class="be"><h3>Порог окупаемости: хватит одного из трёх</h3><div class="be-row">
+    ${beItem(r.beH,1,'ч','времени инженера в день',saved,fAuto(saved)+' ч')}
+    ${beItem(r.beS,1,'%','оплаченных машино-часов',v.mhShare,fAuto(v.mhShare)+' %')}
+    ${beItem(r.beD,2,'дн','задержки в год',r.prevDays,fAuto(Math.round(r.prevDays*100)/100)+' дн')}
+  </div></div>`:'';
+
+  const mx=Math.max(r.effect,r.cost,1);
+  const w=x=>(x/mx*100).toFixed(3)+'%';
+  const seg=(cls,val,name)=>val>0?`<div class="sb-seg ${cls}" style="flex:${val} 1 0" tabindex="0" data-tip="${name}|${rub(val)}|${r.effect>0&&cls!=='c'?fx(val/r.effect*100,0)+' % эффекта':''}"></div>`:'';
+  const chart=`<div class="sb"><div class="sb-h"><h3>Эффект и затраты в месяц</h3></div>
+    <div class="sb-row"><span class="sb-l">Эффект</span><div class="sb-track">${r.effect>0?`<div class="sb-fill" style="width:${w(r.effect)}">${seg('s1',r.labor,'Время инженеров')}${seg('s2',r.mh,'Машино-часы')}${seg('s3',r.delay,'Сроки')}</div>`:''}</div><span class="sb-v">${rub(r.effect)}</span></div>
+    <div class="sb-row"><span class="sb-l">Затраты</span><div class="sb-track">${r.cost>0?`<div class="sb-fill" style="width:${w(r.cost)}">${seg('c',r.cost,'Затраты на систему')}</div>`:''}</div><span class="sb-v">${rub(r.cost)}</span></div>
+    <div class="legend"><span style="--lc:var(--s1)"><i></i>Время инженеров</span><span style="--lc:var(--s2)"><i></i>Машино-часы</span><span style="--lc:var(--s3)"><i></i>Сроки</span><span style="--lc:var(--cost)"><i></i>Затраты</span></div></div>`;
+
+  $('#results').innerHTML=`<div class="hero">${hero}</div>${tiles}${be}${chart}`;
+
+  $('#d-labor').innerHTML=`<span>Экономия времени</span><b>${rub(r.labor)} в месяц</b>`;
+  $('#d-mh').innerHTML=`<span>Неподтверждённые маш.-ч</span><b>${rub(r.mh)} в месяц</b>`;
+  $('#d-delay').innerHTML=`<span>Предотвращено ${fAuto(Math.round(r.prevDays*100)/100)} дн задержки в год</span><b>${rub(r.delay)} в месяц</b>`;
+  $('#d-cost').innerHTML=`<span>Затраты = лицензия + ${fx(v.cams,0)} ${pl(v.cams,'камера','камеры','камер')} × облако</span><b>${rub(r.cost)} в месяц</b>`;
+
+  renderSens(r);
+  renderFormulas(r);
+}
+
+/* ---------- sensitivity (tornado) ---------- */
+function renderSens(r){
+  const host=$('#sens');
+  if(!(r.cost>0)||!isFinite(r.ratio)){host.innerHTML=`<h2 style="--gc:var(--accent)"><i></i>Чувствительность</h2><p class="note">Появится, когда заданы затраты на систему.</p>`;return;}
+  const rows=SENS.map(k=>{
+    const lo=calc(Object.assign({},v,{[k]:v[k]*0.5})).ratio,hi=calc(Object.assign({},v,{[k]:v[k]*1.5})).ratio;
+    return {k,lo,hi,min:Math.min(lo,hi),max:Math.max(lo,hi),swing:Math.abs(hi-lo)};
+  }).sort((a,b)=>b.swing-a.swing);
+  let dmin=Math.min(r.ratio,...rows.map(x=>x.min)),dmax=Math.max(r.ratio,...rows.map(x=>x.max));
+  if(dmin>1&&dmin<1.6)dmin=1;
+  const pad=(dmax-dmin)*0.06||1;dmin=Math.max(0,dmin-pad);dmax=dmax+pad;
+  const X=x=>((x-dmin)/(dmax-dmin)*84+8);
+  const xb=X(r.ratio),x1=(1>=dmin&&1<=dmax)?X(1):null;
+  const nice=(()=>{const span=dmax-dmin;const raw=span/5;const p=Math.pow(10,Math.floor(Math.log10(raw)));const m=raw/p;const st=(m<1.5?1:m<3.5?2:m<7.5?5:10)*p;const t=[];for(let x=Math.ceil(dmin/st)*st;x<=dmax+1e-9;x+=st)t.push(x);return t;})();
+  const body=rows.map(x=>{
+    const f=FIELDS[x.k];const loV=v[x.k]*0.5,hiV=v[x.k]*1.5;
+    const negW=Math.max(0,xb-X(x.min)),posW=Math.max(0,X(x.max)-xb);
+    const tip=`${SHORT[x.k]}|${fAuto(Math.round(loV*100)/100)} ${f.u} → ${times(x.lo)}; ${fAuto(Math.round(hiV*100)/100)} ${f.u} → ${times(x.hi)}`;
+    return `<div class="tor-row"><span class="tor-l">${SHORT[x.k]}</span><div class="tor-plot" tabindex="0" data-tip="${tip}">`+
+      (x.min<r.ratio-1e-9?`<div class="tor-bar neg" style="left:${X(x.min).toFixed(2)}%;width:${negW.toFixed(2)}%"></div><span class="tor-t" style="right:${(100-X(x.min)+0.8).toFixed(2)}%">${x.swing<1e-9?'':'×'+fx(x.min,1)}</span>`:'')+
+      (x.max>r.ratio+1e-9?`<div class="tor-bar pos" style="left:${xb.toFixed(2)}%;width:${posW.toFixed(2)}%"></div><span class="tor-t" style="left:${(X(x.max)+0.8).toFixed(2)}%">×${fx(x.max,1)}</span>`:'')+
+      `<div class="tor-base" style="left:${xb.toFixed(2)}%"></div>${x1!=null?`<div class="tor-one" style="left:${x1.toFixed(2)}%"></div>`:''}</div></div>`;
+  }).join('');
+  host.innerHTML=`<div class="sens-h"><div><h2 style="--gc:var(--accent)"><i></i>Какие допущения важнее всего</h2><p>Как изменится отношение эффекта к затратам, если одно допущение уменьшить или увеличить наполовину, а остальные оставить. Сейчас — ${times(r.ratio)}.</p></div><div class="legend"><span style="--lc:var(--neg)"><i></i>хуже текущего</span><span style="--lc:var(--pos)"><i></i>лучше текущего</span><span><i style="background:none;border-left:2px solid var(--ink);width:2px;border-radius:0"></i>текущий расчёт</span>${x1!=null?`<span><i style="background:none;border-left:1.5px dashed var(--crit);width:2px;border-radius:0"></i>порог окупаемости ×1</span>`:''}</div></div>
+    <div class="tor">${body}</div>
+    <div class="tor-axis"><div></div><div>${nice.map(t=>`<span style="left:${X(t).toFixed(2)}%">×${fAuto(Math.round(t*10)/10)}</span>`).join('')}</div></div>`;
+}
+
+/* ---------- formulas ---------- */
+function renderFormulas(r){
+  const lines=[
+    `<b>Время инженеров</b> = (${fAuto(v.hBefore)} − ${fAuto(v.hAfter)}) ч × ${rub(v.rateH)} × ${fx(v.days,0)} дн = <b>${rub(r.labor)}</b>`,
+    `<b>Машино-часы</b> = ${fx(v.mh,0)} маш.-ч × ${rub(v.mhRate)} × ${fAuto(v.mhShare)} % = <b>${rub(r.mh)}</b>`,
+    `<b>Предотвращённые дни</b> = ${fx(v.devs,0)} ${pl(v.devs,'отклонение','отклонения','отклонений')} ×${fAuto(v.lead)} дн × ${fAuto(v.fix)} % = <b>${fAuto(Math.round(r.prevDays*100)/100)} дн в год</b>`,
+    `<b>Сроки</b> = ${fAuto(Math.round(r.prevDays*100)/100)} дн × ${rub(v.dayCost)} ÷ 12 мес = <b>${rub(r.delay)}</b>`,
+    `<b>Затраты</b> = ${rub(v.license)} + ${fx(v.cams,0)} ${pl(v.cams,'камера','камеры','камер')} ×${rub(v.camCost)} = <b>${rub(r.cost)}</b>`,
+    r.cost>0?`<b>Эффект ÷ затраты</b> = ${rub(r.effect)} ÷ ${rub(r.cost)} = <b>${fx(r.ratio,2)}</b>`:'',
+    r.net>0?`<b>Окупаемость внедрения</b> = ${rub(v.impl)} ÷ ${rub(r.net)} в месяц = <b>${fx(r.payback,2)} мес</b>`:'',
+    r.cost>0?`<b>Порог окупаемости</b> = ${rub(r.cost)} ÷ (${rub(v.rateH)} × ${fx(v.days,0)} дн) = <b>${fx(r.beH,2)} ч в день</b>, или ÷ (${fx(v.mh,0)} × ${rub(v.mhRate)}) = <b>${fx(r.beS,2)} %</b>, или × 12 ÷ ${rub(v.dayCost)} = <b>${fx(r.beD,2)} дн в год</b>`:''
+  ].filter(Boolean);
+  $('#formulas').innerHTML=`<h2 style="--gc:var(--ink-2)"><i></i>Как считается</h2><div class="fx">${lines.map(l=>`<div>${l}</div>`).join('')}</div>
+    <p class="note">Все суммы — на один объект в месяц, кроме годовых показателей. Проверьте допущения с экспертами заказчика: время инженеров на камеры, стоимость дня задержки, долю спорных машино-часов и то, через сколько дней сейчас замечают отставание.</p>
+    <div class="links" style="margin-top:12px"><a href="https://garyanikin.github.io/oko-landing/plan-fact-site-monitor.html" target="_blank" rel="noopener">Интерактивное демо системы</a><a href="https://garyanikin.github.io/oko-landing/%D0%AD%D0%BA%D0%BE%D0%BD%D0%BE%D0%BC%D0%B8%D0%BA%D0%B0%20%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8F%20%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B8%20%D0%BF%D0%BE%20%D0%BA%D0%B0%D0%BC%D0%B5%D1%80%D0%B0%D0%BC.pdf" target="_blank" rel="noopener">Презентация с экономикой</a></div>`;
+}
+
+/* ---------- copy ---------- */
+function summary(){
+  const r=calc(v);
+  return [
+    'Окупаемость контроля стройки по камерам — на один объект в месяц',
+    `Время инженеров: ${rub(r.labor)} ((${fAuto(v.hBefore)} − ${fAuto(v.hAfter)}) ч × ${rub(v.rateH)} × ${fx(v.days,0)} дн)`,
+    `Машино-часы: ${rub(r.mh)} (${fx(v.mh,0)} маш.-ч × ${rub(v.mhRate)} × ${fAuto(v.mhShare)} %)`,
+    `Сроки: ${rub(r.delay)} (${fAuto(Math.round(r.prevDays*100)/100)} дн задержки в год × ${rub(v.dayCost)})`,
+    `Эффект: ${rub(r.effect)} · затраты: ${rub(r.cost)}`+(r.cost>0?` · эффект больше затрат в ${times(r.ratio)}`:''),
+    r.net>0?`Окупаемость внедрения (${rub(v.impl)}): ${fx(r.payback,1)} мес`:'Внедрение не окупается при этих допущениях',
+    r.cost>0?`Порог окупаемости: ${fx(r.beH,1)} ч инженера в день, или ${fx(r.beS,1)} % машино-часов, или ${fx(r.beD,2)} дн задержки в год`:''
+  ].filter(Boolean).join('\n');
+}
+function toast(msg){const t=$('#toast');t.innerHTML=ICON.ok+'<span></span>';t.lastChild.textContent=msg;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>{t.hidden=true;},2600);}
+$('#copyBtn').addEventListener('click',()=>{
+  const text=summary();const box=$('#copyBox'),ta=$('#copyText');
+  const fallback=()=>{ta.value=text;box.hidden=false;ta.focus();ta.select();};
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>{box.hidden=true;toast('Расчёт скопирован');},fallback);}
+    else fallback();
+  }catch(e){fallback();}
+});
+$('#resetBtn').addEventListener('click',()=>{v=Object.assign({},BASE);syncInputs();save();render();toast('Вернули базовый сценарий');});
+$('#presets').addEventListener('click',e=>{const b=e.target.closest('[data-preset]');if(!b)return;v=Object.assign({},PRESETS[b.dataset.preset]);syncInputs();save();render();});
+document.addEventListener('input',e=>{if(e.target.matches('#inputs input'))onInput(e.target);});
+
+/* ---------- tooltips ---------- */
+function showTip(el,x,y){
+  const p=(el.dataset.tip||'').split('|');const t=$('#tip');
+  t.innerHTML='';const h=document.createElement('div');h.style.fontWeight='600';h.textContent=p[0];t.appendChild(h);
+  for(const line of p.slice(1)){if(!line)continue;const d=document.createElement('div');d.textContent=line;t.appendChild(d);}
+  t.hidden=false;const r=t.getBoundingClientRect();let lx=x+14,ly=y+14;
+  if(lx+r.width>innerWidth-8)lx=x-r.width-14;if(ly+r.height>innerHeight-8)ly=y-r.height-14;
+  t.style.left=Math.max(8,lx)+'px';t.style.top=Math.max(8,ly)+'px';
+}
+function hideTip(){$('#tip').hidden=true;}
+document.addEventListener('pointermove',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el)showTip(el,e.clientX,e.clientY);else hideTip();});
+document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el){const r=el.getBoundingClientRect();showTip(el,r.left+r.width/2,r.bottom);}});
+document.addEventListener('focusout',hideTip);
+document.addEventListener('scroll',hideTip,{passive:true});
+
+buildInputs();
+render();
+})();
+</script>
+
+</body></html>
