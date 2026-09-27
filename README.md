@@ -179,5 +179,10 @@ Qwen3-VL 8B в bf16 (~17 ГБ видеопамяти); она загружает
 |---|---|---|
 | **GPU** | NVIDIA 24 ГБ: RTX 3090 / 4090, A5000, L4 | NVIDIA 8 ГБ: RTX 3060 Ti / 4060 и выше |
 | **Оперативная память** | 32 ГБ | 16 ГБ |
+
+
+# [BACKEND](https://github.com/Antonoof/Intelligent-construction-site-monitoring-system/tree/main/backend)
+
+# [FRONTEND](https://github.com/Antonoof/Intelligent-construction-site-monitoring-system/tree/main/frontend)
 | **Диск** | 35 ГБ свободно | 15 ГБ свободно |
 | **ПО** | драйвер NVIDIA ≥ 570 (CUDA 12.8), Python 3.10+, Windows или Linux | то же |
