@@ -338,3 +338,4 @@ erDiagram
 - ТЗ «Автоматизированный сервис поиска нарушений на строительных площадках Москвы» и справочник видов работ организаторов.
 - README ML-части — раздел «Детектор техники» корневого README.md и training/README.md: модели, классы, метрики, требования к оборудованию.
 - [The System Design Primer](https://github.com/donnemartin/system-design-primer) — подход к разделу 8.
+- [RF-DETR](https://github.com/roboflow/rf-detr) — детектор, обучение и экспорт в ONNX.

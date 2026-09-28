@@ -106,7 +106,8 @@ def cmd_ingest(a):
     s = _session()
     p = s.get(M.Project, a.project) or sys.exit(f"проект {a.project} не найден")
     cam = S.camera_by_key(s, p, a.camera)
-    files = sorted(f for f in Path(a.folder).rglob("*") if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".bmp", ".webp"))
+    files = sorted(f for f in Path(a.folder).rglob("*")
+                   if f.suffix.lower() in (".jpg", ".jpeg", ".png", ".bmp", ".webp") and not f.name.startswith("."))
     for f in files:
         snap, info = S.ingest_snapshot(s, p, cam, f.read_bytes(), f.name)
         s.commit()

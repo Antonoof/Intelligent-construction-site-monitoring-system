@@ -23,10 +23,13 @@ echo "→ жду, пока cloud-init поставит Docker на $HOST"
 $SSH 'cloud-init status --wait >/dev/null 2>&1 || true; until sudo docker compose version >/dev/null 2>&1; do sleep 5; done'
 
 echo "→ копирую код и веса (без документов и кешей)"
-tar -C "$ROOT" \
+# COPYFILE_DISABLE=1 — tar на macOS не добавляет служебные файлы ._имя с метаданными Finder
+COPYFILE_DISABLE=1 tar -C "$ROOT" \
   --exclude=.git --exclude=.venv --exclude='data/runtime' --exclude='__pycache__' --exclude='*.pyc' \
+  --exclude='._*' --exclude='.DS_Store' \
   --exclude='docs/*.pptx' --exclude='docs/*.pdf' --exclude='docs/*.docx' \
-  -czf - . | $SSH 'mkdir -p ~/oko && tar -xzf - -C ~/oko'
+  -czf - . | $SSH 'mkdir -p ~/oko && tar --warning=no-unknown-keyword -xzf - -C ~/oko \
+                   && find ~/oko \( -name "._*" -o -name ".DS_Store" \) -type f -delete'
 $SSH "cd ~/oko && [ -f deploy/yandex-cloud/.env ] || echo 'OKO_WEIGHTS_FILE=$WEIGHTS' > deploy/yandex-cloud/.env"
 
 echo "→ сборка и запуск (первый раз 5–15 минут: PyTorch и rfdetr)"

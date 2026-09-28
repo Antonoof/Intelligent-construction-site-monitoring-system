@@ -30,9 +30,11 @@ class DemoDetector(Detector):
     def index(self) -> dict[str, dict]:
         idx: dict[str, dict] = {}
         for js in sorted(self.demo_dir.rglob("*.json")):
+            if js.name.startswith("."):        # ._имя — служебные файлы macOS в архивах, собранных на Mac
+                continue
             try:
                 meta = json.loads(js.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+            except (OSError, ValueError):      # битый JSON или не UTF-8
                 continue
             if not isinstance(meta, dict) or "detections" not in meta:
                 continue

@@ -33,7 +33,8 @@ def seed_demo(s: Session, demo_dir: Path | None = None) -> list[int]:
         S.apply_site_config(s, p, json.loads((demo_dir / pj["site"]).read_text(encoding="utf-8")))
         sched = demo_dir / pj["schedule"]
         S.import_schedule(s, p, sched.name, sched.read_bytes())
-        shots = sorted((demo_dir / pj["snapshots"]).glob("*.jpg"))
+        # служебные файлы macOS (._имя — AppleDouble из архивов, собранных на Mac) пропускаем
+        shots = sorted(f for f in (demo_dir / pj["snapshots"]).glob("*.jpg") if not f.name.startswith("."))
         for img in shots:
             meta = json.loads(img.with_suffix(".json").read_text(encoding="utf-8"))
             cam = S.camera_by_key(s, p, meta["camera"])

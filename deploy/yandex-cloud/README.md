@@ -57,7 +57,7 @@ deploy/yandex-cloud/deploy.sh <публичный IP>
 | Перезапуск | `sudo docker compose -f deploy/yandex-cloud/docker-compose.yml restart app` |
 | Сбросить данные к демо | `sudo docker compose -f deploy/yandex-cloud/docker-compose.yml down -v`, затем `deploy.sh` |
 | Обновить код или веса | `deploy.sh <IP>` с ноутбука |
-| Остановить ВМ после показа | `yc compute instance stop oko-demo` (статический IP сохраняется) |
+| Остановить ВМ после показа | `yc compute instance stop <имя ВМ>` (статический IP сохраняется) |
 
 ## Если что-то не так
 
