@@ -1,0 +1,58 @@
+# Публичное демо ОКО на одной ВМ Yandex Cloud: PostgreSQL + сервис с детектором RF-DETR на CPU (PyTorch).
+#
+# Запуск на ВМ из корня репозитория (это делает deploy.sh):
+#   sudo docker compose -f deploy/yandex-cloud/docker-compose.yml up -d --build
+# Сайт — http://<публичный IP ВМ> (порт 80), Swagger — /docs.
+#
+# Веса: weights/<файл>.pth в корне репозитория. Имя файла, порядок классов и вариант модели —
+# в deploy/yandex-cloud/.env (пример — .env.example рядом).
+name: oko
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oko
+      POSTGRES_PASSWORD: oko
+      POSTGRES_DB: oko
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oko -d oko"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    # тот же код, что и основной сервис, плюс PyTorch (CPU) и rfdetr
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile.ai
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cpu
+    environment:
+      OKO_DATABASE_URL: postgresql+psycopg://oko:oko@db:5432/oko
+      OKO_DETECTOR: rfdetr
+      OKO_DEVICE: cpu
+      OKO_RFDETR_WEIGHTS: /srv/weights/${OKO_WEIGHTS_FILE:-rfdetr_large_best_ema.pth}
+      OKO_RFDETR_VARIANT: ${OKO_RFDETR_VARIANT:-large}
+      OKO_RFDETR_CLASSES: ${OKO_RFDETR_CLASSES:-}
+      OKO_DETECTOR_THRESHOLD: ${OKO_DETECTOR_THRESHOLD:-0.3}
+      OKO_SEED_DEMO: "1"
+      # при первой сборке модели RF-DETR может скачать конфигурацию DINOv2 с Hugging Face — кешируем в томе
+      HF_HOME: /data/hf
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://huggingface.co}
+    volumes:
+      - ../../weights:/srv/weights:ro
+      - appdata:/data
+    ports:
+      - "80:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  appdata:

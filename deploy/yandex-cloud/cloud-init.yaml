@@ -1,0 +1,29 @@
+#cloud-config
+# Подготовка ВМ Ubuntu 24.04 для демо ОКО: пользователь oko с SSH-ключом, Docker, зеркало Docker Hub, swap.
+# create-vm.sh подставляет ваш публичный ключ вместо __SSH_PUBLIC_KEY__.
+datasource:
+  Ec2:
+    strict_id: false
+ssh_pwauth: no
+users:
+  - name: oko
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - __SSH_PUBLIC_KEY__
+write_files:
+  # Docker Hub из российских облаков бывает недоступен (403/429) — образы берём через зеркало
+  - path: /etc/docker/daemon.json
+    content: |
+      {"registry-mirrors": ["https://mirror.gcr.io"]}
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - curl
+runcmd:
+  - usermod -aG docker oko
+  - systemctl enable --now docker
+  - systemctl restart docker
+  # swap: сборка образа с PyTorch и загрузка модели на 8 ГБ ОЗУ идут спокойнее
+  - [bash, -c, "test -f /swapfile || (fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab)"]
