@@ -79,8 +79,11 @@ class RFDETRDetector(Detector):
             import rfdetr
             cls = {"nano": "RFDETRNano", "small": "RFDETRSmall", "medium": "RFDETRMedium",
                    "base": "RFDETRBase", "large": "RFDETRLarge"}[variant.lower()]
-            return getattr(rfdetr, cls)(pretrain_weights=str(self.weights), device=self.device,
-                                        trust_checkpoint=self.trust)
+            try:
+                return getattr(rfdetr, cls)(pretrain_weights=str(self.weights), device=self.device,
+                                            trust_checkpoint=self.trust)
+            except TypeError:   # версии rfdetr без параметра trust_checkpoint
+                return getattr(rfdetr, cls)(pretrain_weights=str(self.weights), device=self.device)
 
     def _predict(self, img: Image.Image) -> list[RawDet]:
         det = self.model.predict(img, threshold=self.threshold)
