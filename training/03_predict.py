@@ -4,7 +4,7 @@
 Результаты пишутся отдельно от обучения: predictions/<дата_время>/
     panels/<кадр>.png      панель: сверху легенда классов, слева фото с рамками, справа текст
     heatmaps/<кадр>.jpg    отдельно: карта внимания — куда смотрела модель
-    frames/<кадр>.jpg      чистый кадр без рамок
+    frames/<кадр>.jpg      чистый кадр без рамок — для инструмента разметки на дашборде
     json/<кадр>.json       все числа по кадру, включая похожие кадры из обучения
     predictions.csv        сводная таблица
 
@@ -13,7 +13,7 @@
     python training/03_predict.py photo.jpg "folder/*.jpg"          # свои фото
     python training/03_predict.py "videos for train/video3.mp4" --every 5   # кадр каждые 5 с видео
     python training/03_predict.py photo.jpg --expected 0.6          # плановая готовность для своих фото
-    python training/03_predict.py --no-vlm --no-openvocab           # только DINOv2 + RF-DETR + голова
+    python training/03_predict.py --no-vlm --no-openvocab           # только DINOv3 + RF-DETR + голова
     python training/03_predict.py --no-boxes                        # панели без рамок: только фото и текст
 
 Если на кадре есть экранная дата камеры, она распознаётся (EasyOCR) и план считается по календарю:
@@ -40,7 +40,7 @@ import torch
 from PIL import Image
 from tqdm.auto import tqdm
 
-from common import (CLASS_RU, Backbone, build_head, det_features, detect, detect_tiled, load_config, load_detector, load_ocr, p,
+from common import (CLASS_RU, Backbone, build_head, det_features, detect, load_config, load_detector, load_ocr, p,
                     pick_device, plan_expected, plan_status, read_frame_date, total_days)
 from render import render_heatmap, render_panel, signed
 
@@ -147,7 +147,7 @@ def free():
 
 
 def stage_perception(items, cfg, run_dir: Path, device: str):
-    """RF-DETR + DINOv2 + голова + поиск похожих обучающих кадров."""
+    """RF-DETR + DINOv3 + голова + поиск похожих обучающих кадров."""
     ck = torch.load(run_dir / "head.pt", map_location="cpu", weights_only=False)
     head = build_head(ck["dim"], ck["n_det"], len(ck["stages"]), ck["hidden"])
     head.load_state_dict(ck["state_dict"])
@@ -165,9 +165,9 @@ def stage_perception(items, cfg, run_dir: Path, device: str):
     grid = ck["grid"]
 
     def infer(rgb):
-        """Один кадр целиком через RF-DETR → DINOv2 → голову."""
+        """Один кадр целиком через RF-DETR → DINOv3 → голову."""
         h, w = rgb.shape[:2]
-        det = detect(detector, [rgb], thr)[0]              # признаки техники — с целого кадра, как при обучении
+        det = detect(detector, [rgb], thr)[0]
         cls, patches = backbone([rgb])
         dfeat = det_features(det, len(class_names), w, h)
         with torch.no_grad():
@@ -175,11 +175,8 @@ def stage_perception(items, cfg, run_dir: Path, device: str):
                        torch.from_numpy(dfeat[None]).to(device))
         return det, cls, out
 
-    for it in tqdm(items, desc="DINOv2 + RF-DETR + голова", unit="кадр"):
+    for it in tqdm(items, desc="DINOv3 + RF-DETR + голова", unit="кадр"):
         det, cls, (prog, logits, attn, z) = infer(it["rgb"])
-        tiles = int((cfg["videos"].get(it["video"]) or {}).get("tiles", cfg["detector"].get("tiles", 1)))
-        if tiles > 1:                                     # рамки на панели — по фрагментам кадра
-            det = detect_tiled(detector, it["rgb"], thr, tiles)
         with torch.no_grad():
             z = torch.nn.functional.normalize(z, dim=-1)
             sims = (train_z @ z[0]).cpu().numpy()

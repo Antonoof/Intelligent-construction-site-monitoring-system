@@ -102,7 +102,7 @@ def section(draw, y, title):
     return y + 36
 
 
-def legend(d, counts, y=76, x=20, other="прочие объекты (Grounding DINO)"):
+def legend(d, counts, y=76, x=20):
     f, fb = font(23), font(23, True)
     for cls, color in CLASS_COLORS.items():
         n = counts.get(cls, 0)
@@ -114,26 +114,24 @@ def legend(d, counts, y=76, x=20, other="прочие объекты (Grounding 
         d.text((x + 32, y), label, font=fb if n else f, fill=INK if n else INK3)
         x += 32 + d.textlength(label, font=fb if n else f) + 30
     dashed_rect(d, (x, y + 3, x + 24, y + 27), INK2, 2, 5)
-    d.text((x + 32, y), other, font=f, fill=INK2)
+    d.text((x + 32, y), "прочие объекты (Grounding DINO)", font=f, fill=INK2)
 
 
 # ---------------- панель ----------------
 
-def render_panel(r: dict, image: Image.Image, out_path: Path, boxes: bool = True, review: dict | None = None):
+def render_panel(r: dict, image: Image.Image, out_path: Path, boxes: bool = True):
     """r — словарь результата по кадру (см. 03_predict.py).
 
     boxes=False — фото без рамок и без легенды классов: легенда нужна только вместе с рамками.
-    review — итоговая панель после проверки: {"verdict", "comment"}; рамки без уверенности (score=None)
-    добавлены проверкой, внизу вместо заключения VLM — итоговая проверка.
     """
     top = PHOTO[1] if boxes else 72
     height = top + PHOTO[3] + 20
     canvas = Image.new("RGB", (W, height), BG)
     d = ImageDraw.Draw(canvas)
-    d.text((20, 18), r["title"] + (" · итог после проверки Claude" if review else ""), font=font(36, True), fill=INK)
+    d.text((20, 18), r["title"], font=font(36, True), fill=INK)
     counts = r["equipment_counts"]
     if boxes:
-        legend(d, counts, other="прочие объекты" if review else "прочие объекты (Grounding DINO)")
+        legend(d, counts)
 
     # слева: фото
     px, py, pw, ph = PHOTO[0], top, PHOTO[2], PHOTO[3]
@@ -145,15 +143,12 @@ def render_panel(r: dict, image: Image.Image, out_path: Path, boxes: bool = True
             box = (px + x1 * sx, py + y1 * sy, px + x2 * sx, py + y2 * sy)
             dashed_rect(d, box, "#0b0b0b", 6)
             dashed_rect(d, box, OTHER, 3)
-            labels.append((box, f"{label} {score:.2f}" if score is not None else f"{label} · Claude", font(22),
-                           "#2a2e2b", OTHER))
+            labels.append((box, f"{label} {score:.2f}", font(22), "#2a2e2b", OTHER))
         for (x1, y1, x2, y2, cls, score) in r["equipment_boxes"]:
             color = CLASS_COLORS.get(cls, "#52514e")
             box = (px + x1 * sx, py + y1 * sy, px + x2 * sx, py + y2 * sy)
             d.rectangle(box, outline=color, width=6)
-            name = CLASS_RU.get(cls, cls)
-            labels.append((box, f"{name} {score:.2f}" if score is not None else f"{name} · Claude", font(24, True),
-                           color, text_on(color)))
+            labels.append((box, f"{CLASS_RU.get(cls, cls)} {score:.2f}", font(24, True), color, text_on(color)))
         for box, t, fnt, bg, fg in labels:
             tw, th = d.textlength(t, font=fnt) + 14, fnt.size + 14
             lx, ly = place_label(box, tw, th, placed, (px, py, px + pw, py + ph))
@@ -221,9 +216,8 @@ def render_panel(r: dict, image: Image.Image, out_path: Path, boxes: bool = True
         for cls, n in sorted(counts.items(), key=lambda kv: -kv[1]):
             d.rounded_rectangle((SIDE_X, y + 5, SIDE_X + 22, y + 27), 4, fill=CLASS_COLORS.get(cls, INK2))
             d.text((SIDE_X + 34, y), CLASS_RU.get(cls, cls), font=font(28), fill=INK)
-            conf = r["equipment_conf"].get(cls)
-            d.text((SIDE_X + 470, y + 2), f"{n} шт. · " + (f"уверенность до {conf:.2f}" if conf is not None
-                                                           else "добавлено проверкой"), font=font(25), fill=INK2)
+            d.text((SIDE_X + 470, y + 2), f"{n} шт. · уверенность до {r['equipment_conf'][cls]:.2f}",
+                   font=font(25), fill=INK2)
             y += 38
     else:
         d.text((SIDE_X, y), "техника не обнаружена", font=font(28), fill=INK2)
@@ -234,28 +228,18 @@ def render_panel(r: dict, image: Image.Image, out_path: Path, boxes: bool = True
             d.text((SIDE_X, y + 4), line, font=font(24), fill=INK2)
             y += 32
 
-    vlm = r.get("vlm_text") if not review else None
-    y = section(d, y + 18, "ИТОГ" if review else "ВЫВОД (собран из чисел выше)")
+    vlm = r.get("vlm_text")
+    y = section(d, y + 18, "ВЫВОД (собран из чисел выше)")
     for line in clip_lines(wrap(d, r["summary"], font(26), SIDE_W), 4 if vlm else 6):
         d.text((SIDE_X, y), line, font=font(26), fill=INK)
         y += 36
 
     # траектория занимает то, что осталось, с запасом под блок VLM
     reserve = 250 if vlm else 0
-    if review:                                        # блок проверки: заголовок, вердикт и строки комментария
-        reserve = 16 + 36 + 38 + 32 * len(wrap(d, review["comment"], font(23), SIDE_W))
-    room = bottom - reserve - y - 18 - 36 - 52
+    room = bottom - reserve - y - 18 - 36 - 40
     if r.get("trajectory") and room >= 110:
-        y = section(d, y + 18, "ГОТОВНОСТЬ ПО ВСЕМУ ВИДЕО" + (" · после обработки" if review else " · прогноз модели"))
-        y = trajectory_chart(d, y, r["trajectory"], r, min(room, 300), "итог после обработки" if review else "прогноз модели")
-
-    if review:
-        y = section(d, y + 16, "ИТОГОВАЯ ПРОВЕРКА · Claude Opus 5.5")
-        d.text((SIDE_X, y), review["verdict"], font=font(26, True), fill="#1a7f45")
-        y += 38
-        for line in clip_lines(wrap(d, review["comment"], font(23), SIDE_W), max(0, (bottom - y) // 32)):
-            d.text((SIDE_X, y), line, font=font(23), fill=INK2)
-            y += 32
+        y = section(d, y + 18, "ТРАЕКТОРИЯ ОБЪЕКТА · прогноз по всему видео")
+        y = trajectory_chart(d, y, r["trajectory"], r, min(room, 300))
 
     if vlm:
         y = section(d, y + 16, "НЕЗАВИСИМАЯ ПРОВЕРКА · " + r["vlm_model"])
@@ -272,7 +256,7 @@ def render_panel(r: dict, image: Image.Image, out_path: Path, boxes: bool = True
     canvas.save(out_path)
 
 
-def trajectory_chart(d, y, traj, r, h, line_label="прогноз модели"):
+def trajectory_chart(d, y, traj, r, h):
     """Прогноз готовности по кадрам видео (линия), план (пунктир), текущий кадр (точка)."""
     x0, x1 = SIDE_X + 62, SIDE_X + SIDE_W - 8
     y1 = y + 6 + h
@@ -294,8 +278,8 @@ def trajectory_chart(d, y, traj, r, h, line_label="прогноз модели")
     d.text((x1 - d.textlength("конец", font=font(19)), y1 + 8), "конец", font=font(19), fill=INK3)
     lx = x0 + 230
     d.line((lx, y1 + 20, lx + 36, y1 + 20), fill="#1d5fae", width=5)
-    d.text((lx + 46, y1 + 8), line_label, font=font(19), fill=INK2)
-    lx += 60 + d.textlength(line_label, font=font(19))
+    d.text((lx + 46, y1 + 8), "прогноз модели", font=font(19), fill=INK2)
+    lx += 250
     for i in range(0, 36, 12):
         d.line((lx + i, y1 + 20, lx + i + 6, y1 + 20), fill=INK2, width=3)
     d.text((lx + 46, y1 + 8), "план", font=font(19), fill=INK2)

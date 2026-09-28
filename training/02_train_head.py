@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Шаг 2. Обучение головы: прогресс 0–1 (регрессия) и стадия (классификация) по кешу признаков.
 
-DINOv2 и RF-DETR заморожены, обучается только голова (~2.6 млн параметров): меньше минуты на 4090.
+DINOv3 и RF-DETR заморожены, обучается только голова (~5 млн параметров для ViT-7B): минуты на 4090.
 Результат — training/runs/<дата_время>/:
     head.pt               веса головы и всё, что нужно для предсказания
     history.csv           лосс, ошибка прогресса и точность стадии по эпохам
@@ -31,23 +31,9 @@ import torch.nn.functional as F
 from common import build_head, load_config, p, pick_device
 
 
-class DiskPatches:
-    """Патчи на диске: на CPU кеш может не поместиться в память, поэтому батчи читаются по индексам."""
-
-    def __init__(self, arr: np.ndarray):
-        self.arr, self.shape = arr, arr.shape
-
-    def __getitem__(self, idx):
-        i = idx.cpu().numpy()
-        order = np.argsort(i)
-        out = np.empty((len(i),) + self.shape[1:], self.arr.dtype)
-        out[order] = self.arr[i[order]]
-        return torch.from_numpy(out)
-
-
 def load_cache(feat_dir: Path, device: str):
-    mm = np.load(feat_dir / "patches.npy", mmap_mode="r")
-    patches = torch.from_numpy(mm[:]).to(device, torch.float16) if device.startswith("cuda") else DiskPatches(mm)
+    patch_dtype = torch.float16 if device.startswith("cuda") else torch.float32
+    patches = torch.from_numpy(np.load(feat_dir / "patches.npy", mmap_mode="r")[:]).to(device, patch_dtype)
     cls = torch.from_numpy(np.load(feat_dir / "cls.npy")).to(device, torch.float32)
     det = torch.from_numpy(np.load(feat_dir / "det.npy")).to(device, torch.float32)
     return patches, cls, det

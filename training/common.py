@@ -1,4 +1,4 @@
-"""Общий код обучения: конфиг, метки, признаки DINOv2 и RF-DETR, голова."""
+"""Общий код обучения: конфиг, метки, признаки DINOv3 и RF-DETR, голова."""
 from __future__ import annotations
 
 import math
@@ -80,20 +80,6 @@ def total_days(cfg: dict, video: str | None) -> float:
     return float((cfg["videos"].get(video) or {}).get("total_days", cfg["plan"]["total_days"]))
 
 
-def monotone(values) -> np.ndarray:
-    """Изотоническая регрессия (PAVA): готовность стройки со временем не убывает, поэтому прогнозы по кадрам
-    одного видео, упорядоченным по времени, сглаживаются до ближайшей неубывающей последовательности."""
-    vals, sizes = [], []
-    for v in np.asarray(values, float):
-        vals.append(v)
-        sizes.append(1)
-        while len(vals) > 1 and vals[-2] > vals[-1]:
-            v2, s2 = vals.pop(), sizes.pop()
-            vals[-1] = (vals[-1] * sizes[-1] + v2 * s2) / (sizes[-1] + s2)
-            sizes[-1] += s2
-    return np.repeat(vals, sizes)
-
-
 # ---------------- признаки RF-DETR ----------------
 
 def load_detector(cfg: dict, device: str):
@@ -115,26 +101,6 @@ def load_detector(cfg: dict, device: str):
 def detect(model, rgb_images: list[np.ndarray], threshold: float):
     out = model.predict(rgb_images, threshold=threshold, include_source_image=False)
     return out if isinstance(out, list) else [out]
-
-
-def detect_tiled(model, rgb: np.ndarray, threshold: float, grid: int = 3, overlap: float = 0.25, nms_iou: float = 0.5,
-                 max_area: float = 0.02):
-    """Кадр целиком + сетка grid×grid перекрывающихся фрагментов: мелкая техника на общих планах видна детектору
-    крупнее. С фрагментов берутся только мелкие рамки (меньше max_area площади кадра) — крупные объекты находит
-    проход по целому кадру. Рамки переводятся в координаты кадра и сливаются через NMS по классам."""
-    import supervision as sv
-    h, w = rgb.shape[:2]
-    tw, th = int(w / grid * (1 + overlap)), int(h / grid * (1 + overlap))
-    tiles = [(x, y) for y in np.linspace(0, h - th, grid).round().astype(int)
-             for x in np.linspace(0, w - tw, grid).round().astype(int)]
-    dets = detect(model, [rgb] + [np.ascontiguousarray(rgb[y:y + th, x:x + tw]) for x, y in tiles], threshold)
-    parts = [dets[0]]
-    for (x, y), d in zip(tiles, dets[1:]):
-        d = d[d.area / (w * h) < max_area] if len(d) else d
-        if len(d):
-            d.xyxy = d.xyxy + np.array([x, y, x, y], dtype=d.xyxy.dtype)
-            parts.append(d)
-    return sv.Detections.merge(parts).with_nms(threshold=nms_iou, class_agnostic=False)
 
 
 def det_features(det, n_classes: int, width: int, height: int) -> np.ndarray:
@@ -205,7 +171,7 @@ def read_frame_date(reader, rgb) -> dict:
             "ocr_text": " | ".join(texts)}
 
 
-# ---------------- DINOv2 ----------------
+# ---------------- DINOv3 ----------------
 
 class Backbone:
     """Замороженный ViT: CLS-токен и патч-токены, усреднённые до сетки grid."""
@@ -255,7 +221,7 @@ def build_head(dim: int, n_det: int, n_stages: int, hidden: int = 512):
     from torch import nn
 
     class StageProgressHead(nn.Module):
-        """Внимание по патчам DINOv2 + CLS + признаки техники → прогресс 0–1 и стадия.
+        """Внимание по патчам DINOv3 + CLS + признаки техники → прогресс 0–1 и стадия.
 
         Веса внимания — это и есть карта «куда смотрела модель» для объяснения вывода.
         """

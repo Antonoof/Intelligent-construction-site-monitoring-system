@@ -1,49 +1,87 @@
-# Обучение и предсказание
+# Обучение: стадия и готовность стройки по кадру
 
-Замороженные **DINOv2 ViT-g** (сцена) и **RF-DETR Large** (техника) + обучаемая голова: по кадру она выдаёт
-готовность объекта 0–100% и стадию S1–S5. Все команды запускаются из корня репозитория.
+Замороженные **DINOv3 ViT-7B** (что за сцена) и **RF-DETR Large** (какая техника) + обучаемая голова,
+которая по кадру предсказывает **готовность объекта 0–100%** и **стадию**. Сверка с планом, прочие объекты
+(Grounding DINO) и независимая проверка (Qwen3-VL) работают только при предсказании.
 
-## Установка
+## Данные
+
+Таймлапсы в `videos for train/`: у каждого видео первый кадр = 0% готовности, последний = 100%.
+Стадия кадра определяется по готовности через границы из `config.yaml → stages`.
+Всё идёт в обучение, валидации нет. Для честной проверки обобщения укажите `head.holdout_video`.
+
+## Установка (RTX 4090)
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install -r training/requirements.txt
+hf auth login        # DINOv3 — закрытая модель: примите лицензию на странице
+                     # huggingface.co/facebook/dinov3-vit7b16-pretrain-lvd1689m
 ```
 
-Веса детектора положите в `weights/rfdetr_large_best_ema.pth`, таймлапсы — в `videos for train/`.
+## Запуск (из корня репозитория)
 
-## Шаги
-
-| шаг | команда | RTX 4090 | результат |
+| шаг | команда | время на 4090 | результат |
 |---|---|---|---|
-| 0 | `python training/00_prepare_frames.py` | ~4 мин | 4 692 кадра + метки |
-| 1 | `python training/01_build_features.py` | ~12 мин | кеш признаков, 2.1 ГБ |
-| 2 | `python training/02_train_head.py` | < 1 мин | `training/runs/<дата>/` |
-| 3 | `python training/03_predict.py --demo 10` | ~10 с/кадр | `predictions/<дата>/` |
-| 4 | `python training/04_report.py` | ~10 с | итоговые графики, примеры и «до/после» в `docs/assets/` |
+| 0 | `python training/00_prepare_frames.py` | ~5 мин на CPU | `training/data/frames/` — 5 892 кадра + `frames.csv` (**уже сделано**) |
+| 1 | `python training/01_build_features.py` | ~25–35 мин | `training/data/features/` — кеш ~7 ГБ |
+| 2 | `python training/02_train_head.py` | ~2–5 мин | `training/runs/<дата>/` — голова, графики, предсказания на обучении |
+| 3 | `python training/03_predict.py` | ~10 с на кадр с VLM | `predictions/<дата>/` — панели, JSON, CSV |
+
+Шаг 1 — самый долгий, он запускается один раз. После изменения границ стадий или настроек головы
+повторяйте только шаг 2.
 
 ```bash
-python training/03_predict.py "videos for train/video3.mp4" --every 3   # кадр каждые 3 с видео
-python training/03_predict.py photo.jpg --expected 0.6                  # своё фото, план 60%
-python training/03_predict.py --no-vlm --no-openvocab                   # быстро: без Grounding DINO и Qwen3-VL
+python training/01_build_features.py --limit 50              # быстрая проверка, что всё скачалось и влезло в память
+python training/03_predict.py --demo 20                      # 20 кадров из обучающих видео
+python training/03_predict.py "videos for train/video3.mp4" --every 3   # кадр каждые 3 с
+python training/03_predict.py my_photo.jpg --expected 0.6    # своё фото, план 60%
+python training/03_predict.py --no-vlm --no-openvocab        # быстро, без Grounding DINO и Qwen3-VL
+python training/03_predict.py --no-boxes                     # панели без рамок: только фото и текст
 ```
 
-## Настройки — `config.yaml`
+## Что сохраняет предсказание
 
-- `stages` — границы стадий как доли готовности; `videos.<файл>.stage_until` — свои границы для видео.
-- `videos.<файл>.plan_finish`, `total_days` — план стройки: `plan_finish: 0.8` значит «по плану закончить к 80% срока».
-- `backbone.name` — энкодер сцены. По умолчанию `facebook/dinov2-giant`, поддерживается и DINOv3 (`facebook/dinov3-*`).
-- `detector.tiles`, `videos.<файл>.tiles` — детекция техники по фрагментам кадра для общих планов с высоты.
-- `head.holdout_video` — видео, которое не участвует в обучении.
+`predictions/<дата>/`:
+
+- `panels/<кадр>.png` — панель. **Сверху** 10 классов техники с цветами (найденные — яркие, с числом)
+  и метка «прочие объекты». **Слева** только кадр в исходном разрешении: рамки техники (RF-DETR) — цветные,
+  прочие объекты (Grounding DINO: рабочие, леса, опалубка, котлован) — пунктир. **Справа** только текст:
+  стадия и вероятности всех стадий, готовность против плана, статус (успеваем / риск / отстаём / опережаем)
+  в п.п. и днях, техника, вывод, траектория объекта, проверка Qwen3-VL
+- `heatmaps/<кадр>.jpg` — отдельно: карта внимания, куда смотрела модель
+- `frames/<кадр>.jpg` — чистый кадр: вместе с `json/<кадр>.json` открывается в инструменте разметки на дашборде,
+  там можно настроить карту внимания, поправить рамки и выгрузить разметку в YOLO
+- `json/<кадр>.json` — все числа, включая три похожих кадра других объектов
+- `predictions.csv` — сводная таблица
+
+## Дата на кадре
+
+Если камера печатает дату на кадре, EasyOCR её распознаёт, и план считается **по календарю**:
+«план на 26.01.2022 — 20%», отставание — в настоящих днях. Начало и конец съёмки каждого видео
+определяются по первому и последнему кадру с читаемой датой (если дату у края обрезает — по ближайшим
+кадрам с продолжением прямой) и кешируются в `training/data/video_dates.json`. Даты на кадре нет —
+план по положению кадра в видео. Плановые даты можно задать явно: `plan_start`, `plan_end` в `config.yaml`.
+
+## Как задать план
+
+По умолчанию план совпадает с фактом (`plan_finish: 1.0`) — статус почти всегда «успеваем».
+Чтобы показать отставание, скажите, что по плану стройка должна была закончиться раньше:
+
+```yaml
+videos:
+  video3.mp4: {plan_finish: 0.8, total_days: 420}   # план — закончить к 80% времени видео
+```
 
 ## Файлы
 
 ```
-00_prepare_frames.py   видео → кадры + метки
-01_build_features.py   кадры → кеш признаков DINOv2 и RF-DETR
-02_train_head.py       кеш → голова
-03_predict.py          кадры → панели, карты внимания, JSON
-04_report.py           запуск → итоговые графики, примеры и проверка кадров для README
-common.py              метки, энкодер, детектор, голова
-render.py              отрисовка панели
+training/
+├─ config.yaml             все настройки
+├─ common.py               метки, DINOv3, RF-DETR, голова
+├─ 00_prepare_frames.py    видео → кадры + метки
+├─ 01_build_features.py    кадры → кеш признаков
+├─ 02_train_head.py        кеш → голова
+├─ 03_predict.py           кадры → панели в predictions/
+└─ render.py               отрисовка панели
 ```

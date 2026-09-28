@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Шаг 1. Кеш признаков: DINOv2 (CLS + 144 патч-токена) и RF-DETR (техника по классам).
+"""Шаг 1. Кеш признаков: DINOv3 (CLS + 144 патч-токена) и RF-DETR (техника по классам).
 
 Большие модели прогоняются по кадрам один раз, дальше голова учится на кеше за минуты.
-На RTX 4090 с DINOv2 ViT-g в bf16: 4 692 кадра ≈ 12 минут, кеш ~2.1 ГБ.
+На 4090 с DINOv3 ViT-7B в bf16: ~5–6 кадров/с, 6 000 кадров ≈ 20 минут, кеш ~7 ГБ.
 
     python training/01_build_features.py
     python training/01_build_features.py --limit 50      # быстрая проверка
@@ -26,7 +26,7 @@ from common import Backbone, det_features, detect, load_config, load_detector, p
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="Кеш признаков DINOv2 и RF-DETR")
+    ap = argparse.ArgumentParser(description="Кеш признаков DINOv3 и RF-DETR")
     ap.add_argument("--config", default=None)
     ap.add_argument("--limit", type=int, default=None, help="только первые N кадров (проверка)")
     args = ap.parse_args(argv)
