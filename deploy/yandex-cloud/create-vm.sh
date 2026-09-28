@@ -30,7 +30,7 @@ if [ -z "$SG_ID" ]; then
     --rule "description=SSH,direction=ingress,port=22,protocol=tcp,v4-cidrs=[0.0.0.0/0]" \
     --rule "description=HTTP,direction=ingress,port=80,protocol=tcp,v4-cidrs=[0.0.0.0/0]" \
     --rule "description=HTTPS,direction=ingress,port=443,protocol=tcp,v4-cidrs=[0.0.0.0/0]" \
-    --rule "description=any outgoing,direction=egress,protocol=any,v4-cidrs=[0.0.0.0/0]" \
+    --rule "description=any outgoing,direction=egress,from-port=1,to-port=65535,protocol=any,v4-cidrs=[0.0.0.0/0]" \
     --format yaml | yaml_id)
 fi
 echo "   $SG_ID"
