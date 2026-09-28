@@ -1,0 +1,23 @@
+{
+ "camera": "CAM-02",
+ "taken_at": "2026-09-24T11:00:00",
+ "scene": "slab",
+ "light": "day",
+ "weather": "clear",
+ "note": "Миксер стоит без насоса и крана",
+ "detections": [
+  {
+   "cls": "concrete_mixer",
+   "conf": 0.91,
+   "xyxy": [
+    461.1,
+    509.8,
+    739.3,
+    649.3
+   ]
+  }
+ ],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "559cd24fb96644975955c1b89e7eb3e26e0e10feb127e0040a1bfb92d0b3f23e"
+}

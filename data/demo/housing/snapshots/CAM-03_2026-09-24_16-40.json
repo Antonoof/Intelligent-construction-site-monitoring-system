@@ -1,0 +1,23 @@
+{
+ "camera": "CAM-03",
+ "taken_at": "2026-09-24T16:40:00",
+ "scene": "entrance",
+ "light": "dusk",
+ "weather": "clear",
+ "note": "Сомнительная рамка «автокран» 0,44 — ниже порога, отклонения нет",
+ "detections": [
+  {
+   "cls": "mobile_crane",
+   "conf": 0.44,
+   "xyxy": [
+    894.7,
+    480.4,
+    1104.5,
+    599.7
+   ]
+  }
+ ],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "15c369a01804adb98d151fbe26ef4fa5ea198b844686536ddf58efeee85c1166"
+}

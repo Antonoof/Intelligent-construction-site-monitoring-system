@@ -1,0 +1,12 @@
+{
+ "camera": "CAM-04",
+ "taken_at": "2026-09-24T09:10:00",
+ "scene": "drain",
+ "light": "day",
+ "weather": "clear",
+ "note": "Ливнёвка: траншея пуста",
+ "detections": [],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "3fb8d98e7c7b916a32306d20cfbe0ebab8c4420e9b9f641ab7ca47db1d7e87b9"
+}

@@ -1,0 +1,33 @@
+{
+ "camera": "CAM-01",
+ "taken_at": "2026-09-25T08:10:00",
+ "scene": "pit",
+ "light": "morning",
+ "weather": "clear",
+ "note": "Котлован: экскаватор с самосвалом",
+ "detections": [
+  {
+   "cls": "excavator",
+   "conf": 0.92,
+   "xyxy": [
+    121.2,
+    416.4,
+    439.3,
+    600.1
+   ]
+  },
+  {
+   "cls": "dump_truck",
+   "conf": 0.9,
+   "xyxy": [
+    657.1,
+    536.2,
+    906.9,
+    656.0
+   ]
+  }
+ ],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "342884e930e37c086d7a228fc55ca630a69585c13d2fc8d838ebf6b2e0dd9d44"
+}

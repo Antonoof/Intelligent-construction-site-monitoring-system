@@ -1,0 +1,12 @@
+{
+ "camera": "CAM-02",
+ "taken_at": "2026-02-11T07:00:00",
+ "scene": "school",
+ "light": "dark",
+ "weather": "snow",
+ "note": "До рассвета — «нет данных»",
+ "detections": [],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "63f12f6fb4d826ebf6cb87f5038a86ce6af0e9ddb0cd30c6d097181ca74156ec"
+}

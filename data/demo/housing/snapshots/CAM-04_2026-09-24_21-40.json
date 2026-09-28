@@ -1,0 +1,12 @@
+{
+ "camera": "CAM-04",
+ "taken_at": "2026-09-24T21:40:00",
+ "scene": "drain",
+ "light": "dark",
+ "weather": "clear",
+ "note": "Ночь без освещения — «нет данных», а не «нет техники»",
+ "detections": [],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "8249fd51dc470994e1445380b7598d42bfbdf7a19e655a781eef09cb110decdc"
+}

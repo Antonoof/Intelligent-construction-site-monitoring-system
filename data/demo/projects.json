@@ -1,0 +1,24 @@
+{
+ "projects": [
+  {
+   "slug": "housing",
+   "name": "Жилой дом, корпус 1 (демо, синтетические снимки)",
+   "object_type": "housing",
+   "address": "Москва, демонстрационный объект",
+   "description": "Подготовка территории и подземная часть. 6 камер, 6 зон, 2 дня съёмки: 24–25.09.2026.",
+   "schedule": "housing/schedule_housing.xlsx",
+   "site": "housing/site.json",
+   "snapshots": "housing/snapshots"
+  },
+  {
+   "slug": "school",
+   "name": "Школа на 550 мест (демо, зима)",
+   "object_type": "education",
+   "address": "Москва, демонстрационный объект",
+   "description": "Монолитный каркас зимой: снег, ночная съёмка с прожекторами, кадр общего плана с оценкой стадии.",
+   "schedule": "school/schedule_school.xlsx",
+   "site": "school/site.json",
+   "snapshots": "school/snapshots"
+  }
+ ]
+}

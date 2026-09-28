@@ -1,0 +1,23 @@
+{
+ "camera": "CAM-01",
+ "taken_at": "2026-02-11T19:30:00",
+ "scene": "school_overview",
+ "light": "night_lit",
+ "weather": "clear",
+ "note": "Ночь, прожекторы: снимок годен, башенный кран на месте",
+ "detections": [
+  {
+   "cls": "tower_crane",
+   "conf": 0.79,
+   "xyxy": [
+    582.6,
+    159.9,
+    987.4,
+    391.9
+   ]
+  }
+ ],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "5836fd70c624dc1f324575b8646db42c9dacf76d2802c82f405a11c0fe6794a9"
+}

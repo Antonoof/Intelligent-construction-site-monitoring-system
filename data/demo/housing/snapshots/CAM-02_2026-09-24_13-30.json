@@ -1,0 +1,33 @@
+{
+ "camera": "CAM-02",
+ "taken_at": "2026-09-24T13:30:00",
+ "scene": "slab",
+ "light": "day",
+ "weather": "clear",
+ "note": "Снова один миксер — за день не больше одного из двух",
+ "detections": [
+  {
+   "cls": "tower_crane",
+   "conf": 0.81,
+   "xyxy": [
+    668.0,
+    58.8,
+    1216.7,
+    367.0
+   ]
+  },
+  {
+   "cls": "concrete_mixer",
+   "conf": 0.89,
+   "xyxy": [
+    714.3,
+    518.9,
+    982.2,
+    657.4
+   ]
+  }
+ ],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "7ec91bead9c2e06b6606258d0e3034d905f3cbb7adadaebaae78db0ddcbcbb51"
+}

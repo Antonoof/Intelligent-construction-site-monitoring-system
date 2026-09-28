@@ -1,0 +1,12 @@
+{
+ "camera": "CAM-05",
+ "taken_at": "2026-09-25T07:20:00",
+ "scene": "camp",
+ "light": "morning",
+ "weather": "fog",
+ "note": "Туман — снимок не проходит контроль качества",
+ "detections": [],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "6e115c2bbd1694b5f25738279865a868c94f69118eea288437dc5fb1771e0ee5"
+}

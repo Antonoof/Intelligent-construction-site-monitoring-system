@@ -1,0 +1,73 @@
+# ОКО — запуск одной командой.
+#
+#   docker compose up --build                 ноутбук без GPU: PostgreSQL + сервис → http://localhost:8000 (Swagger: /docs)
+#                                             детектор auto: ONNX-модель из ./weights/rfdetr_v2.onnx, если есть,
+#                                             иначе демо-разметка (демо-проекты работают без весов)
+#   OKO_DETECTOR=http docker compose --profile gpu up --build
+#                                             + AI-сервис с RF-DETR на GPU; веса — в ./weights
+#
+# Веса детектора из ML-части: ./weights/rfdetr_large_best_ema.pth
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: oko
+      POSTGRES_PASSWORD: oko
+      POSTGRES_DB: oko
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oko -d oko"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      OKO_DATABASE_URL: postgresql+psycopg://oko:oko@db:5432/oko
+      OKO_DETECTOR: ${OKO_DETECTOR:-auto}
+      OKO_AI_URL: http://ai:8001
+      OKO_SEED_DEMO: ${OKO_SEED_DEMO:-1}
+    volumes:
+      - appdata:/data
+      - ./weights:/srv/weights:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ai:
+    profiles: ["gpu"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile.ai
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu128
+    environment:
+      OKO_DETECTOR: rfdetr
+      OKO_DEVICE: cuda
+      OKO_SEED_DEMO: "0"
+    volumes:
+      - ./weights:/srv/weights:ro
+      - aidata:/data
+    ports:
+      - "8001:8001"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  appdata:
+  aidata:

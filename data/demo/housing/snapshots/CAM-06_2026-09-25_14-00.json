@@ -1,0 +1,67 @@
+{
+ "camera": "CAM-06",
+ "taken_at": "2026-09-25T14:00:00",
+ "scene": "overview",
+ "light": "day",
+ "weather": "clear",
+ "note": "Общий план: стадия S1, готовность 12,6 %",
+ "detections": [
+  {
+   "cls": "tower_crane",
+   "conf": 0.8,
+   "xyxy": [
+    874.5,
+    45.2,
+    1219.4,
+    238.3
+   ]
+  },
+  {
+   "cls": "concrete_mixer",
+   "conf": 0.72,
+   "xyxy": [
+    897.2,
+    416.2,
+    991.8,
+    463.8
+   ]
+  },
+  {
+   "cls": "excavator",
+   "conf": 0.73,
+   "xyxy": [
+    304.4,
+    407.4,
+    417.4,
+    472.2
+   ]
+  },
+  {
+   "cls": "concrete_mixer",
+   "conf": 0.66,
+   "xyxy": [
+    999.9,
+    464.0,
+    1095.5,
+    511.7
+   ]
+  },
+  {
+   "cls": "dump_truck",
+   "conf": 0.7,
+   "xyxy": [
+    468.7,
+    494.1,
+    555.6,
+    535.9
+   ]
+  }
+ ],
+ "assessment": {
+  "stage": "S1",
+  "readiness": 12.6,
+  "model": "dinov2-vitg-head-v1 (ML-часть; в демо — из разметки)"
+ },
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "b950c6d0b5d4b85934d641c79621725cf102953dbb718992707ce710294f41ca"
+}

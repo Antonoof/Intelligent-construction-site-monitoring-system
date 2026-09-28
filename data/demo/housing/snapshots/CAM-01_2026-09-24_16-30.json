@@ -1,0 +1,43 @@
+{
+ "camera": "CAM-01",
+ "taken_at": "2026-09-24T16:30:00",
+ "scene": "pit",
+ "light": "dusk",
+ "weather": "clear",
+ "note": "Вечер: комплект восстановлен",
+ "detections": [
+  {
+   "cls": "dump_truck",
+   "conf": 0.8,
+   "xyxy": [
+    956.2,
+    430.8,
+    1143.2,
+    520.6
+   ]
+  },
+  {
+   "cls": "excavator",
+   "conf": 0.88,
+   "xyxy": [
+    210.1,
+    414.8,
+    531.0,
+    601.1
+   ]
+  },
+  {
+   "cls": "dump_truck",
+   "conf": 0.85,
+   "xyxy": [
+    661.4,
+    542.5,
+    911.4,
+    663.2
+   ]
+  }
+ ],
+ "assessment": null,
+ "source": "синтетическая сцена, рамки — эталонная разметка сцены",
+ "sha256": "66c6f1d9e01a245f96e7fa555f922e3d487ed50176f9a1bb083aa9e15044aefe"
+}
