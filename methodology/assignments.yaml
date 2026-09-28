@@ -1,0 +1,308 @@
+# Привязка видов работ справочника организаторов к профилям техники и стадиям S1–S5.
+#
+# Правила наследования (tools/build_methodology.py):
+#   * профиль: свой → профиль ближайшего предка с явным профилем → для групп без профиля
+#     составной профиль COMPOSITE:<id> из профилей подпунктов (объединение техники);
+#   * стадия: своя → стадия ближайшего предка;
+#   * observability можно переопределить на строке (например, по замечаниям экспертов).
+#
+# Стадии совпадают со стадиями модели готовности из ML-части:
+#   S1 подготовка и котлован · S2 фундамент и подземная часть · S3 каркас ·
+#   S4 фасад и инженерные системы · S5 отделка и благоустройство.
+version: "2026.09"
+
+stages:
+  "10": S1
+  "12.1": S1
+  "12.2": S2
+  "12.3": S2
+  "12.3.1": S1
+  "12.3.5": S1
+  "12.3.6": S1
+  "12.3.7": S1
+  "12.3.7-2": S2
+  "12.3.7-12": S2
+  "12.3.7-13": S2
+  "12.3.7-14": S2
+  "12.4": S3
+  "12.4.1": S4
+  "12.4.2": S4
+  "12.4.3": S4
+  "12.4.7-4": S4
+  "12.4.7-5": S4
+  "12.4.8-2": S4
+  "12.4.8-4": S4
+  "12.4.8-6": S4
+  "12.4.8-9": S4
+  "12.4.8-10": S4
+  "12.4.8-11": S4
+  "12.4.8-12": S4
+  "12.4.8-13": S5
+  "12.4.8-14": S4
+  "12.4.8-15": S5
+  "12.4.8-16": S5
+  "12.4.11": S4
+  "12.4.13-3": S5
+  "12.4.13-4": S5
+  "12.4.13-5": S5
+  "12.4.14": S4
+  "12.4.14-3": S5
+  "12.4.14-4": S5
+  "12.4.14-5": S5
+  "12.4.14-6": S5
+  "12.4.14-7": S5
+  "12.4.15": S4
+  "12.4.16": S5
+  "12.4.17": S5
+  "12.4.18": S5
+  "12.4.19": S5
+  "12.4.20": S5
+  "12.4.21": S5
+  "12.4.22": S5
+  "12.4.24": S5
+  "12.4.25": S5
+  "12.4.26": S4
+  "12.4.27": S2
+  "12.4.30-4": S4
+  "12.4.30-5": S4
+  "12.4.30-6": S4
+  "12.4.31": S4
+  "12.4.33": S4
+  "12.4.34": S5
+  "12.4.35": S5
+  "12.4.36": S4
+  "12.4.37": S4
+  "12.4.38": S4
+  "12.4.39": S5
+  "12.4.40": S5
+  "12.4.41": S4
+  "12.4.42": S4
+  "12.4.43": S4
+  "12.4.44": S4
+  "12.4.45": S4
+  "12.4.46": S4
+  "12.4.47": S4
+  "12.4.48": S4
+  "12.4.49": S4
+  "12.4.50": S4
+  "12.4.51": S4
+  "12.4.52": S4
+  "12.4.53": S4
+  "12.4.54": S4
+  "12.4.55": S4
+  "12.4.56": S4
+  "12.4.57": S4
+  "12.5": S4
+  "12.6": S5
+  "12.7": S5
+
+profiles:
+  # 10. Подготовка территории
+  "10.1": ADMIN
+  "10.2": UTILITIES_TRENCH
+  "10.3": DEMOLITION
+  "10.4": DEMOLITION
+  "10.5": GREENERY_REMOVAL
+  "10.6": TREE_PLANTING
+  "10.7": MANUAL_OUTDOOR
+  "10.8": DISMANTLING
+  "10.9": DEBRIS_REMOVAL
+  "10.10": MANUAL_OUTDOOR
+  "10.11.1": SITE_FENCE
+  "10.11.2": {profile: UTILITIES_TRENCH, observability: medium}
+  "10.11.3": TEMP_ROADS
+  "10.11.4": SITE_CAMP
+  "10.12": {profile: ROAD_FURNITURE, observability: low}
+  "10.13": MANUAL_OUTDOOR
+  "10.14": MANUAL_OUTDOOR
+  "10.14.1": ADMIN
+  "10.14.3": ADMIN
+  "10.14.4": ADMIN
+
+  # 12.1–12.2 Тоннели (дороги)
+  "12.1": TUNNEL_ASSEMBLY
+  "12.2": TUNNELING
+
+  # 12.3 Подземная часть
+  "12.3.1": EXCAVATION
+  "12.3.2": PILING
+  "12.3.3": BASE_LAYERS
+  "12.3.4-1": PILING
+  "12.3.4-2": BASE_LAYERS
+  "12.3.4-3": BASE_LAYERS
+  "12.3.4-4": CONCRETE_PREP
+  "12.3.4-5": MONOLITH_BELOW0
+  "12.3.4-6": MONOLITH_BELOW0
+  "12.3.4-7": MONOLITH_BELOW0
+  "12.3.4-8": REBAR
+  "12.3.5-1": PILING
+  "12.3.5-2": INJECTION
+  "12.3.5-3": MONOLITH_BELOW0
+  "12.3.6": PIT_WALL
+  "12.3.7-1": EXCAVATION
+  "12.3.7-2": BACKFILL
+  "12.3.7-3": GRADING
+  "12.3.7-4": COMPACTION
+  "12.3.7-5": STRUTS
+  "12.3.7-6": SHEET_PILING
+  "12.3.7-7": SHEET_PILING
+  "12.3.7-8": EXCAVATION
+  "12.3.7-9": EXCAVATION
+  "12.3.7-10": PILING
+  "12.3.7-11": INJECTION
+  "12.3.7-12": BASE_LAYERS
+  "12.3.7-13": BACKFILL
+  "12.3.7-14": BASE_LAYERS
+  "12.3.8": ROAD_BASE
+  "12.3.8-2": GRADING
+  "12.3.8-3": COMPACTION
+  "12.3.9": MONOLITH_BELOW0
+  "12.3.10": MANUAL_OUTDOOR
+  "12.3.11": MANUAL_OUTDOOR
+
+  # 12.4 Надземная часть
+  "12.4.1": ADMIN
+  "12.4.2": EQUIPMENT_SUPPLY
+  "12.4.3": EQUIPMENT_INSTALL
+  "12.4.4": FRAME
+  "12.4.5": REBAR
+  "12.4.6-1": MANUAL_OUTDOOR
+  "12.4.6-2": FRAME
+  "12.4.6-3": MANUAL_OUTDOOR
+  "12.4.7-1": REBAR
+  "12.4.7-2": CONCRETING
+  "12.4.7-3": STEEL
+  "12.4.7-4": STEEL
+  "12.4.7-5": ROOFING
+  "12.4.8-1": WALLS
+  "12.4.8-2": INTERIOR
+  "12.4.8-3": WALLS
+  "12.4.8-4": INTERIOR
+  "12.4.8-5": WALLS
+  "12.4.8-6": FACADE
+  "12.4.8-7": PANELS
+  "12.4.8-8": WALLS
+  "12.4.8-9": INTERIOR
+  "12.4.8-10": INTERIOR
+  "12.4.8-11": INTERIOR
+  "12.4.8-12": INTERIOR
+  "12.4.8-13": INTERIOR
+  "12.4.8-14": INTERIOR
+  "12.4.8-15": INTERIOR
+  "12.4.8-16": INTERIOR
+  "12.4.9": CONCRETING
+  "12.4.10": CONCRETING
+  "12.4.11": FACADE
+  "12.4.12": ROAD_BASE
+  "12.4.12-2": GRADING
+  "12.4.12-3": COMPACTION
+  "12.4.12-4": CURB
+  "12.4.13-1": FRAME
+  "12.4.13-2": CONCRETING
+  "12.4.13-3": ROAD_FURNITURE
+  "12.4.13-4": ROAD_FURNITURE
+  "12.4.13-5": ROAD_FURNITURE
+  "12.4.13-6": STEEL
+  "12.4.14-1": ASPHALT
+  "12.4.14-2": ASPHALT
+  "12.4.14-3": ROAD_FURNITURE
+  "12.4.14-4": ROAD_FURNITURE
+  "12.4.14-5": ROAD_FURNITURE
+  "12.4.14-6": ROAD_FURNITURE
+  "12.4.14-7": ROAD_FURNITURE
+  "12.4.15": TRACK
+  "12.4.15-3": CONCRETING
+  "12.4.16": ROAD_FURNITURE
+  "12.4.17": ROAD_MARKING
+  "12.4.18": ROAD_FURNITURE
+  "12.4.19": ROAD_FURNITURE
+  "12.4.20": ROAD_FURNITURE
+  "12.4.21": ROAD_FURNITURE
+  "12.4.22": ROAD_FURNITURE
+  "12.4.23": FRAME
+  "12.4.24": MANUAL_OUTDOOR
+  "12.4.25": ROAD_FURNITURE
+  "12.4.26": MANUAL_OUTDOOR
+  "12.4.27": BASE_LAYERS
+  # замечание экспертов к 12.4.28-1…8: «сложно отделять по фото с дальнего расстояния» —
+  # подпункты контролируются на уровне 12.4.28, у самих подпунктов наблюдаемость низкая
+  "12.4.28": FRAME
+  "12.4.28-1": {profile: FRAME, observability: low}
+  "12.4.28-2": {profile: FRAME, observability: low}
+  "12.4.28-3": INTERIOR
+  "12.4.28-4": {profile: FRAME, observability: low}
+  "12.4.28-5": MANUAL_OUTDOOR
+  "12.4.28-6": MANUAL_OUTDOOR
+  "12.4.28-7": MANUAL_OUTDOOR
+  "12.4.28-8": {profile: UTILITIES_TRENCH, observability: low}
+  "12.4.29": FRAME
+  "12.4.30": STEEL
+  "12.4.30-3": MANUAL_OUTDOOR
+  "12.4.30-4": MANUAL_OUTDOOR
+  "12.4.30-5": MANUAL_OUTDOOR
+  "12.4.31": ROOFING
+  "12.4.32": STEEL
+  "12.4.33": FACADE
+  "12.4.34": INTERIOR
+  "12.4.35": INTERIOR
+  "12.4.36": FACADE
+  "12.4.37": FACADE
+  "12.4.38": FACADE
+  "12.4.39": INTERIOR
+  "12.4.40": INTERIOR
+  "12.4.41": FACADE
+  "12.4.42": FACADE
+  "12.4.43": FACADE
+  "12.4.44": FACADE
+  "12.4.45": FACADE
+  "12.4.46": FACADE
+  "12.4.47": FACADE
+  "12.4.48": FACADE
+  "12.4.49": FACADE
+  "12.4.50": FACADE
+  "12.4.51": FACADE
+  "12.4.52": FACADE
+  "12.4.53": FACADE
+  "12.4.54": FACADE
+  "12.4.55": MANUAL_OUTDOOR
+  "12.4.56": FACADE
+  "12.4.57": STEEL
+
+  # 12.5 Инженерные системы
+  "12.5.1": UTILITIES_TRENCH
+  "12.5.1-9": EQUIPMENT_INSTALL
+  "12.5.2": INTERIOR
+  "12.5.2-9": EXCAVATION
+  "12.5.2-10": UTILITIES_TRENCH
+  "12.5.2-11": UTILITIES_TRENCH
+
+  # 12.6 Отделочные работы
+  "12.6": INTERIOR
+  "12.6.1": FACADE
+  "12.6.12": {profile: EQUIPMENT_INSTALL, observability: low}
+
+  # 12.7 Благоустройство
+  "12.7.1-1": ASPHALT
+  "12.7.1-2": PAVING
+  "12.7.1-3": CONCRETE_PREP
+  "12.7.1-4": MANUAL_OUTDOOR
+  "12.7.1-5": CURB
+  "12.7.1-6": FRAME
+  "12.7.1-7": ROAD_FURNITURE
+  "12.7.2-1": LAWN
+  "12.7.2-2": LAWN
+  "12.7.2-3": LAWN
+  "12.7.2-4": TREE_PLANTING
+  "12.7.2-5": TREE_PLANTING
+  "12.7.3": SMALL_FORMS
+  "12.7.4": GRADING
+  "12.7.4-1": BASE_LAYERS
+  "12.7.4-2": EXCAVATION
+  "12.7.5": TREE_PLANTING
+  "12.7.6": SITE_FENCE
+  "12.7.6-2": {profile: SITE_FENCE, observability: low}
+  "12.7.7-1": EQUIPMENT_INSTALL
+  "12.7.7-2": UTILITIES_TRENCH
+  "12.7.7-3": POLE_FOUNDATIONS
+  "12.7.7-4": EQUIPMENT_INSTALL
+  "12.7.7-5": MANUAL_OUTDOOR

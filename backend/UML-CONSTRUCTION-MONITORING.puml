@@ -1,5 +1,8 @@
 @startuml
 skinparam BoxPadding 10
+skinparam ParticipantPadding 8
+skinparam defaultFontName DejaVu Sans
+skinparam sequenceMessageAlign left
 <style>
 sequenceDiagram {
   participant {
@@ -8,141 +11,86 @@ sequenceDiagram {
 }
 </style>
 
-title Контроль хода строительства: снимки с камер + AI-детекция техники ⇄ календарный график (XLS)
+title ОКО — поиск нарушений на стройплощадке: снимки с камер → техника (RF-DETR) → этапы графика (методика «этап → техника») → отклонения → нарушения
 
 actor "Руководитель проекта" as PM
-actor "Сотрудник (Инженер стройконтроля)" as Engineer
+actor "Инженер стройконтроля" as Engineer
 
-box "Бэкенд платформы мониторинга (FastAPI)" #LightYellow
-    participant "API Gateway (Nginx)" as Nginx
-    participant "FastAPI App" as App
+box "Сервис ОКО (FastAPI, CPU)" #LightYellow
+    participant "API\n/api/…" as App
+    participant "Методика\nmethodology/*.yaml" as Method
+    participant "Движок правил\nengine.py" as Engine
 end box
 
-box "Асинхронный слой" #LightGreen
-    participant "Redis Cache" as Redis
-    control "Celery Beat" as Beat
-    participant "Celery Workers" as Celery
+box "AI" #LightBlue
+    participant "Детектор техники\nRF-DETR · ONNX на CPU · AI-сервис на GPU" as AI
 end box
 
-box "AI и аналитика" #LightBlue
-    participant "AI Detector (CV-модель)" as AI
-    participant "Plan-Fact Engine" as Engine
-end box
+database "PostgreSQL\n(SQLite на ноутбуке)" as DB
+entity "Хранилище снимков\n(диск / S3)" as Store
+boundary "IP-камеры\nили загрузка снимков" as Cams
+boundary "Уведомления\n(e-mail / Telegram)" as Notify
 
-database "PostgreSQL" as DB
-entity "Yandex Object Storage (S3)" as S3
-boundary "IP-камеры стройплощадки" as Cams
-boundary "Уведомления (e-mail / Telegram)" as Notify
-
-== СЦЕНАРИЙ 1: Создание проекта (XLS-график + URL камер) ==
-PM -> Nginx: POST /api/v1/projects (Название, XLS-график, URL камер, зоны обзора)
-Nginx -> App: Обработка мультипарт-запроса
-App -> App: Парсинг XLS (pandas / openpyxl):\nэтапы, виды работ, сроки,\nзоны, потребность в технике
-App -> DB: SELECT справочник «вид работ → классы техники»
-DB --> App: Требуемая техника по этапам (если не указана в XLS)
-note right of DB
-  Пример справочника:
-  котлован → экскаватор, самосвал, бульдозер
-  фундамент → автобетоносмеситель, автобетононасос
-  каркас → автокран, башенный кран
+== СЦЕНАРИЙ 1: Проект — календарный график, зоны и камеры ==
+PM -> App: POST /api/projects (название, тип объекта из справочника)
+PM -> App: PUT /api/projects/{id}/site (зоны = захватки, камеры, полигоны зон на кадре,\nзаявленная техника — башенный кран)
+PM -> App: POST /api/projects/{id}/schedule (XLSX / CSV)
+App -> App: Разбор графика: столбцы по заголовкам («Код», «Наименование работ»,\n«Захватка», «Начало», «Окончание», «Техника (план)»), иерархия этапов
+App -> Method: Сопоставить строку графика с видом работ справочника\n(по коду 12.3.4.6 → 12.3.4-6, иначе по названию)
+Method --> App: Вид работ → профиль техники, стадия S1–S5, наблюдаемость
+note right of Method
+  Методика: 377 видов работ → 46 профилей
+  котлован → экскаватор (на снимке) + самосвал (за смену),
+             пара: экскаватор → самосвал
+  монолит  → кран за смену; пара: миксер → насос / кран
+  отделка  → не видно с камер: только «лишняя» техника
 end note
-App -> Cams: Тестовый запрос кадра по каждому URL
-Cams --> App: HTTP 200 (JPEG): камеры доступны
-App -> S3: Загрузка исходного XLS в 'project-plans/{project_id}/'
-App -> DB: INSERT INTO projects, schedule_tasks, cameras (status: active)
-DB --> App: Проект сохранен (ID получен)
-App --> PM: HTTP 201 Created (Распознано N этапов, подключено M камер)
+App -> DB: INSERT schedule_versions, schedule_tasks (+ зона, профиль, техника из графика)
+App --> PM: 201: строк N, сопоставлено M, замечания (строки без вида работ — указать вручную)
 
-== СЦЕНАРИЙ 2: Получение снимков и детекция техники (каждые 5 минут) ==
-Beat -> Celery: capture_frames.delay() по расписанию
-Celery -> DB: SELECT активные камеры (url, project_id, zone_id)
-DB --> Celery: Список камер
-loop Для каждой камеры
-    Celery -> Cams: GET snapshot (HTTP JPEG / кадр RTSP-потока)
-    alt Камера доступна
-        Cams --> Celery: Кадр JPEG + timestamp
-        Celery -> S3: Загрузка кадра в 'site-frames/{camera_id}/{ts}.jpg'
-        Celery -> Redis: LPUSH & LTRIM (12) frames:{camera_id}
-        Celery -> AI: POST /detect (кадры камеры за 1 час)
-        AI --> Celery: Детекции по кадрам:\nкласс техники, bbox, confidence
-        Celery -> Celery: Подсчет техники по типам и зонам;\nработа / простой по смещению bbox
-        Celery -> DB: INSERT INTO detections (ts, camera_id, zone_id, machine_type, count, active_count)
-    else Таймаут / нет сигнала
-        Celery -> DB: INSERT INTO camera_events (offline): «нет данных» ≠ «нет техники»
-    end
+== СЦЕНАРИЙ 2: Снимок — техника, зоны, сопоставление с графиком ==
+Cams -> App: POST /api/projects/{id}/snapshots (камера, файлы; время — EXIF / имя файла / поле)
+App -> App: SHA-256: повторный снимок не дублируется
+App -> App: Контроль качества: яркость, контраст, резкость
+alt Снимок годен
+    App -> AI: Детекция техники (кадр целиком; для общего плана — + фрагменты 3×3)
+    AI --> App: Рамки: класс (v1 — 10 классов, v2 — 12), уверенность, координаты
+    App -> App: Зона машины — по точке опоры (середина нижней стороны рамки)
+else Темно / туман / засветка
+    App -> App: «Нет данных» — не «нет техники»; детекция не выполняется
 end
-Celery -> Redis: SET site_state:{project_id} (live-состав техники)
+App -> Store: Снимок
+App -> DB: INSERT snapshots, detections
+App -> Engine: Окно из одного снимка: этапы зоны на дату снимка + профили + рамки
+Engine --> App: Объяснение по снимку: ожидаемая и видимая техника, пары, лишняя техника
+App -> DB: INSERT snapshot_checks
 
-== СЦЕНАРИЙ 3: Привязка наблюдений к графику и формирование аналитики (конец смены) ==
-Beat -> Celery: build_daily_report.delay(project_id, date)
-Celery -> DB: SELECT этапы графика WHERE date BETWEEN start_date AND end_date
-DB --> Celery: План: этапы, зоны, требуемая техника (тип × кол-во, маш.-ч)
-Celery -> DB: SELECT агрегаты detections и camera_events за смену
-DB --> Celery: Факт: техника по зонам, часы присутствия и работы, периоды без данных
-Celery -> Engine: match_plan_fact(план, факт)
-Engine -> Engine: Привязка к этапам графика:\nзона + класс техники → этап
-Engine -> Engine: Отклонения по правилам\n+ гипотезы причин
-note over AI, Engine
-  <b>Правила выявления отклонений</b>
-  |= Факт за смену |= Статус этапа |
-  | этап активен, техники нет | Работы не ведутся |
-  | техники меньше плана | Недостаток ресурсов |
-  | простой > 50% смены | Простой техники |
-  | техника не начатого этапа | Опережение / вне графика |
-  | камера недоступна | Нет данных |
-end note
-Engine -> Engine: Темп: Σ факт. / Σ план. маш.-ч\n→ прогноз окончания этапа
-Engine -> Engine: Риск срыва сроков:\nпрогноз vs плановая дата,\nрезерв, зависимые этапы
-Engine --> Celery: Статусы этапов, отклонения, гипотезы причин,\nриск срыва (низкий / средний / высокий)
-Celery -> DB: INSERT INTO reports (status: pending_review) & deviations (+ ключевые кадры)
-Celery -> Notify: Инженеру: «Отчет за {date} ожидает проверки»
-Notify -> Engineer: Уведомление со ссылкой на отчет
+== СЦЕНАРИЙ 3: Отклонения за день (пересчёт после каждого снимка) ==
+App -> DB: SELECT снимки дня по зоне (все камеры зоны, 5-минутные слоты: максимум по камерам)
+App -> Engine: evaluate_window(зона, день, этапы: идущие / предстоящие / завершённые)
+Engine -> Engine: NO_DATA · NO_EQUIPMENT · MISSING_REQUIRED · INCOMPLETE_SET ·\nINSUFFICIENT_COUNT · EARLY_START · STAGE_OVERRUN · UNEXPECTED_EQUIPMENT ·\nNO_ACTIVE_STAGE · STAGE_MISMATCH (стадия по кадру общего плана)
+Engine --> App: Отклонения: важность, «предварительно» (1 снимок) / «подтверждено» (серия),\nтекст, рекомендация, расчёт, снимки-доказательства с рамками
+App -> DB: UPSERT deviations + deviation_evidence (ключ: день, зона, этап, правило, класс)
+App --> Cams: 200: техника на снимке, время обработки, id отклонений
 
-== СЦЕНАРИЙ 4: Проверка и утверждение AI-аналитики сотрудником (human-in-the-loop) ==
-Engineer -> Nginx: GET /api/v1/reports/{report_id}
-Nginx -> App: Проверка JWT и роли «Инженер»
-App -> DB: SELECT отчет, отклонения, детекции
-DB --> App: План/факт по этапам, отклонения, ключи кадров в S3
-App -> S3: generate_presigned_url(ключевые кадры, ExpiresIn=3600)
-S3 --> App: Временные ссылки на кадры
-App --> Engineer: HTTP 200 OK (План/факт, отклонения, кадры с разметкой bbox)
-Engineer -> Nginx: POST /api/v1/reports/{report_id}/review\n(вердикт по каждому отклонению)
-Nginx -> App: Обработка решения
-alt Отставание от графика подтверждено
-    App -> DB: UPDATE deviations SET verdict='delay_confirmed'
-else Форс-мажор (погода, поломка техники, срыв поставок)
-    App -> DB: UPDATE deviations SET verdict='force_majeure' & INSERT INTO incidents (тип, комментарий)
-else Ошибка распознавания (ложное срабатывание / пропуск)
-    App -> DB: UPDATE deviations SET verdict='false_positive' (исправленный факт)
-    App -> S3: Кадры и исправленная разметка в 'ml-feedback-dataset/' (дообучение модели)
+== СЦЕНАРИЙ 4: Проверка инженером → нарушение ==
+Engineer -> App: GET /api/projects/{id}/summary, /deviations (зоны, отклонения, снимки)
+Engineer -> App: POST /api/deviations/{id}/review (accepted | rejected | force_majeure)
+alt Подтверждено
+    App -> DB: INSERT violations (номер НР-2026-0001, подрядчик из графика, срок устранения)
+else Ложное срабатывание
+    App -> DB: detections.is_rejected = true (рамки → набор для дообучения)
+else Форс-мажор
+    App -> DB: deviation_reviews (погода, поломка, поставки)
 end
-App -> DB: UPDATE reports SET status='approved', reviewed_by, reviewed_at
-App -> Redis: DEL dashboard:{project_id} (сброс кэша)
-App -> Celery: notify_project_manager.delay(report_id), если есть подтвержденные отклонения
-App --> Engineer: HTTP 200 OK (Отчет утвержден)
+App --> Engineer: Отклонение с вердиктом; пересчёт не возвращает отклонённое
 
-== СЦЕНАРИЙ 5: Оповещение и дашборд руководителя проекта ==
-note over Celery: Выполняется асинхронно в фоне
-Celery -> DB: SELECT подтвержденные отклонения, инциденты, прогноз по этапам
-DB --> Celery: «Бетонирование фундамента»: отставание 3 дня при резерве 1 день
-Celery -> Notify: Руководителю проекта: этап, отставание, причина, риск срыва
-Notify -> PM: Алерт: «Риск срыва сроков: высокий»
-PM -> Nginx: GET /api/v1/projects/{project_id}/dashboard
-Nginx -> App: Проверка JWT
-App -> Redis: GET dashboard:{project_id}
-Redis --> App: JSON дашборда / nil
-alt Кэш пуст
-    App -> DB: SELECT план/факт по этапам, подтвержденные отклонения, инциденты
-    DB --> App: Данные для диаграммы Ганта и KPI
-    App -> Redis: SET dashboard:{project_id} EX 300
-end
-App -> Redis: GET site_state:{project_id}
-App -> S3: generate_presigned_url(последние кадры камер)
-App --> PM: HTTP 200 OK (Гант план/факт, статусы этапов, отклонения, риск срыва, live-кадры)
+== СЦЕНАРИЙ 5: Руководитель проекта ==
+App -> Notify: Подтверждённые критичные нарушения: зона, этап, снимок, рекомендация
+Notify -> PM: «Котлован, секция 1: экскаватор без самосвалов 2 снимка — снижение темпа»
+PM -> App: GET /api/projects/{id}/report?format=csv · реестр нарушений · сводка по зонам
 note over PM
-  Реакция РП: запрос подрядчику,
-  перераспределение техники,
-  корректировка графика
-  (новая версия XLS → Сценарий 1)
+  Реакция: запрос подрядчику, перераспределение техники,
+  новая версия графика (сценарий 1, базовая версия сохраняется)
 end note
 @enduml

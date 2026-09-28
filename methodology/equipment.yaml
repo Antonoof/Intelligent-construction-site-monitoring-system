@@ -1,0 +1,129 @@
+# Справочник классов строительной техники.
+#
+# key            — идентификатор класса в коде, БД и API;
+# tz             — класс из перечня ТЗ (раздел 6.2): самосвал, экскаватор, каток, кран-манипулятор,
+#                  бетоносмеситель, бульдозер, грузовик, автокран;
+# models         — версии детектора, которые распознают класс:
+#                  v1 = RF-DETR Large, 10 классов (ML-часть, mAP50 0.907);
+#                  v2 = RF-DETR Large, 12 классов — v1 + каток и грузовик (training/05–07);
+#                  v3 = план: + автобетононасос, асфальтоукладчик;
+# site_wide      — техника обслуживает всю площадку и не привязывается к зоне (башенный кран);
+# aliases        — названия классов в датасетах и чекпойнтах, которые приводятся к key
+#                  (без учёта регистра, пробелов и дефисов).
+version: "2026.09"
+classes:
+  excavator:
+    name: Экскаватор
+    name_en: Excavator
+    tz: true
+    models: [v1, v2, v3]
+    color: "#E1A21C"
+    aliases: [excavator, экскаватор, excavator-crane, smalldigger, mini excavator, backhoe]
+  dump_truck:
+    name: Самосвал
+    name_en: Dump truck
+    tz: true
+    models: [v1, v2, v3]
+    color: "#C4502E"
+    aliases: [dump truck, dump_truck, dumptruck, самосвал]
+  roller:
+    name: Каток
+    name_en: Road roller
+    tz: true
+    models: [v2, v3]
+    color: "#7A5CC2"
+    aliases: [roller, road roller, compactor, каток, дорожный каток]
+  crane_manipulator:
+    name: Кран-манипулятор
+    name_en: Truck-mounted crane
+    tz: true
+    models: [v1, v2, v3]
+    color: "#3E6FA8"
+    aliases: [crane manipulator, crane_manipulator, manipulator, кран-манипулятор, манипулятор, кму]
+  concrete_mixer:
+    name: Автобетоносмеситель
+    name_en: Concrete mixer truck
+    tz: true
+    models: [v1, v2, v3]
+    color: "#8A97A3"
+    aliases: [mixer, concrete mixer, concrete truck, concrete_mixer, бетоносмеситель, автобетоносмеситель, миксер]
+  bulldozer:
+    name: Бульдозер
+    name_en: Bulldozer
+    tz: true
+    models: [v1, v2, v3]
+    color: "#D98C1F"
+    aliases: [bulldozer, dozer, бульдозер]
+  truck:
+    name: Грузовик
+    name_en: Truck
+    tz: true
+    models: [v2, v3]
+    color: "#4F8F5B"
+    aliases: [truck, trailer, gazelle, tanker, грузовик, бортовой, тягач, газель]
+  mobile_crane:
+    name: Автокран
+    name_en: Mobile crane
+    tz: true
+    models: [v1, v2, v3]
+    color: "#B83C8C"
+    aliases: [autocran, mobile crane, mobile_crane, truck crane, crane, автокран]
+  loader:
+    name: Погрузчик
+    name_en: Loader
+    tz: false
+    models: [v1, v2, v3]
+    color: "#9C7A2B"
+    aliases: [loader, bucket loader big, bucket loader standart, bucket loader standard, wheel loader,
+              forklift standart, forklift standard, forklift giraffe, telehandler, погрузчик]
+  grader:
+    name: Грейдер
+    name_en: Motor grader
+    tz: false
+    models: [v1, v2, v3]
+    color: "#5E8C99"
+    aliases: [grader, motor grader, грейдер, автогрейдер]
+  tower_crane:
+    name: Башенный кран
+    name_en: Tower crane
+    tz: false
+    site_wide: true
+    models: [v1, v2, v3]
+    color: "#D39B1E"
+    aliases: [tower crane, tower_crane, башенный кран]
+  drilling_rig:
+    name: Буровая установка
+    name_en: Drilling / piling rig
+    tz: false
+    models: [v1, v2, v3]
+    color: "#6B4FA0"
+    aliases: [drilling rig, drilling_rig, drill rig, piling rig, pile driver, буровая установка, буровая, копёр, копер]
+  concrete_pump:
+    name: Автобетононасос
+    name_en: Concrete pump truck
+    tz: false
+    models: [v3]
+    color: "#2F8FB5"
+    aliases: [concrete pump, concrete_pump, pump-truck, pump truck, pump, бетононасос, автобетононасос]
+  asphalt_paver:
+    name: Асфальтоукладчик
+    name_en: Asphalt paver
+    tz: false
+    models: [v3]
+    color: "#444B52"
+    aliases: [asphalt paver, paver, асфальтоукладчик]
+
+# Состав версий детектора (для документации и режима «какие правила проверяемы»).
+model_versions:
+  v1:
+    id: rfdetr-l-10cls-v1
+    title: RF-DETR Large, 10 классов (ML-часть)
+    metrics: {map50: 0.907, map50_95: 0.767, precision: 0.938}
+  v2:
+    id: rfdetr-l-12cls-v2
+    title: RF-DETR Large, 12 классов — v1 + каток, грузовик (дообучение по датасетам из ссылок организаторов)
+    metrics: null   # заполняется после training/07_eval_conditions.py
+  v3:
+    id: rfdetr-l-14cls-v3
+    title: План — + автобетононасос, асфальтоукладчик
+    metrics: null

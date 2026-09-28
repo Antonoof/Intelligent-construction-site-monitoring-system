@@ -1,0 +1,31 @@
+# ОКО — сервис с детектором RF-DETR (README-3). Тот же код, что и основной сервис, плюс PyTorch и rfdetr.
+# Используется как AI-сервис на GPU (эндпоинт /internal/detect) или как единый сервис на CPU.
+#   CPU:  docker build -f backend/Dockerfile.ai -t oko-ai .
+#   GPU:  docker build -f backend/Dockerfile.ai --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128 -t oko-ai .
+FROM python:3.11-slim
+
+ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core curl libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /srv/backend
+RUN pip install torch torchvision --index-url ${TORCH_INDEX}
+COPY backend/requirements.txt backend/requirements-ml.txt ./
+RUN pip install -r requirements.txt -r requirements-ml.txt
+
+COPY backend/app ./app
+COPY methodology /srv/methodology
+COPY frontend/app /srv/frontend/app
+COPY data/demo /srv/data/demo
+
+ENV OKO_METHODOLOGY_DIR=/srv/methodology \
+    OKO_FRONTEND_DIR=/srv/frontend/app \
+    OKO_DEMO_DIR=/srv/data/demo \
+    OKO_DATA_DIR=/data \
+    OKO_DETECTOR=rfdetr \
+    OKO_RFDETR_WEIGHTS=/srv/weights/rfdetr_large_best_ema.pth
+VOLUME ["/data"]
+EXPOSE 8001
+HEALTHCHECK --interval=20s --timeout=5s --start-period=90s CMD curl -fs http://localhost:8001/internal/info || exit 1
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]

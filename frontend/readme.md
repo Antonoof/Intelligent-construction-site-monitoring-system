@@ -1,3 +1,13 @@
-https://garyanikin.github.io/oko-landing/
+# Фронтенд
 
-[Контроль хода строительства — архитектура системы](https://github.com/Antonoof/Intelligent-construction-site-monitoring-system/blob/main/backend/readme.md)
+| Что | Где | Назначение |
+|---|---|---|
+| **Интерфейс прототипа ОКО** | [app/](app/) | Рабочий интерфейс под ТЗ: сводка по зонам, снимки с рамками, отклонения со снимками-доказательствами и вердиктом инженера, график, методика «этап → техника», проверка своего снимка. Отдаётся бэкендом: http://localhost:8000 |
+| Лендинг «ОКО — ночная смена» | [index.html](index.html), `support.js`, `vendor/` | Продуктовая страница: https://garyanikin.github.io/oko-landing/ |
+| Макет «план-факт» | [plan-fact-site-monitor.html](plan-fact-site-monitor.html) | Следующий слой: машино-часы, индекс SPI и прогноз срыва срока по темпу |
+| Окупаемость | [окупаемость-контроля-стройки.html](окупаемость-контроля-стройки.html), [PDF](Экономика%20контроля%20стройки%20по%20камерам.pdf) | Калькулятор и расчёт экономики на один объект |
+
+Интерфейс прототипа — одна страница без сборки (HTML, CSS, JavaScript), ходит в REST API бэкенда. Отдельный
+запуск не нужен: `docker compose up --build` или `scripts/run_local.sh` поднимают API и интерфейс вместе.
+
+Архитектура системы — [backend/readme.md](../backend/readme.md).

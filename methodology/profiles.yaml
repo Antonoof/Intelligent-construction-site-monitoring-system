@@ -1,0 +1,480 @@
+# Профили техники — ядро методики «этап работ → необходимая техника».
+#
+# Каждый вид работ справочника (work_types.yaml) ссылается на один профиль. Профиль описывает,
+# какую технику камера должна видеть, пока этап идёт, и какая техника этапу не свойственна.
+#
+# observability — насколько работы видны на снимках:
+#   high   — работы ведёт тяжёлая техника на открытой площадке: нет техники — нет работ.
+#            Отсутствие проверяется по каждому снимку и подтверждается серией снимков.
+#   medium — техника работает эпизодически (подача, монтаж, доставка): отсутствие проверяется
+#            только за окно (смену) — хотя бы одно появление за смену.
+#   low    — техника вспомогательная: отсутствие не отклонение, проверяется только «лишняя» техника.
+#   none   — работы не видны с камер (внутри здания, документы): только «лишняя» тяжёлая техника.
+#
+# required    — группы обязательной техники. В группе достаточно любого класса из any_of
+#               в количестве min. window: snapshot — должна быть на каждом снимке, пока идёт
+#               этап (с подтверждением серией); shift — хотя бы раз за смену.
+# companions  — парные правила: если видна ведущая техника (lead), на том же снимке в той же зоне
+#               должна быть парная (partner). Пример из ТЗ: экскаватор без самосвалов.
+# allowed     — допустимая техника: её появление не отклонение.
+# not_detected — техника, нужная этапу, которую детектор пока не распознаёт (видна в карточке,
+#               в расчёт не входит, пока класс не появится в модели).
+#
+# Всё, что не входит в required ∪ partner ∪ allowed ∪ общеплощадочные классы (rules.yaml),
+# считается техникой, не соответствующей этапу.
+version: "2026.09"
+profiles:
+
+  # ------------------------------------------------------------------ без техники / не видно
+  ADMIN:
+    name: "Организационные работы"
+    description: "Документы, закупки, согласования, интеграции. На площадке не видны."
+    observability: none
+    required: []
+    allowed: [truck, crane_manipulator]
+
+  MANUAL_OUTDOOR:
+    name: "Ручные работы на площадке"
+    description: "Геодезия, гидроизоляция, окраска, монтаж слаботочных систем и датчиков — без тяжёлой техники."
+    observability: low
+    required: []
+    allowed: [truck, crane_manipulator, loader]
+
+  INTERIOR:
+    name: "Работы внутри здания"
+    description: "Внутренние сети, отделка, двери, мебель, оборудование. Камеры видят только доставку материалов."
+    observability: none
+    required: []
+    allowed: [truck, crane_manipulator, loader]
+
+  # ------------------------------------------------------------------ подготовка территории
+  DEMOLITION:
+    name: "Снос зданий и сооружений"
+    description: "Экскаватор-разрушитель разбирает конструкции, самосвалы вывозят бой."
+    observability: high
+    required:
+      - {role: "разборка конструкций", any_of: [excavator], min: 1, window: snapshot}
+      - {role: "вывоз строительного мусора", any_of: [dump_truck], min: 1, window: shift}
+    companions:
+      - lead: [excavator]
+        partner: [dump_truck]
+        severity: warning
+        message: "Экскаватор разбирает конструкции, самосвалов нет — мусор не вывозится, фронт работ сужается."
+    allowed: [loader, bulldozer, truck, mobile_crane, crane_manipulator]
+
+  DISMANTLING:
+    name: "Демонтаж конструкций краном"
+    description: "Демонтаж ж/б плит и элементов с подъёмом краном и вывозом."
+    observability: medium
+    required:
+      - {role: "демонтаж и подъём элементов", any_of: [mobile_crane, excavator, crane_manipulator], min: 1, window: shift}
+    allowed: [truck, dump_truck, loader, tower_crane]
+
+  DEBRIS_REMOVAL:
+    name: "Погрузка и вывоз мусора"
+    description: "Погрузчик или экскаватор грузит мусор в самосвалы."
+    observability: high
+    required:
+      - {role: "погрузка", any_of: [loader, excavator], min: 1, window: snapshot}
+      - {role: "вывоз", any_of: [dump_truck, truck], min: 1, window: shift}
+    companions:
+      - lead: [loader, excavator]
+        partner: [dump_truck, truck]
+        severity: warning
+        message: "Погрузочная техника работает без самосвалов — мусор копится на площадке."
+    allowed: [bulldozer]
+
+  GREENERY_REMOVAL:
+    name: "Вырубка зелёных насаждений"
+    description: "Валка деревьев вручную, корчевание и вывоз порубочных остатков."
+    observability: medium
+    required:
+      - {role: "вывоз порубочных остатков", any_of: [crane_manipulator, truck, dump_truck], min: 1, window: shift}
+    allowed: [excavator, loader, mobile_crane]
+
+  TREE_PLANTING:
+    name: "Посадка и пересадка деревьев"
+    description: "Выкопка и посадка с комом: экскаватор, кран-манипулятор или автокран, доставка грузовиком."
+    observability: medium
+    required:
+      - {role: "выкопка, подъём и посадка", any_of: [excavator, crane_manipulator, mobile_crane, loader], min: 1, window: shift}
+    allowed: [truck, dump_truck]
+
+  UTILITIES_TRENCH:
+    name: "Наружные сети в траншее"
+    description: "Разработка траншеи, укладка труб или кабеля, обратная засыпка."
+    observability: high
+    required:
+      - {role: "разработка траншеи", any_of: [excavator], min: 1, window: snapshot}
+    companions:
+      - lead: [excavator]
+        partner: [dump_truck, truck]
+        severity: info
+        message: "Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование."
+    allowed: [dump_truck, truck, crane_manipulator, mobile_crane, loader, roller, bulldozer, drilling_rig]
+
+  SITE_FENCE:
+    name: "Устройство ограждения"
+    description: "Доставка и монтаж секций ограждения, бурение под стойки."
+    observability: medium
+    required:
+      - {role: "доставка и монтаж секций", any_of: [crane_manipulator, truck], min: 1, window: shift}
+    allowed: [drilling_rig, excavator, mobile_crane, loader]
+
+  TEMP_ROADS:
+    name: "Временные дороги и подъезды"
+    description: "Отсыпка щебнем или укладка дорожных плит."
+    observability: high
+    required:
+      - {role: "устройство основания или укладка плит", any_of: [bulldozer, grader, loader, crane_manipulator, mobile_crane], min: 1, window: snapshot}
+    companions:
+      - lead: [dump_truck]
+        partner: [bulldozer, grader, loader]
+        severity: info
+        message: "Щебень завозится, но не распределяется — техники для планировки нет."
+    allowed: [dump_truck, roller, truck, excavator]
+
+  SITE_CAMP:
+    name: "Бытовой городок"
+    description: "Установка блок-контейнеров краном."
+    observability: medium
+    required:
+      - {role: "установка блок-контейнеров", any_of: [crane_manipulator, mobile_crane], min: 1, window: shift}
+    allowed: [truck, loader]
+
+  # ------------------------------------------------------------------ тоннели (дороги)
+  TUNNEL_ASSEMBLY:
+    name: "Сборка ТПМК"
+    description: "Монтаж тоннелепроходческого комплекса в стартовом котловане."
+    observability: medium
+    required:
+      - {role: "монтаж узлов комплекса", any_of: [mobile_crane], min: 1, window: shift}
+    allowed: [truck, crane_manipulator, loader, tower_crane]
+
+  TUNNELING:
+    name: "Проходка тоннеля"
+    description: "ТПМК под землёй не виден; на поверхности — вывоз грунта и подача тюбингов."
+    observability: medium
+    required:
+      - {role: "вывоз грунта", any_of: [dump_truck], min: 1, window: shift}
+    allowed: [truck, mobile_crane, crane_manipulator, loader, excavator, tower_crane]
+
+  # ------------------------------------------------------------------ котлован и земляные работы
+  EXCAVATION:
+    name: "Разработка и вывоз грунта"
+    description: "Экскаватор разрабатывает грунт, самосвалы вывозят его с площадки."
+    observability: high
+    required:
+      - {role: "разработка грунта", any_of: [excavator], min: 1, window: snapshot}
+      - {role: "вывоз грунта", any_of: [dump_truck], min: 1, window: shift}
+    companions:
+      - lead: [excavator]
+        partner: [dump_truck]
+        severity: warning
+        message: "Экскаватор работает без самосвалов — грунт не вывозится, возможно снижение темпа работ."
+    allowed: [bulldozer, loader]
+
+  PIT_WALL:
+    name: "Ограждение котлована"
+    description: "Шпунт, буросекущие сваи или «стена в грунте» — способ задаёт проект."
+    observability: high
+    required:
+      - {role: "погружение шпунта или бурение", any_of: [drilling_rig, mobile_crane, excavator], min: 1, window: snapshot}
+    allowed: [concrete_mixer, concrete_pump, crane_manipulator, truck, dump_truck, loader, tower_crane]
+
+  SHEET_PILING:
+    name: "Шпунтовое ограждение"
+    description: "Погружение шпунта вибропогружателем на базе копра, крана или экскаватора."
+    observability: high
+    required:
+      - {role: "погружение шпунта", any_of: [drilling_rig, mobile_crane, excavator], min: 1, window: snapshot}
+    allowed: [truck, crane_manipulator, loader]
+
+  PILING:
+    name: "Буронабивные и буросекущие сваи, «стена в грунте»"
+    description: "Бурение скважин, установка арматурных каркасов, бетонирование."
+    observability: high
+    required:
+      - {role: "бурение скважин", any_of: [drilling_rig], min: 1, window: snapshot}
+    companions:
+      - lead: [drilling_rig]
+        partner: [concrete_mixer]
+        window: shift
+        severity: warning
+        message: "Скважины бурятся, а бетон за смену не подавался — буронабивные сваи бетонируют сразу после бурения, проверьте поставку бетона."
+    allowed: [concrete_mixer, concrete_pump, mobile_crane, crane_manipulator, excavator, dump_truck, loader, truck, tower_crane]
+
+  INJECTION:
+    name: "Буроинъекционные сваи и закрепление грунтов"
+    description: "Бурение малым диаметром и нагнетание раствора."
+    observability: high
+    required:
+      - {role: "бурение и инъектирование", any_of: [drilling_rig], min: 1, window: snapshot}
+    allowed: [truck, crane_manipulator, concrete_mixer, loader, excavator]
+
+  STRUTS:
+    name: "Распорная система котлована"
+    description: "Монтаж металлических распорок и обвязки краном."
+    observability: medium
+    required:
+      - {role: "монтаж распорок", any_of: [mobile_crane, tower_crane, crane_manipulator], min: 1, window: shift}
+    allowed: [truck, excavator, loader]
+
+  BACKFILL:
+    name: "Обратная засыпка"
+    description: "Засыпка пазух и траншей грунтом с послойным уплотнением."
+    observability: high
+    required:
+      - {role: "засыпка и разравнивание", any_of: [bulldozer, loader, excavator], min: 1, window: snapshot}
+    companions:
+      - lead: [bulldozer, loader]
+        partner: [roller]
+        window: shift
+        severity: info
+        message: "Засыпка идёт без катка — проверьте послойное уплотнение (виброплиты детектор не распознаёт)."
+    allowed: [dump_truck, roller, truck]
+
+  BASE_LAYERS:
+    name: "Отсыпка оснований и насыпей"
+    description: "Песчаная подготовка, щебёночное основание, насыпь — подвоз, распределение, уплотнение."
+    observability: high
+    required:
+      - {role: "подвоз материала", any_of: [dump_truck], min: 1, window: shift}
+      - {role: "распределение слоя", any_of: [bulldozer, loader, grader, excavator], min: 1, window: snapshot}
+    companions:
+      - lead: [dump_truck]
+        partner: [bulldozer, loader, grader, excavator]
+        severity: info
+        message: "Материал завозится, но не распределяется — техники для разравнивания нет."
+      - lead: [bulldozer, grader]
+        partner: [roller]
+        window: shift
+        severity: info
+        message: "Слой распределяется без катка — риск недоуплотнения основания."
+    allowed: [roller, truck]
+
+  GRADING:
+    name: "Планировка грунта"
+    description: "Планировка бульдозером или грейдером, в т.ч. вертикальная планировка."
+    observability: high
+    required:
+      - {role: "планировка", any_of: [bulldozer, grader], min: 1, window: snapshot}
+    allowed: [dump_truck, excavator, loader, roller, truck]
+
+  COMPACTION:
+    name: "Уплотнение грунта"
+    description: "Уплотнение катками. Виброплиты и трамбовки детектор не распознаёт."
+    observability: high
+    required:
+      - {role: "уплотнение", any_of: [roller], min: 1, window: snapshot}
+    allowed: [bulldozer, grader, dump_truck, loader]
+
+  # ------------------------------------------------------------------ бетонные и монолитные работы
+  CONCRETE_PREP:
+    name: "Бетонная подготовка"
+    description: "Укладка тощего бетона прямо из лотка миксера."
+    observability: high
+    required:
+      - {role: "подача бетонной смеси", any_of: [concrete_mixer], min: 1, window: snapshot}
+    allowed: [concrete_pump, loader, excavator, truck, crane_manipulator, tower_crane, mobile_crane]
+
+  CONCRETING:
+    name: "Бетонирование конструкций"
+    description: "Бетон подаётся из миксеров бетононасосом или краном в бадье. Бетонирование идёт захватками — миксер нужен хотя бы раз за смену; длинные этапы лучше детализировать в графике по захваткам."
+    observability: medium
+    required:
+      - {role: "подача бетонной смеси", any_of: [concrete_mixer], min: 1, window: shift}
+    companions:
+      - lead: [concrete_mixer]
+        partner: [concrete_pump, tower_crane, mobile_crane]
+        severity: warning
+        message: "Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает."
+    not_detected: [concrete_pump]
+    allowed: [concrete_pump, tower_crane, mobile_crane, truck, crane_manipulator]
+
+  MONOLITH_BELOW0:
+    name: "Монолитные работы ниже отм. 0"
+    description: "Армирование, опалубка и бетонирование подземной части. По замечанию экспертов — контроль как единой вехи."
+    observability: medium
+    required:
+      - {role: "подача арматуры и опалубки", any_of: [tower_crane, mobile_crane, crane_manipulator], min: 1, window: shift}
+    companions:
+      - lead: [concrete_mixer]
+        partner: [concrete_pump, tower_crane, mobile_crane]
+        severity: warning
+        message: "Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает."
+    not_detected: [concrete_pump]
+    allowed: [concrete_mixer, concrete_pump, truck, loader]
+
+  FRAME:
+    name: "Монолитный каркас выше отм. 0"
+    description: "Возведение несущих конструкций: кран подаёт арматуру и опалубку, бетон — насос или кран."
+    observability: medium
+    required:
+      - {role: "подъём арматуры, опалубки и бетона", any_of: [tower_crane, mobile_crane], min: 1, window: shift}
+    companions:
+      - lead: [concrete_mixer]
+        partner: [concrete_pump, tower_crane, mobile_crane]
+        severity: warning
+        message: "Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает."
+    not_detected: [concrete_pump]
+    allowed: [concrete_mixer, concrete_pump, truck, crane_manipulator, loader]
+
+  REBAR:
+    name: "Армирование и армокаркасы"
+    description: "Доставка и подача арматуры."
+    observability: medium
+    required:
+      - {role: "доставка и подача арматуры", any_of: [crane_manipulator, mobile_crane, tower_crane, truck], min: 1, window: shift}
+    allowed: [loader]
+
+  # ------------------------------------------------------------------ монтаж и поставка
+  STEEL:
+    name: "Монтаж металлоконструкций"
+    description: "Фермы, балки, пролётные строения, конструкции кровли, козырьки — монтаж краном."
+    observability: medium
+    required:
+      - {role: "монтаж конструкций", any_of: [mobile_crane, tower_crane, crane_manipulator], min: 1, window: shift}
+    allowed: [truck, loader]
+
+  EQUIPMENT_SUPPLY:
+    name: "Поставка оборудования и материалов"
+    description: "Доставка на площадку и разгрузка."
+    observability: medium
+    required:
+      - {role: "доставка и разгрузка", any_of: [truck, crane_manipulator], min: 1, window: shift}
+    allowed: [loader, mobile_crane]
+
+  EQUIPMENT_INSTALL:
+    name: "Монтаж оборудования и крупных элементов"
+    description: "Подъём и установка краном: оборудование, опоры, ДГУ, эскалаторы."
+    observability: medium
+    required:
+      - {role: "подъём и монтаж", any_of: [mobile_crane, crane_manipulator, tower_crane], min: 1, window: shift}
+    allowed: [truck, loader, concrete_mixer]
+
+  WALLS:
+    name: "Наружные стены"
+    description: "Кладка и монтаж панелей; материалы подаёт кран эпизодически."
+    observability: low
+    required: []
+    allowed: [tower_crane, mobile_crane, crane_manipulator, truck, loader]
+
+  PANELS:
+    name: "Монтаж стеновых сэндвич-панелей"
+    description: "Подъём панелей автокраном или манипулятором."
+    observability: medium
+    required:
+      - {role: "подъём панелей", any_of: [mobile_crane, crane_manipulator, tower_crane], min: 1, window: shift}
+    allowed: [truck, loader]
+
+  FACADE:
+    name: "Фасадные работы"
+    description: >-
+      Утеплитель, подсистема, облицовка, окна и витражи — с фасадных подъёмников и лесов, которых
+      нет среди классов. По замечанию экспертов подэтапы фасада разделяются визуально (стадия S4 по
+      кадру общего плана), а не по технике.
+    observability: low
+    required: []
+    allowed: [tower_crane, mobile_crane, crane_manipulator, truck, loader]
+
+  ROOFING:
+    name: "Кровля"
+    description: "По замечанию экспертов без съёмки кровли стадию не определить — техника не проверяется."
+    observability: none
+    required: []
+    allowed: [tower_crane, mobile_crane, crane_manipulator, truck]
+
+  # ------------------------------------------------------------------ дороги и благоустройство
+  ROAD_BASE:
+    name: "Основание дорожной одежды"
+    description: "Подвоз щебня или песка, распределение грейдером, уплотнение катком."
+    observability: high
+    required:
+      - {role: "подвоз материала", any_of: [dump_truck], min: 1, window: shift}
+      - {role: "распределение слоя", any_of: [grader, bulldozer, loader], min: 1, window: snapshot}
+      - {role: "уплотнение слоя", any_of: [roller], min: 1, window: shift}
+    companions:
+      - lead: [grader, bulldozer]
+        partner: [roller]
+        window: shift
+        severity: warning
+        message: "Слой распределён, но за смену не уплотнялся — риск недоуплотнения основания."
+    allowed: [excavator, truck]
+
+  ASPHALT:
+    name: "Асфальтобетонное покрытие"
+    description: "Самосвалы подвозят смесь, асфальтоукладчик укладывает, катки уплотняют."
+    observability: high
+    required:
+      - {role: "уплотнение смеси", any_of: [roller], min: 1, window: snapshot}
+      - {role: "подвоз асфальтобетона", any_of: [dump_truck], min: 1, window: shift}
+    companions:
+      - lead: [dump_truck]
+        partner: [roller]
+        severity: warning
+        message: "Асфальтобетон подвезён, катков нет — смесь остывает без уплотнения, риск брака."
+    not_detected: [asphalt_paver]
+    allowed: [asphalt_paver, grader, loader, truck]
+
+  CURB:
+    name: "Бортовой камень и лотки"
+    description: "Укладка бортового камня и водоотводных лотков."
+    observability: medium
+    required:
+      - {role: "укладка элементов", any_of: [crane_manipulator, excavator, loader], min: 1, window: shift}
+    allowed: [truck, concrete_mixer, dump_truck]
+
+  PAVING:
+    name: "Плиточные покрытия"
+    description: "Тротуарная плитка с бортовым камнем: подача поддонов, основание."
+    observability: medium
+    required:
+      - {role: "подача материалов", any_of: [loader, truck, crane_manipulator], min: 1, window: shift}
+    allowed: [roller, dump_truck, grader, excavator, concrete_mixer]
+
+  ROAD_FURNITURE:
+    name: "Обустройство дорог"
+    description: "Знаки, ограждения, светофоры, экраны — доставка и монтаж."
+    observability: medium
+    required:
+      - {role: "доставка и монтаж элементов", any_of: [crane_manipulator, truck, mobile_crane], min: 1, window: shift}
+    allowed: [drilling_rig, excavator, concrete_mixer, loader]
+
+  ROAD_MARKING:
+    name: "Дорожная разметка"
+    description: "Разметочная машина не входит в классы детектора."
+    observability: low
+    required: []
+    allowed: [truck]
+
+  TRACK:
+    name: "Верхнее строение пути"
+    description: "Укладка рельсо-шпальной решётки, путевой бетон. Путевая техника не входит в классы."
+    observability: medium
+    required:
+      - {role: "укладка звеньев и материалов", any_of: [mobile_crane, crane_manipulator, loader], min: 1, window: shift}
+    allowed: [truck, concrete_mixer, dump_truck, excavator]
+
+  LAWN:
+    name: "Газоны и цветники"
+    description: "Подвоз и планировка растительного грунта."
+    observability: medium
+    required:
+      - {role: "подвоз и планировка грунта", any_of: [dump_truck, loader, truck, bulldozer], min: 1, window: shift}
+    allowed: [excavator, roller, crane_manipulator, grader]
+
+  SMALL_FORMS:
+    name: "Малые архитектурные формы"
+    description: "По замечанию экспертов на первых этапах некритично — только «лишняя» техника."
+    observability: low
+    required: []
+    allowed: [crane_manipulator, truck, loader, mobile_crane]
+
+  POLE_FOUNDATIONS:
+    name: "Фундаменты опор"
+    description: "Бурение или рытьё под фундаменты опор и бетонирование."
+    observability: medium
+    required:
+      - {role: "бурение или рытьё", any_of: [drilling_rig, excavator], min: 1, window: shift}
+    allowed: [concrete_mixer, truck, crane_manipulator]

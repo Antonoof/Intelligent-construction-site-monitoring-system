@@ -1,0 +1,122 @@
+# Правила выявления отклонений — вторая половина методики.
+#
+# Профили (profiles.yaml) говорят, какая техника нужна этапу. Здесь — как из снимков и детекций
+# получаются отклонения: пороги, окна подтверждения, уровни важности и тексты предупреждений.
+# Версия правил записывается в каждое отклонение (rules_version), поэтому старые выводы воспроизводимы.
+version: "2026.09-1"
+
+detection:
+  # Уверенность, с которой машина считается присутствующей. Асимметрия порогов снижает число
+  # ложных предупреждений: для правил «лишняя техника» нужна уверенная рамка, а для правил
+  # «техники нет» засчитывается даже сомнительная рамка.
+  presence_threshold: 0.50
+  weak_presence_threshold: 0.30
+  per_class_presence:
+    tower_crane: 0.40        # на общих планах башенный кран детектор видит хуже (ML-часть)
+    drilling_rig: 0.45
+
+# Техника, которая обслуживает всю площадку и никогда не считается «лишней».
+site_wide_classes: [tower_crane]
+# Доставка допустима в любой зоне, где по графику идут работы.
+delivery_classes: [truck, crane_manipulator]
+
+quality:
+  # Контроль качества снимка до детекции: тёмный, пересвеченный или размытый снимок даёт
+  # «нет данных», а не «техники нет».
+  min_brightness: 0.12        # средняя яркость 0..1
+  max_brightness: 0.93
+  min_sharpness: 25.0         # дисперсия лапласиана кадра, уменьшенного до 640 px по ширине
+  min_contrast: 0.035         # стандартное отклонение яркости 0..1 (туман, засветка)
+
+windows:
+  # Окно агрегации — день (смена) по зоне. Отклонение по одному снимку — «предварительное»,
+  # серия снимков делает его «подтверждённым».
+  confirm_min_snapshots: 2
+  confirm_single_confidence: 0.8     # лишняя техника: одна очень уверенная рамка подтверждает отклонение без серии
+  incomplete_share: 0.3              # доля снимков «ведущая техника без парной»: 30 % смены — это часы потерянного темпа
+  no_equipment_min_span_minutes: 60  # «работы не ведутся» — пустая зона минимум час
+  early_start_horizon_days: 21       # техника этапа, который начнётся в пределах N дней — «опережение»
+  overrun_lookback_days: 30          # техника этапа, закончившегося не раньше N дней назад, — «этап не завершён»
+  shift_start: "08:00"
+  shift_end: "20:00"
+
+severity_levels:
+  critical: {name: Критично, order: 0}
+  warning: {name: Внимание, order: 1}
+  info: {name: К сведению, order: 2}
+
+rules:
+  NO_DATA:
+    title: Нет данных
+    kind: data
+    severity: info
+    message: "Снимок непригоден для анализа ({reason}) — зона «{zone}» по нему не оценивается."
+    recommendation: Проверьте камеру (освещение, загрязнение объектива, положение). Статус зоны не меняется — «нет данных» не означает «нет техники».
+
+  NO_EQUIPMENT:
+    title: Работы не ведутся
+    kind: absence
+    severity: warning
+    confirmed_severity: critical
+    message: "По графику идёт этап «{task}», но в зоне «{zone}» не видно техники ({snapshots})."
+    recommendation: Запросите подрядчика о выходе техники и бригады; при подтверждении зафиксируйте нарушение графика.
+
+  MISSING_REQUIRED:
+    title: Нет необходимой техники
+    kind: absence
+    severity: warning
+    confirmed_severity: critical
+    message: "Этап «{task}»: нет техники для работ «{role}» ({expected}). Видно: {observed}."
+    recommendation: Уточните у подрядчика, когда будет техника для «{role}»; без неё этап не выполняется в полном объёме.
+
+  INCOMPLETE_SET:
+    title: Неполный комплект техники
+    kind: absence
+    severity: warning
+    confirmed_severity: critical
+    message: "{companion_message} Зона «{zone}», этап «{task}»: {lead} есть, {partner} нет."
+    recommendation: Проверьте логистику парной техники; при повторении — предупреждение о снижении темпа работ подрядчику.
+
+  INSUFFICIENT_COUNT:
+    title: Техники меньше плана
+    kind: absence
+    severity: warning
+    confirmed_severity: critical
+    message: "Этап «{task}»: по графику {planned} × {cls}, одновременно в кадре {observed}."
+    recommendation: Сравните фактическую расстановку техники с ППР; нехватка техники — ранний признак отставания.
+
+  EARLY_START:
+    title: Опережение графика
+    kind: unexpected
+    severity: info
+    message: "{cls} в зоне «{zone}» относится к этапу «{task}», который начнётся {start}."
+    recommendation: Уточните, согласован ли ранний старт; если нет — проверьте, не идут ли работы вне ППР.
+
+  STAGE_OVERRUN:
+    title: Этап не завершён в срок
+    kind: unexpected
+    severity: warning
+    confirmed_severity: warning
+    message: "{cls} в зоне «{zone}» работает на этапе «{task}», который по графику закончился {end}."
+    recommendation: Этап затягивается — оцените влияние на последующие этапы и скорректируйте график.
+
+  UNEXPECTED_EQUIPMENT:
+    title: Техника не соответствует этапу
+    kind: unexpected
+    severity: warning
+    message: "{cls} в зоне «{zone}» не нужен ни одному этапу графика на {date} (идут: {tasks})."
+    recommendation: Выясните, какие работы ведёт эта техника; работы вне графика — нарушение ППР.
+
+  NO_ACTIVE_STAGE:
+    title: Техника в зоне без работ по графику
+    kind: unexpected
+    severity: warning
+    message: "{cls} в зоне «{zone}», где по графику на {date} работ нет."
+    recommendation: Проверьте, не ведутся ли работы вне графика или не устарел ли график зоны.
+
+  STAGE_MISMATCH:
+    title: Стадия по снимку не совпадает с планом
+    kind: visual
+    severity: warning
+    message: "Кадр общего плана: модель готовности видит стадию {observed_stage}, по графику {planned_stage}."
+    recommendation: Сверьте фактическую готовность с графиком; включается при подключённой модели готовности (ML-часть).

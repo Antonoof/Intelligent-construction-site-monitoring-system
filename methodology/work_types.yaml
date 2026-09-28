@@ -1,0 +1,6292 @@
+# СГЕНЕРИРОВАНО tools/build_methodology.py из справочника организаторов и assignments.yaml.
+# Не редактируйте вручную: меняйте assignments.yaml / profiles.yaml и пересоберите.
+version: '2026.09'
+object_types:
+- key: housing
+  name: Жильё
+- key: education
+  name: Образование
+- key: healthcare
+  name: Здравоохранение
+- key: sport
+  name: Спорт
+- key: culture
+  name: Культура
+- key: admin
+  name: Административные здания
+- key: kindergarten
+  name: ДОУ
+- key: office
+  name: Офисно-деловой центр
+- key: roads
+  name: Дороги
+work_types:
+- id: '10'
+  code: '10'
+  name: Подготовка территории
+  level: 1
+  parent: null
+  stage: S1
+  profile: COMPOSITE:10
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: '10.1'
+  code: '10.1'
+  name: Отселение домов в пятне застройки
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: ADMIN
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.2'
+  code: '10.2'
+  name: Вынос инженерных систем из пятна застройки (ЦТП/ТП/сети)
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 10.2-1
+  code: null
+  name: 'Вынос сетей: теплосеть (ЦТП)'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-2
+  code: null
+  name: 'Вынос сетей: теплосеть (сети)'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-3
+  code: null
+  name: 'Вынос сетей: теплосеть'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-4
+  code: null
+  name: 'Вынос сетей: водоснабжение'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-5
+  code: null
+  name: 'Вынос сетей: Х/Б канализация'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-6
+  code: null
+  name: 'Вынос сетей: ливневая канализация'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-7
+  code: null
+  name: 'Вынос сетей: газоснабжение'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-8
+  code: null
+  name: 'Вынос сетей: электроснабжение (ТП)'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-9
+  code: null
+  name: 'Вынос сетей: электроснабжение (сети)'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-10
+  code: null
+  name: 'Вынос сетей: электроснабжение'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-11
+  code: null
+  name: 'Вынос сетей: сети связи (КП МПТЦ)'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.2-12
+  code: null
+  name: 'Вынос сетей: сети связи'
+  level: 3
+  parent: '10.2'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.3'
+  code: '10.3'
+  name: Снос домов в пятне застройки
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: DEMOLITION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.4'
+  code: '10.4'
+  name: Снос нежилых объектов в пятне застройки
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: DEMOLITION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.5'
+  code: '10.5'
+  name: Вырубка зеленых насаждений
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: GREENERY_REMOVAL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.6'
+  code: '10.6'
+  name: Пересадка зеленых насождений
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: TREE_PLANTING
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.7'
+  code: '10.7'
+  name: Проверка посадки здания
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.8'
+  code: '10.8'
+  name: Демонтаж ж/б перекрытий
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: DISMANTLING
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.9'
+  code: '10.9'
+  name: Погрузка строительного мусора
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: DEBRIS_REMOVAL
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.10'
+  code: '10.10'
+  name: Устройство геодезических знаков
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.11'
+  code: '10.11'
+  name: Обустройство строительной площадки
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: COMPOSITE:10.11
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 10.11.1
+  code: 10.11.1
+  name: Устройство ограждения строительной площадки
+  level: 3
+  parent: '10.11'
+  stage: S1
+  profile: SITE_FENCE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 10.11.2
+  code: 10.11.2
+  name: Устройство временных инженерных сетей
+  level: 3
+  parent: '10.11'
+  stage: S1
+  profile: UTILITIES_TRENCH
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 10.11.3
+  code: 10.11.3
+  name: Устройство временных внутриплощадочных и подъездных дорог
+  level: 3
+  parent: '10.11'
+  stage: S1
+  profile: TEMP_ROADS
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 10.11.4
+  code: 10.11.4
+  name: Возведение хозяйственно-бытового городка
+  level: 3
+  parent: '10.11'
+  stage: S1
+  profile: SITE_CAMP
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: '10.12'
+  code: '10.12'
+  name: Организация движения согласно ПОДД на период строительства
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: ROAD_FURNITURE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.13'
+  code: '10.13'
+  name: Оснащение стройплощадки оборудованием по 299-ПП
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 10.13.1
+  code: 10.13.1
+  name: Видеокамеры для обзора территории стройплощадки (тип 1)
+  level: 3
+  parent: '10.13'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.13.2
+  code: 10.13.2
+  name: Видеокамеры для установки на КПП в зоне входа/выхода на стройплощадку (тип 2)
+  level: 3
+  parent: '10.13'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.13.3
+  code: 10.13.3
+  name: Видеокамеры для обзора зоны въезда/выезда на стройплощадку с распознаванием гос. номера ТС (тип 3)
+  level: 3
+  parent: '10.13'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.13.4
+  code: 10.13.4
+  name: Установка датчиков шума (тип 4) (при необходимости)
+  level: 3
+  parent: '10.13'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '10.14'
+  code: '10.14'
+  name: Оснащение стройплощадки системой СКУД с Face ID
+  level: 2
+  parent: '10'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 10.14.1
+  code: 10.14.1
+  name: Закупка оборудования
+  level: 3
+  parent: '10.14'
+  stage: S1
+  profile: ADMIN
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.14.2
+  code: 10.14.2
+  name: Установка оборудования СКУД с FaceID
+  level: 3
+  parent: '10.14'
+  stage: S1
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.14.3
+  code: 10.14.3
+  name: Интеграция с ЕЦХД
+  level: 3
+  parent: '10.14'
+  stage: S1
+  profile: ADMIN
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 10.14.4
+  code: 10.14.4
+  name: Проведение работ по интеграционному тестированию
+  level: 3
+  parent: '10.14'
+  stage: S1
+  profile: ADMIN
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: '12'
+  code: '12'
+  name: Выполнение строительно-монтажных работ
+  level: 1
+  parent: null
+  stage: null
+  profile: COMPOSITE:12
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: '12.1'
+  code: '12.1'
+  name: Сборка и подготовка устройства ТПМК
+  level: 2
+  parent: '12'
+  stage: S1
+  profile: TUNNEL_ASSEMBLY
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: '12.2'
+  code: '12.2'
+  name: Проходка тоннелей с монтажем ж/б обделки
+  level: 2
+  parent: '12'
+  stage: S2
+  profile: TUNNELING
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: '12.3'
+  code: '12.3'
+  name: Устройство подземной части
+  level: 2
+  parent: '12'
+  stage: S2
+  profile: COMPOSITE:12.3
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.3.1
+  code: 12.3.1
+  name: Устройство котлована
+  level: 3
+  parent: '12.3'
+  stage: S1
+  profile: EXCAVATION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.2
+  code: 12.3.2
+  name: Устройство свай
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: PILING
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.3.3
+  code: 12.3.3
+  name: Устройство основания
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.3.4
+  code: 12.3.4
+  name: Устройство фундамента
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: COMPOSITE:12.3.4
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.3.4-1
+  code: null
+  name: Устройство свайного фундамента (при необходимости)
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: PILING
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.4-2
+  code: null
+  name: Устройство песчаной подготовки
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.4-3
+  code: null
+  name: Устройство щебеночного основания
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.4-4
+  code: null
+  name: Устройство бетонной подготовки
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: CONCRETE_PREP
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.4-5
+  code: null
+  name: Устройство монолитных ж/б плит перекрытия/покрытия
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.4-6
+  code: null
+  name: Устройство фундаментной плиты
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.4-7
+  code: null
+  name: Устройство фундамента под башенный кран
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.4-8
+  code: null
+  name: Армокаркас
+  level: 4
+  parent: 12.3.4
+  stage: S2
+  profile: REBAR
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.3.5
+  code: 12.3.5
+  name: Ограждающие конструкции (СВГ,БСС)
+  level: 3
+  parent: '12.3'
+  stage: S1
+  profile: COMPOSITE:12.3.5
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.3.5-1
+  code: null
+  name: Устройство скважины интервала (бурение, разработка, погружение каркаса, бетонирование)
+  level: 4
+  parent: 12.3.5
+  stage: S1
+  profile: PILING
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.5-2
+  code: null
+  name: Закрепление грунтов
+  level: 4
+  parent: 12.3.5
+  stage: S1
+  profile: INJECTION
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.5-3
+  code: null
+  name: Обвязочная балка
+  level: 4
+  parent: 12.3.5
+  stage: S1
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.6
+  code: 12.3.6
+  name: Устройство ограждающих конструкций котлована
+  level: 3
+  parent: '12.3'
+  stage: S1
+  profile: PIT_WALL
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - roads
+  has_children: false
+- id: 12.3.7
+  code: 12.3.7
+  name: Земляные работы
+  level: 3
+  parent: '12.3'
+  stage: S1
+  profile: COMPOSITE:12.3.7
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.3.7-1
+  code: null
+  name: Разработка грунта
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: EXCAVATION
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-2
+  code: null
+  name: Обратная засыпка
+  level: 4
+  parent: 12.3.7
+  stage: S2
+  profile: BACKFILL
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-3
+  code: null
+  name: Планировка грунта
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: GRADING
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-4
+  code: null
+  name: Уплотнение грунта
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: COMPACTION
+  observability: high
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-5
+  code: null
+  name: Распорная система
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: STRUTS
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-6
+  code: null
+  name: Шпунтовое ограждение
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: SHEET_PILING
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-7
+  code: null
+  name: Устройство шпунтового ограждения котлована, устройство деревянной забирки
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: SHEET_PILING
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-8
+  code: null
+  name: Выемка грунта котлована
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: EXCAVATION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-9
+  code: null
+  name: Разработка грунта с креплением котлована
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: EXCAVATION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-10
+  code: null
+  name: Буронабивные сваи
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: PILING
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-11
+  code: null
+  name: Буроинъекционные сваи
+  level: 4
+  parent: 12.3.7
+  stage: S1
+  profile: INJECTION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-12
+  code: null
+  name: Песчаное основание
+  level: 4
+  parent: 12.3.7
+  stage: S2
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-13
+  code: null
+  name: Обратная засыпка грунтом
+  level: 4
+  parent: 12.3.7
+  stage: S2
+  profile: BACKFILL
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.7-14
+  code: null
+  name: Обратная засыпка песком
+  level: 4
+  parent: 12.3.7
+  stage: S2
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.3.8
+  code: 12.3.8
+  name: Основание нижнего слоя дорожной одежды (в т.ч. Песчано-подстилающий слой)
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: ROAD_BASE
+  observability: high
+  object_types:
+  - roads
+  has_children: true
+- id: 12.3.8-1
+  code: null
+  name: Устройство нижнего слоя основания дорожной одежды
+  level: 4
+  parent: 12.3.8
+  stage: S2
+  profile: ROAD_BASE
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.3.8-2
+  code: null
+  name: Планировка нижнего слоя основания дорожной одежды
+  level: 4
+  parent: 12.3.8
+  stage: S2
+  profile: GRADING
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.3.8-3
+  code: null
+  name: Уплотнение нижнего слоя основания дорожной одежды
+  level: 4
+  parent: 12.3.8
+  stage: S2
+  profile: COMPACTION
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.3.9
+  code: 12.3.9
+  name: Монолитные работы ниже отметки"0"
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: В целом как веха, без дателей внутреннего устройства
+  has_children: true
+- id: 12.3.9-1
+  code: null
+  name: Устройство стен, колонн и пилонов подземного этажа
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.9-2
+  code: null
+  name: Устройство монолитной ж/б фундаментной плиты (плита под здание, плита под башенный кран, фундамент под оборудование),
+    в т.ч. устройство бетонной подготовки
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.9-3
+  code: null
+  name: Устройство несущих ж/б контсрукций подземной части здания
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.9-4
+  code: null
+  name: Устройство монолитных ж/б колонн
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.9-5
+  code: null
+  name: Устройство монолитных ж/б плит перекрытия/покрытия
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.9-6
+  code: null
+  name: Устройство монолитных ж/б лестниц
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.9-7
+  code: null
+  name: Устройство плиты перекрытия подземного этажа (+0.000)
+  level: 4
+  parent: 12.3.9
+  stage: S2
+  profile: MONOLITH_BELOW0
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.10
+  code: 12.3.10
+  name: Устройство гидроизоляции
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.3.10-1
+  code: null
+  name: Устройство горизонтальной рулонной гидроизоляции в 2 слоя под защитой
+  level: 4
+  parent: 12.3.10
+  stage: S2
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.10-2
+  code: null
+  name: Устройство вертикальной рулонной гидроизоляции в 2 слоя
+  level: 4
+  parent: 12.3.10
+  stage: S2
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.10-3
+  code: null
+  name: Устройство отсечной гидроизоляции стен подвала (пакеры)
+  level: 4
+  parent: 12.3.10
+  stage: S2
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.3.11
+  code: 12.3.11
+  name: Инъектирование стен подвала
+  level: 3
+  parent: '12.3'
+  stage: S2
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: '12.4'
+  code: '12.4'
+  name: Устройство надземной части
+  level: 2
+  parent: '12'
+  stage: S3
+  profile: COMPOSITE:12.4
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.4.1
+  code: 12.4.1
+  name: Заказ оборудования
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: ADMIN
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.2
+  code: 12.4.2
+  name: Поставка оборудования
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: EQUIPMENT_SUPPLY
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.3
+  code: 12.4.3
+  name: Монтаж оборудования
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: EQUIPMENT_INSTALL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.4
+  code: 12.4.4
+  name: Устройство несущих ж/б контсрукций надземной части здания
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.5
+  code: 12.4.5
+  name: Армокаркас
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: REBAR
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.6
+  code: 12.4.6
+  name: Опоры
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: COMPOSITE:12.4.6
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.4.6-1
+  code: null
+  name: Устройство гидрозоляции
+  level: 4
+  parent: 12.4.6
+  stage: S3
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.6-2
+  code: null
+  name: Устройство ж/б конструкций
+  level: 4
+  parent: 12.4.6
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.6-3
+  code: null
+  name: Окраска бетонных поверхностей
+  level: 4
+  parent: 12.4.6
+  stage: S3
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.7
+  code: 12.4.7
+  name: Пролеты
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: COMPOSITE:12.4.7
+  observability: medium
+  object_types:
+  - roads
+  has_children: true
+- id: 12.4.7-1
+  code: null
+  name: Армирование пролетного строения
+  level: 4
+  parent: 12.4.7
+  stage: S3
+  profile: REBAR
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.7-2
+  code: null
+  name: Бетонирование пролетного строения
+  level: 4
+  parent: 12.4.7
+  stage: S3
+  profile: CONCRETING
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.7-3
+  code: null
+  name: Устройство конструкций пролетного строения (металл, балки)
+  level: 4
+  parent: 12.4.7
+  stage: S3
+  profile: STEEL
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.7-4
+  code: null
+  name: Устройство конструкций кровли
+  level: 4
+  parent: 12.4.7
+  stage: S4
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.7-5
+  code: null
+  name: Устройство пирога кровли
+  level: 4
+  parent: 12.4.7
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.8
+  code: 12.4.8
+  name: Стены и перегородки
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: COMPOSITE:12.4.8
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.4.8-1
+  code: null
+  name: Устройство наружных стен
+  level: 4
+  parent: 12.4.8
+  stage: S3
+  profile: WALLS
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.8-2
+  code: null
+  name: Устройство внутренних перегородок
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.8-3
+  code: null
+  name: Устройство стен из ячеистого бетона, в т.ч. креплением их к монолитным стенам/перекрытиям, заделкой мест примыканий,
+    установкой перемычек и армированием сеткой
+  level: 4
+  parent: 12.4.8
+  stage: S3
+  profile: WALLS
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-4
+  code: null
+  name: Устройство внутренних перегородок
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-5
+  code: null
+  name: Кладка стен наружных армированных из кирпича
+  level: 4
+  parent: 12.4.8
+  stage: S3
+  profile: WALLS
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-6
+  code: null
+  name: Наружная облицовка поверхности стен, отливов профлистом
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-7
+  code: null
+  name: Монтаж наружных стеновых сэндвич-панелей (сэндвич-панели, нащельники)
+  level: 4
+  parent: 12.4.8
+  stage: S3
+  profile: PANELS
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-8
+  code: null
+  name: Устройство стен и перегородок из кирпича, в т.ч. креплением их к монолитным стенам/перекрытиям, заделкой мест примыканий,
+    установкой перемычек и армированием сеткой
+  level: 4
+  parent: 12.4.8
+  stage: S3
+  profile: WALLS
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-9
+  code: null
+  name: Устройство армированных кирпичных перегородок, укладка перемычек
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-10
+  code: null
+  name: Облицовка стен ГВЛВ по металлическому каркасу с теплоизоляцией
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-11
+  code: null
+  name: Устройство армированных перегородок из газобетонных блоков
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-12
+  code: null
+  name: Устройство армированных внутренних перегородок из газобетонного блока
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-13
+  code: null
+  name: Установка сантехнических перегородок
+  level: 4
+  parent: 12.4.8
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-14
+  code: null
+  name: Устройство перегородок из гипсокартонных листов (ГКЛ)
+  level: 4
+  parent: 12.4.8
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-15
+  code: null
+  name: Облицовка стен листами ГКЛ на клею в 2 слоя
+  level: 4
+  parent: 12.4.8
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.8-16
+  code: null
+  name: Установка люков сантехнических (ревизионных)
+  level: 4
+  parent: 12.4.8
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.9
+  code: 12.4.9
+  name: Бетонирование плиты и стен
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: CONCRETING
+  observability: medium
+  object_types:
+  - sport
+  - roads
+  has_children: false
+- id: 12.4.10
+  code: 12.4.10
+  name: Бетонирование колонн и перекрытий
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: CONCRETING
+  observability: medium
+  object_types:
+  - sport
+  - roads
+  has_children: false
+- id: 12.4.11
+  code: 12.4.11
+  name: Фасад
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.4.11-1
+  code: null
+  name: Монтаж утеплителя
+  level: 4
+  parent: 12.4.11
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  expert_note: '- Важно разделять каждый этап работы фасада
+
+    - к этапу завершения теплого контура идет этап подключения центрального отопления'
+  has_children: false
+- id: 12.4.11-2
+  code: null
+  name: Монтаж фасадной системы
+  level: 4
+  parent: 12.4.11
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.11-3
+  code: null
+  name: Монтаж навесных элементов фасада
+  level: 4
+  parent: 12.4.11
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.11-4
+  code: null
+  name: Заполнение оконных проемов
+  level: 4
+  parent: 12.4.11
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.12
+  code: 12.4.12
+  name: Основание верхнего слоя дорожной одежды
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: ROAD_BASE
+  observability: high
+  object_types:
+  - roads
+  has_children: true
+- id: 12.4.12-1
+  code: null
+  name: Устройство верхнего слоя основания дорожной одежды
+  level: 4
+  parent: 12.4.12
+  stage: S3
+  profile: ROAD_BASE
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.12-2
+  code: null
+  name: Планировка верхнего слоя основания дорожной одежды
+  level: 4
+  parent: 12.4.12
+  stage: S3
+  profile: GRADING
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.12-3
+  code: null
+  name: Уплотнение верхнего слоя основания дорожной одежды
+  level: 4
+  parent: 12.4.12
+  stage: S3
+  profile: COMPACTION
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.12-4
+  code: null
+  name: Устройство бортового камня
+  level: 4
+  parent: 12.4.12
+  stage: S3
+  profile: CURB
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.13
+  code: 12.4.13
+  name: Мостовое полотно
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: COMPOSITE:12.4.13
+  observability: medium
+  object_types:
+  - roads
+  has_children: true
+- id: 12.4.13-1
+  code: null
+  name: Устройство плиты проезжей части
+  level: 4
+  parent: 12.4.13
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.13-2
+  code: null
+  name: Устройство монолитного участка деформационного шва
+  level: 4
+  parent: 12.4.13
+  stage: S3
+  profile: CONCRETING
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.13-3
+  code: null
+  name: Установка бокового барьерного ограждения с внешней стороны пролетного строения
+  level: 4
+  parent: 12.4.13
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.13-4
+  code: null
+  name: Установка барьерного ограждения на разделительной полосе
+  level: 4
+  parent: 12.4.13
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.13-5
+  code: null
+  name: Установка перильного ограждения
+  level: 4
+  parent: 12.4.13
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.13-6
+  code: null
+  name: Устройство конструкций пролетного строения (металл, балки)
+  level: 4
+  parent: 12.4.13
+  stage: S3
+  profile: STEEL
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14
+  code: 12.4.14
+  name: Покрытие дорожной одежды
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: COMPOSITE:12.4.14
+  observability: medium
+  object_types:
+  - roads
+  has_children: true
+- id: 12.4.14-1
+  code: null
+  name: Устройство нижнего слоя покрытия
+  level: 4
+  parent: 12.4.14
+  stage: S4
+  profile: ASPHALT
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14-2
+  code: null
+  name: Устройство верхнего слоя покрытия
+  level: 4
+  parent: 12.4.14
+  stage: S4
+  profile: ASPHALT
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14-3
+  code: null
+  name: Дорожные знаки
+  level: 4
+  parent: 12.4.14
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14-4
+  code: null
+  name: Пешеходное ограждение
+  level: 4
+  parent: 12.4.14
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14-5
+  code: null
+  name: Светофорные объекты
+  level: 4
+  parent: 12.4.14
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14-6
+  code: null
+  name: Шумо/грязезащитные экраны
+  level: 4
+  parent: 12.4.14
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.14-7
+  code: null
+  name: Дорожное ограждение
+  level: 4
+  parent: 12.4.14
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.15
+  code: 12.4.15
+  name: ВСП (верхнее строение пути)
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: TRACK
+  observability: medium
+  object_types:
+  - roads
+  has_children: true
+- id: 12.4.15-1
+  code: null
+  name: Жесткое основание
+  level: 4
+  parent: 12.4.15
+  stage: S4
+  profile: TRACK
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.15-2
+  code: null
+  name: Рельсо-шпальная решетка, стрелочные переводы
+  level: 4
+  parent: 12.4.15
+  stage: S4
+  profile: TRACK
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.15-3
+  code: null
+  name: Путевой бетон
+  level: 4
+  parent: 12.4.15
+  stage: S4
+  profile: CONCRETING
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.16
+  code: 12.4.16
+  name: Средства организации дорожного движения
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.17
+  code: 12.4.17
+  name: Дорожная разметка
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_MARKING
+  observability: low
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.18
+  code: 12.4.18
+  name: Обустройство
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.19
+  code: 12.4.19
+  name: Установка дорожных знаков
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.20
+  code: 12.4.20
+  name: Установка пешеходного ограждения
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.21
+  code: 12.4.21
+  name: Установка светофорных объектов
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.22
+  code: 12.4.22
+  name: Установка шумо/грязезащитных экранов
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.23
+  code: 12.4.23
+  name: Подпорная / противопожарная стена
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.24
+  code: 12.4.24
+  name: Противопожарные мероприятия
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.25
+  code: 12.4.25
+  name: Трансбарьер
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.26
+  code: 12.4.26
+  name: огнезащита, окраска
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.27
+  code: 12.4.27
+  name: Насыпь/Призма
+  level: 3
+  parent: '12.4'
+  stage: S2
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.4.28
+  code: 12.4.28
+  name: Монолитные работы выше отметки"0"
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.4.28-1
+  code: null
+  name: Сталебетонные перекрытия выше отм. 0,000
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: FRAME
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-2
+  code: null
+  name: Устройство монолитных ж/б лестниц
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: FRAME
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-3
+  code: null
+  name: Трибуны актового зала
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-4
+  code: null
+  name: Устройство монолитных ж/б конструкций входных групп
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: FRAME
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-5
+  code: null
+  name: Устройство горизонтальной рулонной гидроизоляции в 2 слоя под защитой
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-6
+  code: null
+  name: Устройство вертикальной рулонной гидроизоляции в 2 слоя по праймеру
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-7
+  code: null
+  name: Теплоизоляция стен экструдированным пенополистиролом толщ. 100 мм
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.28-8
+  code: null
+  name: Устройство пристенного дренажа, в т.ч. прижимной стенки
+  level: 4
+  parent: 12.4.28
+  stage: S3
+  profile: UTILITIES_TRENCH
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Сложно отделять по фото с дальнего расстояния
+  has_children: false
+- id: 12.4.29
+  code: 12.4.29
+  name: Каркас здания
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.4.29-1
+  code: null
+  name: Устройство ж/б конструкций
+  level: 4
+  parent: 12.4.29
+  stage: S3
+  profile: FRAME
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.30
+  code: 12.4.30
+  name: Металлоконструкции
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.4.30-1
+  code: null
+  name: Металлоконструкции (фермы, балки, прогоны, надколонники, связи, козырьки, решетки приямков, лестницы)
+  level: 4
+  parent: 12.4.30
+  stage: S3
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.30-2
+  code: null
+  name: Покрытие из профилированного листа
+  level: 4
+  parent: 12.4.30
+  stage: S3
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.30-3
+  code: null
+  name: Огнезащита м/к
+  level: 4
+  parent: 12.4.30
+  stage: S3
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.30-4
+  code: null
+  name: Ограждения
+  level: 4
+  parent: 12.4.30
+  stage: S4
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.30-5
+  code: null
+  name: Решетки
+  level: 4
+  parent: 12.4.30
+  stage: S4
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.30-6
+  code: null
+  name: Пожарные лестницы
+  level: 4
+  parent: 12.4.30
+  stage: S4
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.31
+  code: 12.4.31
+  name: Устройство пирога кровли
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  expert_note: Если нет фото кровли, определить не получится. Не тратить время сейчас
+  has_children: true
+- id: 12.4.31-1
+  code: null
+  name: Пароизоляция
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-2
+  code: null
+  name: Утепление
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-3
+  code: null
+  name: Разуклонка ЦПР
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-4
+  code: null
+  name: Гидроизоляция 3 слоя
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-5
+  code: null
+  name: Покрытие козырьков
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-6
+  code: null
+  name: Водосток с основной кровли, с кровли крылец
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-7
+  code: null
+  name: Устройство кровли. Тип 1
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-8
+  code: null
+  name: Устройство кровли. Тип 2
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-9
+  code: null
+  name: Устройство кровли. Тип 3
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-10
+  code: null
+  name: Устройство кровли. Тип 4
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-11
+  code: null
+  name: Устройство кровли. Тип 5
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-12
+  code: null
+  name: Устройство кровли. Тип 6
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-13
+  code: null
+  name: Устройство кровли. Тип 7
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-14
+  code: null
+  name: Устройство кровли. Тип 8
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-15
+  code: null
+  name: Козырьки из светопрозрачных металлических конструкций
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-16
+  code: null
+  name: Дополнительные элементы и надстройки кровли
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-17
+  code: null
+  name: Парапеты вентшахты
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-18
+  code: null
+  name: Устройство кровли по железобетонному покрытию (Тип кровли 1)
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-19
+  code: null
+  name: Устройство кровли по покрытию из стального профлиста (Тип кровли 2)
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-20
+  code: null
+  name: Установка аэраторов
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-21
+  code: null
+  name: Устройство парапетной крышки, крышки фахверка, отделка фахверков парапета
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-22
+  code: null
+  name: Устройство эксплуатируемой дорожки
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-23
+  code: null
+  name: Устройство примыканий в парапету, воронкам
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-24
+  code: null
+  name: Устройство проходок через кровлю
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.31-25
+  code: null
+  name: Устройство шумозащитного экрана
+  level: 4
+  parent: 12.4.31
+  stage: S4
+  profile: ROOFING
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.32
+  code: 12.4.32
+  name: Устройство конструкций кровли
+  level: 3
+  parent: '12.4'
+  stage: S3
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.33
+  code: 12.4.33
+  name: Установка ворот
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.34
+  code: 12.4.34
+  name: Установка дверей деревянных
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.35
+  code: 12.4.35
+  name: Установка внутренних металлических дверей
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.36
+  code: 12.4.36
+  name: Установка наружных дверей
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.37
+  code: 12.4.37
+  name: Монтаж алюминиевых витражей (шторы противопожарные, алюминиевые витражи)
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.38
+  code: 12.4.38
+  name: Установка оконных блоков ПВХ
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.4.39
+  code: 12.4.39
+  name: Установка алюминиевых подоконников
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.40
+  code: 12.4.40
+  name: Установка подоконников ГКЛВ с отделкой
+  level: 3
+  parent: '12.4'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.41
+  code: 12.4.41
+  name: Устройство теплоизоляции стен, в т.ч. укрытие плит утеплителя ветровлагозащитной пленкой (при необходимости)
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.42
+  code: 12.4.42
+  name: Устройство вентилируемого навесного фасада из керамогранита
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.43
+  code: 12.4.43
+  name: Облицовка цоколя крупноформатными панелями из керамогранита на растворе
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.44
+  code: 12.4.44
+  name: Облицовка крылец и наружных лестниц нескользящей бетонной плитки с гранитной крошкой на клее
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.45
+  code: 12.4.45
+  name: Устройство откосов и сливов из оцинкованной стали с полимерным покрытием
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.46
+  code: 12.4.46
+  name: Навесной вентилируемый фасад из стеклофибробетона со вставками из стемалита
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.47
+  code: 12.4.47
+  name: Облицовка цоколя гранитной плиткой на подсистеме вентилируемого фасада
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.48
+  code: 12.4.48
+  name: Облицовка крылец и наружных лестниц гранитной плиткой на растворе
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.49
+  code: 12.4.49
+  name: Металлические декоративные ламели
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.50
+  code: 12.4.50
+  name: Облицовка керамогранитной плиткой внутренней поверхности приямков
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.51
+  code: 12.4.51
+  name: Подшивка нависающих частей здания алюминиевой рейкой
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.52
+  code: 12.4.52
+  name: Элементы фасада (логотипы, вывески, указатели, светильники, флагодержатели и пр.)
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.53
+  code: 12.4.53
+  name: Ограждения из нержавеющей стали
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.54
+  code: 12.4.54
+  name: Теплоизоляция фасада
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.55
+  code: 12.4.55
+  name: Устройство гидроизоляции цоколя
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.56
+  code: 12.4.56
+  name: Установка перфорированной фасадной кассеты
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.4.57
+  code: 12.4.57
+  name: Монтаж козырьков
+  level: 3
+  parent: '12.4'
+  stage: S4
+  profile: STEEL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: '12.5'
+  code: '12.5'
+  name: Устройство инженерных систем
+  level: 2
+  parent: '12'
+  stage: S4
+  profile: COMPOSITE:12.5
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.5.1
+  code: 12.5.1
+  name: Устройство наружных сетей
+  level: 3
+  parent: '12.5'
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.5.1-1
+  code: null
+  name: Теплосеть
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-2
+  code: null
+  name: Водоснабжение
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-3
+  code: null
+  name: Х/Б канализация
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-4
+  code: null
+  name: Ливневая канализация
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-5
+  code: null
+  name: Электроснабжение
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-6
+  code: null
+  name: Слаботочные сети
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-7
+  code: null
+  name: Устройство трубной канализации
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.5.1-8
+  code: null
+  name: Прокладка кабеля
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.5.1-9
+  code: null
+  name: Дизель-генераторная установка, в т.ч. фундамент под оборудование
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: EQUIPMENT_INSTALL
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.1-10
+  code: null
+  name: Наружные сети связи
+  level: 4
+  parent: 12.5.1
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2
+  code: 12.5.2
+  name: Устройство внутренних сетей
+  level: 3
+  parent: '12.5'
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.5.2-1
+  code: null
+  name: Вентиляция и кондиционирование
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-2
+  code: null
+  name: Электрика
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-3
+  code: null
+  name: Сантехника
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-4
+  code: null
+  name: Сети связи
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-5
+  code: null
+  name: Сети водоснабжения
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-6
+  code: null
+  name: Сети канализации
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-7
+  code: null
+  name: Система отопления
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-8
+  code: null
+  name: Ливневая канализация
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.5.2-9
+  code: null
+  name: Разработка грунта с креплением
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: EXCAVATION
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.5.2-10
+  code: null
+  name: Устройство колодцев
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.5.2-11
+  code: null
+  name: Прокладка труб
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.5.2-12
+  code: null
+  name: Индивидуальный тепловой пункт (ИТП)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-13
+  code: null
+  name: Охранно-защитная дератизационная система (ОЗДС)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-14
+  code: null
+  name: Система автоматизации теплового пункта (АТМ ИТП)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-15
+  code: null
+  name: Силовое электрооборудование и электроосвещение теплового пункта (ЭОМ ИТП)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-16
+  code: null
+  name: Система радиофикации (РФ)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-17
+  code: null
+  name: Система электрочасофикации (ЭЧ)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-18
+  code: null
+  name: Обеспечение доступа инвалидам (ОДИ)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-19
+  code: null
+  name: Система вызова для МГН (СВМГН)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-20
+  code: null
+  name: Система телефонизации, телевидения, доступа к сети передачи данных, домофонии, внутренних сетей (СС)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-21
+  code: null
+  name: Система охранной сигнализации (ОС)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-22
+  code: null
+  name: Система охранного телевидения (СОТ)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-23
+  code: null
+  name: Система контроля управления доступом (СКУД)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-24
+  code: null
+  name: Система автоматической установки пожарная сигнализация (АПС)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-25
+  code: null
+  name: Система оповещения и управления эвакуацией (СОУЭ)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-26
+  code: null
+  name: Система автоматики противопожарной защиты (АППЗ)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-27
+  code: null
+  name: Автоматизация инженерных систем
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-28
+  code: null
+  name: Монтаж автоматической установки газового пожаротушения (АУГП)
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.5.2-29
+  code: null
+  name: Автоматическая установка водяного пожаротушения
+  level: 4
+  parent: 12.5.2
+  stage: S4
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: '12.6'
+  code: '12.6'
+  name: Отделочные работы
+  level: 2
+  parent: '12'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.6.1
+  code: 12.6.1
+  name: Внешняя отделка
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.6.1-1
+  code: null
+  name: Черновая отделка
+  level: 4
+  parent: 12.6.1
+  stage: S5
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.1-2
+  code: null
+  name: Чистовая отделка
+  level: 4
+  parent: 12.6.1
+  stage: S5
+  profile: FACADE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.2
+  code: 12.6.2
+  name: Внутренняя отделка
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.6.2-1
+  code: null
+  name: Черновая отделка
+  level: 4
+  parent: 12.6.2
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.2-2
+  code: null
+  name: Чистовая отделка
+  level: 4
+  parent: 12.6.2
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.3
+  code: 12.6.3
+  name: Внутренняя отделка полов
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.6.3-1
+  code: null
+  name: Черновая отделка полов
+  level: 4
+  parent: 12.6.3
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.3-2
+  code: null
+  name: Чистовая отделка полов
+  level: 4
+  parent: 12.6.3
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.4
+  code: 12.6.4
+  name: Внутренняя отделка стен
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.6.4-1
+  code: null
+  name: Черновая отделка стен
+  level: 4
+  parent: 12.6.4
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.4-2
+  code: null
+  name: Чистовая отделка стен
+  level: 4
+  parent: 12.6.4
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.5
+  code: 12.6.5
+  name: Внутренняя отделка потолков
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.6.5-1
+  code: null
+  name: Черновая отделка потолков
+  level: 4
+  parent: 12.6.5
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.5-2
+  code: null
+  name: Чистовая отделка потолков
+  level: 4
+  parent: 12.6.5
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6
+  code: 12.6.6
+  name: Внутренняя отделка дверей
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.6.6-1
+  code: null
+  name: Монтаж внутренних дверей
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-2
+  code: null
+  name: Монтаж наружных дверей и ворот
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-3
+  code: null
+  name: Двери автоматические раздвижные светопрозрачные
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-4
+  code: null
+  name: Двери алюминиевые наружные
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-5
+  code: null
+  name: Двери алюминиевые внутренние
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-6
+  code: null
+  name: Двери металлические наружные
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-7
+  code: null
+  name: Двери металлические взломостойкие с решеткой
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-8
+  code: null
+  name: Двери металлические рентгенозащитные
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-9
+  code: null
+  name: Двери глухие ПВХ
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-10
+  code: null
+  name: Двери комбинированные
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-11
+  code: null
+  name: Перегородки душевых кабинок из матового стекла
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-12
+  code: null
+  name: Сантехнические перегородки из HPL пластика
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-13
+  code: null
+  name: Трансформируемые перегородки
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-14
+  code: null
+  name: Люки
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.6-15
+  code: null
+  name: Люки герметические (кровля)
+  level: 4
+  parent: 12.6.6
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.6.7
+  code: 12.6.7
+  name: Внутренняя отделка (технические помещения)
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.6.7-1
+  code: null
+  name: Черновая отделка
+  level: 4
+  parent: 12.6.7
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.7-2
+  code: null
+  name: Чистовая отделка
+  level: 4
+  parent: 12.6.7
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.8
+  code: 12.6.8
+  name: Внутренняя отделка (пассажирские зоны)
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.6.8-1
+  code: null
+  name: Черновая отделка
+  level: 4
+  parent: 12.6.8
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.8-2
+  code: null
+  name: Чистовая отделка
+  level: 4
+  parent: 12.6.8
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.9
+  code: 12.6.9
+  name: Монтаж вертикального транспорта
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.10
+  code: 12.6.10
+  name: Монтаж оборудования по ТХЗ
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.11
+  code: 12.6.11
+  name: Монтаж мебели
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  - roads
+  has_children: true
+- id: 12.6.11-1
+  code: null
+  name: Медицинская мебель (с учетом установки и распаковки) (не облагаемая НДС)
+  level: 4
+  parent: 12.6.11
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.11-2
+  code: null
+  name: Медицинская мебель (с учетом установки и распаковки)
+  level: 4
+  parent: 12.6.11
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.11-3
+  code: null
+  name: Мебель общего назначения (с учетом установки и распаковки)
+  level: 4
+  parent: 12.6.11
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.12
+  code: 12.6.12
+  name: Монтаж эскалаторов
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: EQUIPMENT_INSTALL
+  observability: low
+  object_types:
+  - education
+  - healthcare
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.6.13
+  code: 12.6.13
+  name: Монтаж оборудования
+  level: 3
+  parent: '12.6'
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: true
+- id: 12.6.13.1
+  code: 12.6.13.1
+  name: Монтируемое оборудование
+  level: 4
+  parent: 12.6.13
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: true
+- id: 12.6.13.1-1
+  code: null
+  name: Медицинское оборудование, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-2
+  code: null
+  name: Медицинское оборудование, с учетом монтажа (не облагаемое НДС)
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-3
+  code: null
+  name: Офисное оборудование, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-4
+  code: null
+  name: Оборудование и мебель конференц-зала, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-5
+  code: null
+  name: Электро- и бытовая техника, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-6
+  code: null
+  name: Хозяйственный инвентарь, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-7
+  code: null
+  name: Периметр безопасности, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-8
+  code: null
+  name: Спортивно-технологическое оборудование и спортивный инвентарь, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-9
+  code: null
+  name: Учебное оборудование, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-10
+  code: null
+  name: Учебное оборудование, с учетом монтажа (не облагаемое НДС)
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-11
+  code: null
+  name: Компьютеры и программное обеспечение, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-12
+  code: null
+  name: Занавески, жалюзи и прочие предметы обстановки, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-13
+  code: null
+  name: Кухонное оборудование и инвентарь, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-14
+  code: null
+  name: Музыкальные инструменты и оборудование для залов, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-15
+  code: null
+  name: Театральное оборудование, оборудование сцены (с учетом монтажа)
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-16
+  code: null
+  name: Светотехническое оборудование, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.1-17
+  code: null
+  name: Торгово-технологическое оборудование, с учетом монтажа
+  level: 5
+  parent: 12.6.13.1
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.2
+  code: 12.6.13.2
+  name: Немонтируемое оборудование
+  level: 4
+  parent: 12.6.13
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: true
+- id: 12.6.13.2-1
+  code: null
+  name: Инструмент медицинский, расходные материалы (не облагаемое НДС)
+  level: 5
+  parent: 12.6.13.2
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.2-2
+  code: null
+  name: Инструмент медицинский, расходные материалы
+  level: 5
+  parent: 12.6.13.2
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: 12.6.13.2-3
+  code: null
+  name: Хозяйственный инвентарь
+  level: 5
+  parent: 12.6.13.2
+  stage: S5
+  profile: INTERIOR
+  observability: none
+  object_types:
+  - healthcare
+  has_children: false
+- id: '12.7'
+  code: '12.7'
+  name: Благоустройство территории
+  level: 2
+  parent: '12'
+  stage: S5
+  profile: COMPOSITE:12.7
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.7.1
+  code: 12.7.1
+  name: Устройство проездов и тротуаров
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: COMPOSITE:12.7.1
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.7.1-1
+  code: null
+  name: Устройство асфальтобетонного покрытия проездов, тротуаров, площадок с установкой бортового камня
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: ASPHALT
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.1-2
+  code: null
+  name: Устройство покрытий из тротуарной плитки с установкой бортового камня
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: PAVING
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.1-3
+  code: null
+  name: Устройство бетонных покрытий (отмостка)
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: CONCRETE_PREP
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.1-4
+  code: null
+  name: Устройство площадок с покрытием из резиновой крошки
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.1-5
+  code: null
+  name: Установка водоотводных лотков
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: CURB
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.1-6
+  code: null
+  name: Устройство подпорных стен
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: FRAME
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.1-7
+  code: null
+  name: 'Обустройство дорог: установка знаков, нанесение разметки'
+  level: 4
+  parent: 12.7.1
+  stage: S5
+  profile: ROAD_FURNITURE
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.2
+  code: 12.7.2
+  name: Озеленение
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: COMPOSITE:12.7.2
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.7.2-1
+  code: null
+  name: Устройство газона рулонного
+  level: 4
+  parent: 12.7.2
+  stage: S5
+  profile: LAWN
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.2-2
+  code: null
+  name: Устройство газона посевного
+  level: 4
+  parent: 12.7.2
+  stage: S5
+  profile: LAWN
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.2-3
+  code: null
+  name: Устройство цветников
+  level: 4
+  parent: 12.7.2
+  stage: S5
+  profile: LAWN
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.2-4
+  code: null
+  name: Посадка деревьев
+  level: 4
+  parent: 12.7.2
+  stage: S5
+  profile: TREE_PLANTING
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.2-5
+  code: null
+  name: Посадка кустарников
+  level: 4
+  parent: 12.7.2
+  stage: S5
+  profile: TREE_PLANTING
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.3
+  code: 12.7.3
+  name: Установка МАФов
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: SMALL_FORMS
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  expert_note: На первых этапах не крит
+  has_children: false
+- id: 12.7.4
+  code: 12.7.4
+  name: Вертикальная планировка
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: GRADING
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.7.4-1
+  code: null
+  name: Устройство насыпи
+  level: 4
+  parent: 12.7.4
+  stage: S5
+  profile: BASE_LAYERS
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.4-2
+  code: null
+  name: Устройство выемки
+  level: 4
+  parent: 12.7.4
+  stage: S5
+  profile: EXCAVATION
+  observability: high
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.5
+  code: 12.7.5
+  name: Посадка зеленых насаждений
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: TREE_PLANTING
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.7.6
+  code: 12.7.6
+  name: Ограждение территории
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: SITE_FENCE
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: true
+- id: 12.7.6-1
+  code: null
+  name: Ограждение территории, в т.ч. ворота, калитки, шлагбаумы
+  level: 4
+  parent: 12.7.6
+  stage: S5
+  profile: SITE_FENCE
+  observability: medium
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.6-2
+  code: null
+  name: Ограждение спортивной площадки
+  level: 4
+  parent: 12.7.6
+  stage: S5
+  profile: SITE_FENCE
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  has_children: false
+- id: 12.7.7
+  code: 12.7.7
+  name: Устройство пешеходных зон и тротуаров
+  level: 3
+  parent: '12.7'
+  stage: S5
+  profile: COMPOSITE:12.7.7
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: true
+- id: 12.7.7-1
+  code: null
+  name: Наружное освещение
+  level: 4
+  parent: 12.7.7
+  stage: S5
+  profile: EQUIPMENT_INSTALL
+  observability: medium
+  object_types:
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false
+- id: 12.7.7-2
+  code: null
+  name: Прокладка кабеля
+  level: 4
+  parent: 12.7.7
+  stage: S5
+  profile: UTILITIES_TRENCH
+  observability: high
+  object_types:
+  - roads
+  has_children: false
+- id: 12.7.7-3
+  code: null
+  name: Устройство фундаментов опор
+  level: 4
+  parent: 12.7.7
+  stage: S5
+  profile: POLE_FOUNDATIONS
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.7.7-4
+  code: null
+  name: Установка опор
+  level: 4
+  parent: 12.7.7
+  stage: S5
+  profile: EQUIPMENT_INSTALL
+  observability: medium
+  object_types:
+  - roads
+  has_children: false
+- id: 12.7.7-5
+  code: null
+  name: Архитектурно-художественная подсветка здания
+  level: 4
+  parent: 12.7.7
+  stage: S5
+  profile: MANUAL_OUTDOOR
+  observability: low
+  object_types:
+  - housing
+  - education
+  - healthcare
+  - sport
+  - culture
+  - admin
+  - kindergarten
+  - office
+  - roads
+  has_children: false

@@ -1,0 +1,937 @@
+# СГЕНЕРИРОВАНО tools/build_methodology.py из справочника организаторов и assignments.yaml.
+# Не редактируйте вручную: меняйте assignments.yaml / profiles.yaml и пересоберите.
+version: '2026.09'
+profiles:
+  COMPOSITE:10.11:
+    name: 'Составной: Обустройство строительной площадки'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - crane_manipulator
+      - truck
+      - excavator
+      - bulldozer
+      - grader
+      - loader
+      - mobile_crane
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - grader
+      - loader
+      severity: info
+      message: Щебень завозится, но не распределяется — техники для планировки нет.
+    allowed:
+    - drilling_rig
+    - dump_truck
+    - roller
+    not_detected: []
+    composite_of:
+    - SITE_CAMP
+    - SITE_FENCE
+    - TEMP_ROADS
+    - UTILITIES_TRENCH
+  COMPOSITE:10:
+    name: 'Составной: Подготовка территории'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: low
+    required: []
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование.
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      severity: info
+      message: Экскаватор разбирает конструкции, самосвалов нет — мусор не вывозится, фронт работ сужается.
+    - lead:
+      - loader
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Погрузочная техника работает без самосвалов — мусор копится на площадке.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - grader
+      - loader
+      severity: info
+      message: Щебень завозится, но не распределяется — техники для планировки нет.
+    allowed:
+    - roller
+    - drilling_rig
+    - tower_crane
+    - concrete_mixer
+    - excavator
+    - dump_truck
+    - crane_manipulator
+    - truck
+    - mobile_crane
+    - loader
+    - bulldozer
+    - grader
+    not_detected: []
+    composite_of:
+    - ADMIN
+    - COMPOSITE:10.11
+    - DEBRIS_REMOVAL
+    - DEMOLITION
+    - DISMANTLING
+    - GREENERY_REMOVAL
+    - MANUAL_OUTDOOR
+    - ROAD_FURNITURE
+    - TREE_PLANTING
+    - UTILITIES_TRENCH
+  COMPOSITE:12.3.4:
+    name: 'Составной: Устройство фундамента'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - drilling_rig
+      - dump_truck
+      - bulldozer
+      - loader
+      - grader
+      - excavator
+      - concrete_mixer
+      - tower_crane
+      - mobile_crane
+      - crane_manipulator
+      - truck
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - drilling_rig
+      partner:
+      - concrete_mixer
+      window: shift
+      severity: info
+      message: Скважины бурятся, а бетон за смену не подавался — буронабивные сваи бетонируют сразу после бурения, проверьте
+        поставку бетона.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - loader
+      - grader
+      - excavator
+      severity: info
+      message: Материал завозится, но не распределяется — техники для разравнивания нет.
+    - lead:
+      - bulldozer
+      - grader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределяется без катка — риск недоуплотнения основания.
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    allowed:
+    - concrete_pump
+    - roller
+    not_detected:
+    - concrete_pump
+    composite_of:
+    - BASE_LAYERS
+    - CONCRETE_PREP
+    - MONOLITH_BELOW0
+    - PILING
+    - REBAR
+  COMPOSITE:12.3.5:
+    name: 'Составной: Ограждающие конструкции (СВГ,БСС)'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - drilling_rig
+      - tower_crane
+      - mobile_crane
+      - crane_manipulator
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - drilling_rig
+      partner:
+      - concrete_mixer
+      window: shift
+      severity: info
+      message: Скважины бурятся, а бетон за смену не подавался — буронабивные сваи бетонируют сразу после бурения, проверьте
+        поставку бетона.
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    allowed:
+    - concrete_mixer
+    - concrete_pump
+    - excavator
+    - dump_truck
+    - loader
+    - truck
+    not_detected:
+    - concrete_pump
+    composite_of:
+    - INJECTION
+    - MONOLITH_BELOW0
+    - PILING
+  COMPOSITE:12.3.7:
+    name: 'Составной: Земляные работы'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - excavator
+      - dump_truck
+      - bulldozer
+      - loader
+      - grader
+      - roller
+      - mobile_crane
+      - tower_crane
+      - crane_manipulator
+      - drilling_rig
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      severity: info
+      message: Экскаватор работает без самосвалов — грунт не вывозится, возможно снижение темпа работ.
+    - lead:
+      - bulldozer
+      - loader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Засыпка идёт без катка — проверьте послойное уплотнение (виброплиты детектор не распознаёт).
+    - lead:
+      - drilling_rig
+      partner:
+      - concrete_mixer
+      window: shift
+      severity: info
+      message: Скважины бурятся, а бетон за смену не подавался — буронабивные сваи бетонируют сразу после бурения, проверьте
+        поставку бетона.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - loader
+      - grader
+      - excavator
+      severity: info
+      message: Материал завозится, но не распределяется — техники для разравнивания нет.
+    - lead:
+      - bulldozer
+      - grader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределяется без катка — риск недоуплотнения основания.
+    allowed:
+    - truck
+    - concrete_mixer
+    - concrete_pump
+    not_detected: []
+    composite_of:
+    - BACKFILL
+    - BASE_LAYERS
+    - COMPACTION
+    - EXCAVATION
+    - GRADING
+    - INJECTION
+    - PILING
+    - SHEET_PILING
+    - STRUTS
+  COMPOSITE:12.3:
+    name: 'Составной: Устройство подземной части'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - excavator
+      - dump_truck
+      - drilling_rig
+      - bulldozer
+      - loader
+      - grader
+      - concrete_mixer
+      - tower_crane
+      - mobile_crane
+      - crane_manipulator
+      - truck
+      - roller
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      severity: info
+      message: Экскаватор работает без самосвалов — грунт не вывозится, возможно снижение темпа работ.
+    - lead:
+      - drilling_rig
+      partner:
+      - concrete_mixer
+      window: shift
+      severity: info
+      message: Скважины бурятся, а бетон за смену не подавался — буронабивные сваи бетонируют сразу после бурения, проверьте
+        поставку бетона.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - loader
+      - grader
+      - excavator
+      severity: info
+      message: Материал завозится, но не распределяется — техники для разравнивания нет.
+    - lead:
+      - bulldozer
+      - grader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределяется без катка — риск недоуплотнения основания.
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    - lead:
+      - bulldozer
+      - loader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Засыпка идёт без катка — проверьте послойное уплотнение (виброплиты детектор не распознаёт).
+    - lead:
+      - grader
+      - bulldozer
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределён, но за смену не уплотнялся — риск недоуплотнения основания.
+    allowed:
+    - concrete_pump
+    not_detected:
+    - concrete_pump
+    composite_of:
+    - BASE_LAYERS
+    - COMPOSITE:12.3.4
+    - COMPOSITE:12.3.5
+    - COMPOSITE:12.3.7
+    - EXCAVATION
+    - MANUAL_OUTDOOR
+    - MONOLITH_BELOW0
+    - PILING
+    - PIT_WALL
+    - ROAD_BASE
+  COMPOSITE:12.4.6:
+    name: 'Составной: Опоры'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - tower_crane
+      - mobile_crane
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    allowed:
+    - truck
+    - crane_manipulator
+    - loader
+    - concrete_mixer
+    - concrete_pump
+    not_detected:
+    - concrete_pump
+    composite_of:
+    - FRAME
+    - MANUAL_OUTDOOR
+  COMPOSITE:12.4.7:
+    name: 'Составной: Пролеты'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - crane_manipulator
+      - mobile_crane
+      - tower_crane
+      - truck
+      - concrete_mixer
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    allowed:
+    - loader
+    - concrete_pump
+    not_detected:
+    - concrete_pump
+    composite_of:
+    - CONCRETING
+    - REBAR
+    - ROOFING
+    - STEEL
+  COMPOSITE:12.4.8:
+    name: 'Составной: Стены и перегородки'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - mobile_crane
+      - crane_manipulator
+      - tower_crane
+      min: 1
+      window: shift
+    companions: []
+    allowed:
+    - truck
+    - loader
+    not_detected: []
+    composite_of:
+    - FACADE
+    - INTERIOR
+    - PANELS
+    - WALLS
+  COMPOSITE:12.4.13:
+    name: 'Составной: Мостовое полотно'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - tower_crane
+      - mobile_crane
+      - concrete_mixer
+      - crane_manipulator
+      - truck
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    allowed:
+    - concrete_pump
+    - loader
+    - drilling_rig
+    - excavator
+    not_detected:
+    - concrete_pump
+    composite_of:
+    - CONCRETING
+    - FRAME
+    - ROAD_FURNITURE
+    - STEEL
+  COMPOSITE:12.4.14:
+    name: 'Составной: Покрытие дорожной одежды'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - roller
+      - dump_truck
+      - crane_manipulator
+      - truck
+      - mobile_crane
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - dump_truck
+      partner:
+      - roller
+      severity: info
+      message: Асфальтобетон подвезён, катков нет — смесь остывает без уплотнения, риск брака.
+    allowed:
+    - asphalt_paver
+    - grader
+    - loader
+    - drilling_rig
+    - excavator
+    - concrete_mixer
+    not_detected:
+    - asphalt_paver
+    composite_of:
+    - ASPHALT
+    - ROAD_FURNITURE
+  COMPOSITE:12.4:
+    name: 'Составной: Устройство надземной части'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - truck
+      - crane_manipulator
+      - mobile_crane
+      - tower_crane
+      - concrete_mixer
+      - dump_truck
+      - grader
+      - bulldozer
+      - loader
+      - roller
+      - excavator
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    - lead:
+      - grader
+      - bulldozer
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределён, но за смену не уплотнялся — риск недоуплотнения основания.
+    - lead:
+      - dump_truck
+      partner:
+      - roller
+      severity: info
+      message: Асфальтобетон подвезён, катков нет — смесь остывает без уплотнения, риск брака.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - loader
+      - grader
+      - excavator
+      severity: info
+      message: Материал завозится, но не распределяется — техники для разравнивания нет.
+    - lead:
+      - bulldozer
+      - grader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределяется без катка — риск недоуплотнения основания.
+    allowed:
+    - concrete_pump
+    - drilling_rig
+    - asphalt_paver
+    not_detected:
+    - concrete_pump
+    - asphalt_paver
+    composite_of:
+    - ADMIN
+    - BASE_LAYERS
+    - COMPOSITE:12.4.13
+    - COMPOSITE:12.4.14
+    - COMPOSITE:12.4.6
+    - COMPOSITE:12.4.7
+    - COMPOSITE:12.4.8
+    - CONCRETING
+    - EQUIPMENT_INSTALL
+    - EQUIPMENT_SUPPLY
+    - FACADE
+    - FRAME
+    - INTERIOR
+    - MANUAL_OUTDOOR
+    - REBAR
+    - ROAD_BASE
+    - ROAD_FURNITURE
+    - ROAD_MARKING
+    - ROOFING
+    - STEEL
+    - TRACK
+  COMPOSITE:12.5:
+    name: 'Составной: Устройство инженерных систем'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - excavator
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование.
+    allowed:
+    - dump_truck
+    - truck
+    - crane_manipulator
+    - mobile_crane
+    - loader
+    - roller
+    - bulldozer
+    - drilling_rig
+    not_detected: []
+    composite_of:
+    - INTERIOR
+    - UTILITIES_TRENCH
+  COMPOSITE:12.7.1:
+    name: 'Составной: Устройство проездов и тротуаров'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - roller
+      - dump_truck
+      - loader
+      - truck
+      - crane_manipulator
+      - concrete_mixer
+      - excavator
+      - tower_crane
+      - mobile_crane
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - dump_truck
+      partner:
+      - roller
+      severity: info
+      message: Асфальтобетон подвезён, катков нет — смесь остывает без уплотнения, риск брака.
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    allowed:
+    - asphalt_paver
+    - grader
+    - concrete_pump
+    - drilling_rig
+    not_detected:
+    - asphalt_paver
+    - concrete_pump
+    composite_of:
+    - ASPHALT
+    - CONCRETE_PREP
+    - CURB
+    - FRAME
+    - MANUAL_OUTDOOR
+    - PAVING
+    - ROAD_FURNITURE
+  COMPOSITE:12.7.2:
+    name: 'Составной: Озеленение'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - dump_truck
+      - loader
+      - truck
+      - bulldozer
+      - excavator
+      - crane_manipulator
+      - mobile_crane
+      min: 1
+      window: shift
+    companions: []
+    allowed:
+    - roller
+    - grader
+    not_detected: []
+    composite_of:
+    - LAWN
+    - TREE_PLANTING
+  COMPOSITE:12.7.7:
+    name: 'Составной: Устройство пешеходных зон и тротуаров'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - mobile_crane
+      - crane_manipulator
+      - tower_crane
+      - excavator
+      - drilling_rig
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование.
+    allowed:
+    - truck
+    - loader
+    - concrete_mixer
+    - dump_truck
+    - roller
+    - bulldozer
+    not_detected: []
+    composite_of:
+    - EQUIPMENT_INSTALL
+    - MANUAL_OUTDOOR
+    - POLE_FOUNDATIONS
+    - UTILITIES_TRENCH
+  COMPOSITE:12.7:
+    name: 'Составной: Благоустройство территории'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: medium
+    required:
+    - role: техника одного из подпунктов
+      any_of:
+      - roller
+      - dump_truck
+      - loader
+      - truck
+      - crane_manipulator
+      - concrete_mixer
+      - excavator
+      - tower_crane
+      - mobile_crane
+      - bulldozer
+      - grader
+      - drilling_rig
+      min: 1
+      window: shift
+    companions:
+    - lead:
+      - dump_truck
+      partner:
+      - roller
+      severity: info
+      message: Асфальтобетон подвезён, катков нет — смесь остывает без уплотнения, риск брака.
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование.
+    allowed:
+    - asphalt_paver
+    - concrete_pump
+    not_detected:
+    - asphalt_paver
+    - concrete_pump
+    composite_of:
+    - COMPOSITE:12.7.1
+    - COMPOSITE:12.7.2
+    - COMPOSITE:12.7.7
+    - GRADING
+    - SITE_FENCE
+    - SMALL_FORMS
+    - TREE_PLANTING
+  COMPOSITE:12:
+    name: 'Составной: Выполнение строительно-монтажных работ'
+    description: 'Группа справочника: объединение техники подпунктов. Этап идёт, если за смену видна техника хотя бы одного
+      подпункта.'
+    observability: low
+    required: []
+    companions:
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      severity: info
+      message: Экскаватор работает без самосвалов — грунт не вывозится, возможно снижение темпа работ.
+    - lead:
+      - drilling_rig
+      partner:
+      - concrete_mixer
+      window: shift
+      severity: info
+      message: Скважины бурятся, а бетон за смену не подавался — буронабивные сваи бетонируют сразу после бурения, проверьте
+        поставку бетона.
+    - lead:
+      - dump_truck
+      partner:
+      - bulldozer
+      - loader
+      - grader
+      - excavator
+      severity: info
+      message: Материал завозится, но не распределяется — техники для разравнивания нет.
+    - lead:
+      - bulldozer
+      - grader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределяется без катка — риск недоуплотнения основания.
+    - lead:
+      - concrete_mixer
+      partner:
+      - concrete_pump
+      - tower_crane
+      - mobile_crane
+      severity: info
+      message: Автобетоносмеситель стоит без насоса и крана — бетон не укладывается, миксер простаивает.
+    - lead:
+      - bulldozer
+      - loader
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Засыпка идёт без катка — проверьте послойное уплотнение (виброплиты детектор не распознаёт).
+    - lead:
+      - grader
+      - bulldozer
+      partner:
+      - roller
+      window: shift
+      severity: info
+      message: Слой распределён, но за смену не уплотнялся — риск недоуплотнения основания.
+    - lead:
+      - dump_truck
+      partner:
+      - roller
+      severity: info
+      message: Асфальтобетон подвезён, катков нет — смесь остывает без уплотнения, риск брака.
+    - lead:
+      - excavator
+      partner:
+      - dump_truck
+      - truck
+      severity: info
+      message: Экскаватор роет траншею, вывоза грунта нет — проверьте, предусмотрено ли временное складирование.
+    allowed:
+    - concrete_pump
+    - asphalt_paver
+    - mobile_crane
+    - dump_truck
+    - excavator
+    - drilling_rig
+    - bulldozer
+    - loader
+    - grader
+    - concrete_mixer
+    - tower_crane
+    - crane_manipulator
+    - truck
+    - roller
+    not_detected:
+    - concrete_pump
+    - asphalt_paver
+    composite_of:
+    - COMPOSITE:12.3
+    - COMPOSITE:12.4
+    - COMPOSITE:12.5
+    - COMPOSITE:12.7
+    - INTERIOR
+    - TUNNELING
+    - TUNNEL_ASSEMBLY

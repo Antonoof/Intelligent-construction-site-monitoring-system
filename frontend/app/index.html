@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ОКО — поиск нарушений на стройплощадке</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23FFC21A'/%3E%3Cpath d='M4 16c3.5-6 7.5-9 12-9s8.5 3 12 9c-3.5 6-7.5 9-12 9S7.5 22 4 16z' fill='%23111922'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23FFC21A'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23111922'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#FFC21A"/><path d="M4 16c3.5-6 7.5-9 12-9s8.5 3 12 9c-3.5 6-7.5 9-12 9S7.5 22 4 16z" fill="#111922"/><circle cx="16" cy="16" r="5" fill="#FFC21A"/><circle cx="16" cy="16" r="2.2" fill="#111922"/></svg>
+    <div><b>ОКО</b><span>поиск нарушений на стройплощадке</span></div>
+  </div>
+  <div class="controls">
+    <label class="sel"><span>Объект</span><select id="project"></select></label>
+    <div class="day">
+      <button class="icon" id="dayPrev" title="Предыдущий день с данными" aria-label="Предыдущий день">‹</button>
+      <label class="sel"><span>День</span><select id="day"></select></label>
+      <button class="icon" id="dayNext" title="Следующий день с данными" aria-label="Следующий день">›</button>
+    </div>
+    <button class="btn primary" id="uploadBtn">Загрузить снимки</button>
+    <a class="btn ghost" href="/docs" target="_blank" rel="noopener">API</a>
+  </div>
+</header>
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="summary" class="on">Сводка</button>
+  <button role="tab" data-tab="snapshots">Снимки <i id="nSnaps"></i></button>
+  <button role="tab" data-tab="deviations">Отклонения <i id="nDevs"></i></button>
+  <button role="tab" data-tab="schedule">График</button>
+  <button role="tab" data-tab="methodology">Методика</button>
+  <button role="tab" data-tab="analyze">Проверить снимок</button>
+</nav>
+<main id="main" aria-live="polite"></main>
+<div id="status" class="statusbar"></div>
+
+<dialog id="dlg" class="dlg"><div class="dlg-in" id="dlgBody"></div></dialog>
+<div id="toast" class="toast" hidden></div>
+<script src="app.js" type="module"></script>
+</body>
+</html>
