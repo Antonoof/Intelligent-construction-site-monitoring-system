@@ -235,6 +235,8 @@ def _vlm(ctx: dict, img_fn, sha: str, step, errors: list, layers: dict, hint: st
         vlm_model = v["model"]
         vlm_out = {**v["output"], "_seconds": round(v["seconds"], 1), "_device": v["device"]}
         _timed(layers, "vlm", t0, hit)
+        if plan.get("reason"):                # почему выбрана именно эта модель (память, OKO_VLM)
+            layers["vlm_reason"] = plan["reason"]
     except Exception as e:                   # нет памяти, нет transformers — анализ продолжается без VLM
         log.warning("VLM: %s", e)
         vlm_model, vlm_out = "", {"error": str(e)[:500]}

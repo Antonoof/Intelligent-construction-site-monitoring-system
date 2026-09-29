@@ -211,7 +211,7 @@ python -m app.cli rules 12.3.1          # правила методики для
 python -m app.cli report --project 1 --day 2026-09-24 --csv отчёт.csv
 ```
 
-**Тесты** — 82 проверки сервиса, включая все демо-сценарии и ИИ-конвейер с подменой YandexGPT:
+**Тесты** — 84 проверки сервиса, включая все демо-сценарии и ИИ-конвейер с подменой YandexGPT:
 
 ```bash
 cd backend && python -m unittest discover -s tests

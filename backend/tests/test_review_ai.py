@@ -173,6 +173,31 @@ class VLMTest(unittest.TestCase):
         self.assertIsNone(name)
         self.assertIn("не помещается", why)
 
+    def test_budget_16gb_vm(self):
+        """ВМ 16 ГБ (MemTotal ≈15.6): RF-DETR + Grounding DINO + модель готовности в bfloat16 оставляют место для
+        Qwen3-VL-2B; в float32 модель готовности вытесняет её до SmolVLM2 — так было на стенде."""
+        from unittest import mock
+        gd = SimpleNamespace(footprint_gb=lambda: O.OpenVocab.footprint_gb(
+            SimpleNamespace(enabled=True, model_name="IDEA-Research/grounding-dino-base")))
+        det = SimpleNamespace(name="rfdetr-large")
+        picked = {}
+        for dtype in ("bfloat16", "float32"):
+            rd = SimpleNamespace(footprint_gb=lambda d=dtype: R.ReadinessModel.footprint_gb(
+                SimpleNamespace(enabled=True, dtype_name=d)))
+            with mock.patch.object(V, "_ram_total_gb", return_value=15.6), \
+                    mock.patch("app.detection.get_detector", return_value=det), \
+                    mock.patch.object(O, "get_openvocab", return_value=gd), \
+                    mock.patch.object(R, "get_readiness", return_value=rd):
+                budget, parts = V.ram_budget_gb(1.5)
+            picked[dtype] = V.choose_from(budget)[0]
+            self.assertIn("Grounding DINO", parts)
+        self.assertEqual(picked["bfloat16"], "Qwen/Qwen3-VL-2B-Instruct")
+        self.assertEqual(picked["float32"], "HuggingFaceTB/SmolVLM2-500M-Video-Instruct")
+        from app.config import Settings
+        env = {k: v for k, v in os.environ.items() if k != "OKO_READINESS_DTYPE"}
+        with mock.patch.dict(os.environ, env, clear=True):
+            self.assertEqual(Settings().readiness_dtype, "bfloat16")    # по умолчанию — как в ML-части
+
     def test_parse_json_and_boxes(self):
         self.assertEqual(V.parse_json('Ответ:\n```json\n{"a": 1}\n```'), {"a": 1})
         self.assertIn("raw", V.parse_json("не JSON"))
@@ -367,6 +392,22 @@ class FusionTest(unittest.TestCase):
         f = fuse_snapshot(_ctx([self.D1]), None, llm, min_conf=0.6)
         self.assertEqual([c["apply"] for c in f["corrections"]], [False])
         self.assertIsNone(f["stage"]["final"])
+
+    def test_llm_confidence_formats(self):
+        """Уверенность LLM приходит по-разному; нет её — None (не 0 %), исправления рамок не применяются."""
+        from app.ai.fusion import conf01
+        for v, want in ((0.85, 0.85), ("0,85", 0.85), (85, 0.85), ("85%", 0.85), ("высокая", 0.8),
+                        ({"value": 0.7}, 0.7), (1, 1.0), (0, 0.0), (None, None), ("не знаю", None), (True, None)):
+            self.assertEqual(conf01(v), want, v)
+        llm = {"summary": "ok", "detections": [{"id": 1, "verdict": "false_positive"}],
+               "missed": [{"cls": "dump_truck", "box": [0.6, 0.4, 0.8, 0.8], "confidence": "90%"}],
+               "stage": {"value": "S1"}, "deviations": [], "recommendations": []}
+        f = fuse_snapshot(_ctx([self.D1]), None, llm, min_conf=0.6)
+        self.assertIsNone(f["confidence"])
+        self.assertEqual([(c["action"], c["apply"]) for c in f["corrections"]], [("reject", False), ("add", True)])
+        llm["stage"]["confidence"] = 0.8                     # общей нет — берётся уверенность в стадии
+        f = fuse_snapshot(_ctx([self.D1]), None, llm, min_conf=0.6)
+        self.assertEqual((f["confidence"], f["corrections"][0]["apply"]), (0.8, True))
 
     def test_loose_llm_json(self):
         """Без строгой схемы модель может вернуть строку вместо объекта или списка — сведение не падает."""
@@ -619,6 +660,7 @@ class AIReviewApiTest(unittest.TestCase):
         L_ = again["final"]["layers"]
         self.assertTrue({"vlm", "open_vocab", "readiness"} <= set(L_["cached"]))
         self.assertIn("llm", L_["timings"])
+        self.assertEqual(L_["vlm_reason"], "тест")           # почему выбрана эта VLM — в карточке
         self.assertEqual(again["final"]["open_vocab"]["counts"], first["final"]["open_vocab"]["counts"])
 
     def test_background_pipeline(self):

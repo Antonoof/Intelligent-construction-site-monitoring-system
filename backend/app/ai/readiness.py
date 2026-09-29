@@ -17,7 +17,8 @@ training/runs/<дата>/, скопированный в weights/readiness/<да
 последнего этапа; статус — по порогам из training/config.yaml (plan: ahead / risk / late).
 
 OKO_READINESS: auto (weights/readiness/latest.txt или самый свежий прогон) | путь к прогону или head.pt | off.
-DINOv2 ViT-g в float32 — ≈4.6 ГБ ОЗУ и 20–40 с на кадр на 4 vCPU; OKO_READINESS_DTYPE=bfloat16 — вдвое меньше памяти.
+DINOv2 ViT-g в bfloat16 — как при обучении головы (training/config.yaml: backbone.dtype), ≈2.6 ГБ ОЗУ и 20–40 с на
+кадр на 4 vCPU; OKO_READINESS_DTYPE=float32 — вдвое больше памяти.
 """
 from __future__ import annotations
 
@@ -136,7 +137,7 @@ def build_head(dim: int, n_det: int, n_stages: int, hidden: int = 512):
 
 
 class ReadinessModel:
-    def __init__(self, setting: str, device_pref: str = "auto", dtype: str = "float32", reserve_gb: float = 1.0):
+    def __init__(self, setting: str, device_pref: str = "auto", dtype: str = "bfloat16", reserve_gb: float = 1.0):
         import importlib.util
         self.run = find_run(setting)
         self.setting = setting
@@ -187,7 +188,7 @@ class ReadinessModel:
         need = BACKBONE_PARAMS_B.get(name, 1.14) * (2 if dtype != torch.float32 else 4) * 1.15 + 0.5
         if avail - self.reserve_gb < need:
             raise RuntimeError(f"модели готовности нужно ≈{need:.1f} ГБ, доступно {avail:.1f} ГБ "
-                               f"(OKO_READINESS_DTYPE=bfloat16 — вдвое меньше)")
+                               f"(в float32 — вдвое больше, чем в bfloat16)")
         t0 = time.perf_counter()
         head = build_head(ck["dim"], ck["n_det"], len(ck["stages"]), ck["hidden"])
         head.load_state_dict(ck["state_dict"])

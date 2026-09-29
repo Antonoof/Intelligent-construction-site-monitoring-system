@@ -442,6 +442,7 @@ function aiResultHTML(d, r, { quick = false } = {}) {
   const hit = new Set(L.cached || []);
   const tline = Object.entries(L.timings || {}).map(([k, v]) => `${TL[k] || k} ${hit.has(k) ? 'из кеша' : `${v} с`}`).join(' · ');
   if (tline) h += `<div class="hint">время слоёв: ${esc(tline)}</div>`;
+  if (L.vlm_model && L.vlm_reason) h += `<div class="hint">VLM ${esc(L.vlm_model.split('/').pop())}: ${esc(L.vlm_reason)}</div>`;
   if (f.summary) h += `<p class="ai-sum">${esc(f.summary)}</p>`;
   if (r.error) h += `<p class="hint">Не все слои отработали: ${esc(r.error)}</p>`;
   // техника: детектор / VLM / LLM
@@ -500,7 +501,7 @@ function aiResultHTML(d, r, { quick = false } = {}) {
     const ap = r.applied && !r.applied.reverted;
     const n = corr.filter((c) => c.apply).length;
     h += `<div class="ai-fix"><div class="lbl">${quick ? 'исправления ИИ' : `исправления данных${ap ? ' — применены' : ''}`}:</div>`
-      + corr.map((c) => `<div>${c.apply ? '<span class="ok-mark">●</span>' : '<span class="wait-mark">○</span>'} ${esc(c.text)}${c.apply ? '' : ` <span class="hint">уверенность ниже ${f.min_conf}</span>`}</div>`).join('')
+      + corr.map((c) => `<div>${c.apply ? '<span class="ok-mark">●</span>' : '<span class="wait-mark">○</span>'} ${esc(c.text)}${c.apply ? '' : ` <span class="hint">${c.action !== 'add' && f.confidence == null ? 'не применяется: LLM не указала уверенность' : `уверенность ниже ${f.min_conf}`}</span>`}</div>`).join('')
       + (quick ? `<div class="hint" style="margin-top:4px">В быстрой проверке снимок не сохраняется — исправления только показываются. Чтобы применить их, загрузите снимок в проект.</div>`
         : `<div class="row" style="margin-top:6px">${ap ? `<button class="btn small" id="aiRevert">Отменить исправления</button><span class="hint">применены ${esc(r.applied.at.replace('T', ' '))} UTC</span>`
           : n ? `<button class="btn small good" id="aiApply">Применить исправления (${n})</button><span class="hint">рамки изменятся, отклонения пересчитаются; можно отменить</span>` : ''}</div>`) + `</div>`;
@@ -539,7 +540,7 @@ function dayAIHTML(r) {
   const ST = { 'по графику': 's-ok', 'есть риски': 's-warning', 'отставание': 's-critical' };
   const IMP = { 'высокое': 's-critical', 'среднее': 's-warning', 'низкое': 's-info' };
   let h = `<div class="row"><span class="chip ${ST[f.status] || 's-info'}">${esc(f.status || '')}</span>`
-    + `<span class="hint">${esc(L.llm_model || '')} · снимков с ИИ-анализом ${L.snapshots_reviewed ?? 0} · оценок модели готовности ${L.readiness_frames ?? 0} · ${(r.duration_ms / 1000).toFixed(1)} с · уверенность ${Math.round((f.confidence || 0) * 100)}%</span></div>`;
+    + `<span class="hint">${esc(L.llm_model || '')} · снимков с ИИ-анализом ${L.snapshots_reviewed ?? 0} · оценок модели готовности ${L.readiness_frames ?? 0} · ${(r.duration_ms / 1000).toFixed(1)} с${f.confidence != null ? ` · уверенность ${Math.round(f.confidence * 100)}%` : ''}</span></div>`;
   h += `<p class="ai-sum">${esc(f.summary || '')}</p><div class="cols2">`;
   h += `<div>${f.risks?.length ? `<div class="lbl">риски срыва сроков</div><table class="eqtab"><thead><tr><th>Риск</th><th>Вероятность</th><th>Влияние</th><th>Что сделать</th></tr></thead><tbody>`
     + f.risks.map((x) => `<tr><td><b>${esc(x.title)}</b>${x.zone || x.task ? `<div class="hint">${esc([x.zone, x.task].filter(Boolean).join(' · '))}</div>` : ''}<div class="hint">${esc(x.reason || '')}</div></td><td>${Math.round((x.probability || 0) * 100)}%</td><td><span class="chip plain ${IMP[x.impact] || ''}">${esc(x.impact || '')}</span></td><td>${esc(x.mitigation || '')}</td></tr>`).join('')

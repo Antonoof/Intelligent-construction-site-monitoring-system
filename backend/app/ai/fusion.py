@@ -33,6 +33,36 @@ def _num(v, default: float = 0.0) -> float:
         return default
 
 
+_CONF_WORDS = (("очень высок", 0.9), ("высок", 0.8), ("средн", 0.6), ("низк", 0.3),
+               ("very high", 0.9), ("high", 0.8), ("medium", 0.6), ("moderate", 0.6), ("low", 0.3))
+
+
+def conf01(v) -> float | None:
+    """Уверенность LLM в долях 0..1. Модели пишут её по-разному: 0.85, \"0,85\", 85, \"85%\", \"высокая\",
+    {\"value\": 0.85}. Нет или не разобрать — None (а не 0: иначе все исправления считались бы неуверенными)."""
+    if isinstance(v, dict):
+        v = next((v[k] for k in ("value", "score", "overall", "confidence") if k in v), None)
+    if v is None or isinstance(v, bool):
+        return None
+    pct = False
+    if isinstance(v, str):
+        s = v.strip().lower().replace(",", ".")
+        pct = s.endswith("%")
+        try:
+            v = float(s.rstrip("%").strip())
+        except ValueError:
+            return next((x for w, x in _CONF_WORDS if w in s), None)
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return None
+    if x != x:                                  # NaN
+        return None
+    if pct or 1.0 < x <= 100.0:
+        x /= 100.0
+    return min(1.0, max(0.0, x))
+
+
 def vlm_counts(m: Methodology, vlm_out: dict | None) -> Counter:
     out: Counter = Counter()
     for it in (vlm_out or {}).get("equipment") or []:
@@ -140,7 +170,7 @@ def clean_day_output(out: dict) -> dict:
     for k in ("model_errors", "recommendations"):
         o[k] = [_as_text(x) for x in _as_list(o.get(k)) if x]
     o["summary"], o["status"] = _as_text(o.get("summary")), _as_text(o.get("status"))
-    o["confidence"] = _num(o.get("confidence"), 0.0)
+    o["confidence"] = conf01(o.get("confidence"))
     return o
 
 
@@ -151,7 +181,9 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
     has_llm = bool(llm_out) and "raw" not in llm
     vlm_ok = bool(vlm_out) and "error" not in vlm_out and "raw" not in vlm_out
     W, H = ctx["image"]["width"], ctx["image"]["height"]
-    llm_conf = _num(llm.get("confidence"), 0.0)
+    llm_conf = conf01(llm.get("confidence"))
+    if llm_conf is None:                         # общей нет — берём уверенность в стадии, если есть
+        llm_conf = conf01((llm.get("stage") or {}).get("confidence"))
 
     # --- рамки детектора: вердикт LLM
     by_id = {}
@@ -179,7 +211,8 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
         box = _box01(x.get("box"), W, H)
         if box is None:
             continue
-        conf = min(1.0, max(0.0, _num(x.get("confidence"), 0.5)))
+        conf = conf01(x.get("confidence"))
+        conf = 0.5 if conf is None else conf
         missed.append({"cls": x["cls"], "name": m.class_name(x["cls"]), "box": box,
                        "xyxy": [round(box[0] * W, 1), round(box[1] * H, 1), round(box[2] * W, 1), round(box[3] * H, 1)],
                        "conf": round(conf, 2), "comment": str(x.get("comment", ""))})
@@ -232,7 +265,7 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
 
     # --- исправления, которые можно применить
     corrections = []
-    gate = has_llm and llm_conf >= min_conf
+    gate = has_llm and llm_conf is not None and llm_conf >= min_conf
     for r in det_rows:
         if r["verdict"] == "false_positive":
             corrections.append({"action": "reject", "detection_id": r["id"], "cls": r["cls"], "apply": gate,

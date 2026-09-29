@@ -65,7 +65,7 @@ class Settings:
     # ---- слой ИИ-анализа (app/ai): модель готовности, локальная VLM и LLM (YandexGPT / Claude / ChatGPT)
     # модель готовности ML-части (DINOv2 + голова): auto — weights/readiness/<прогон>/head.pt | путь | off
     readiness: str = field(default_factory=lambda: os.environ.get("OKO_READINESS", "auto"))
-    readiness_dtype: str = field(default_factory=lambda: os.environ.get("OKO_READINESS_DTYPE", "float32"))
+    readiness_dtype: str = field(default_factory=lambda: os.environ.get("OKO_READINESS_DTYPE", "bfloat16"))
     # Grounding DINO — прочие объекты (опалубка, леса, рабочие…) и проверка техники по текстовым подсказкам
     # (methodology/open_vocab.yaml): auto — IDEA-Research/grounding-dino-base | id модели Hugging Face | off
     openvocab: str = field(default_factory=lambda: os.environ.get("OKO_OPENVOCAB", "auto"))
