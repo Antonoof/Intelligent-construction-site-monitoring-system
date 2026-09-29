@@ -82,8 +82,18 @@ def _ai_brief() -> dict:
             "llm": f'{st["llm"]["provider"]}:{st["llm"]["model"]}' if st["llm"]["provider"] != "off" else None}
 
 
+class FrontendFiles(StaticFiles):
+    """Интерфейс без кеша в браузере: после обновления сервиса страница сразу берёт новые app.js и app.css
+    (браузер сверяет ETag и скачивает файл, только если он изменился)."""
+
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+
 if settings.frontend_dir.exists():
-    app.mount("/app", StaticFiles(directory=settings.frontend_dir, html=True), name="frontend")
+    app.mount("/app", FrontendFiles(directory=settings.frontend_dir, html=True), name="frontend")
 
     @app.get("/", include_in_schema=False)
     def root():

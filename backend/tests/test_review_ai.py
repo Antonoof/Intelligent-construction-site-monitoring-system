@@ -432,6 +432,25 @@ class AIReviewApiTest(unittest.TestCase):
         self.assertEqual(len(self.c.get(f"/api/snapshots/{sid}").json()["boxes"]), len(before["boxes"]))
         self.assertEqual(len(self._tz_deviation()["evidence"]), 2)
 
+    def test_quick_check_ai(self):
+        """«Проверить снимок»: снимок без проекта проходит тот же конвейер ИИ, результат — в памяти."""
+        from pathlib import Path
+        shot = Path(__file__).resolve().parents[2] / "data" / "demo" / "housing" / "snapshots" / "CAM-01_2026-09-24_10-30.jpg"
+        r = self.c.post("/api/analyze/ai", data={"work_types": "12.3.1", "planned": ""},
+                        files={"file": (shot.name, shot.read_bytes(), "image/jpeg")})
+        self.assertEqual(r.status_code, 202)
+        j = r.json()
+        self.assertEqual(j["status"], "done", j.get("error"))
+        f = j["final"]
+        self.assertEqual(f["assessment"]["stage"], "S1")
+        self.assertEqual(f["stage"]["planned"], ["S1"])
+        self.assertEqual(f["cross_check"]["vlm_only"][0]["cls"], "dump_truck")
+        self.assertEqual(f["detections"][0]["verdict"], "confirmed")
+        self.assertNotIn("context", j)
+        full = self.c.get(f"/api/analyze/ai/{j['id']}", params={"full": 1}).json()
+        self.assertEqual(full["context"]["schedule"][0]["tasks"][0]["wbs"], "12.3.1")
+        self.assertEqual(self.c.get("/api/analyze/ai/q000").status_code, 404)
+
     def test_disabled_layers(self):
         L.set_llm(L.LLMClient("off"))
         V.set_vlm(V.LocalVLM("off"))

@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -128,14 +130,59 @@ def _step(s: Session, r: M.AIReview, text: str) -> None:
     s.commit()
 
 
+def _vlm_and_llm(ctx: dict, load_img, images_fn, step, errors: list, hint: str = ""):
+    """Слои 3–5 конвейера, общие для снимка проекта и быстрой проверки: VLM → сверка с детектором → LLM.
+    Дополняет ctx (vlm, cross_check) и возвращает (модель VLM, ответ VLM, ответ LLM или None)."""
+    m = get_methodology()
+    vlm, llm = get_vlm(), get_llm()
+    vlm_model, vlm_out, llm_res = "", None, None
+    if vlm.enabled:
+        plan = vlm.plan()
+        step(" ".join(x for x in ("локальная VLM", plan.get("model") or "", "описывает кадр") if x))
+        try:
+            res = vlm.describe(load_img(), hint=hint)
+            vlm_model = res.model
+            vlm_out = {**res.output, "_seconds": round(res.seconds, 1), "_device": res.device}
+        except Exception as e:               # нет памяти, нет transformers — анализ продолжается без VLM
+            log.warning("VLM: %s", e)
+            vlm_out = {"error": str(e)[:500]}
+            errors.append(f"VLM: {e}")
+        ctx["vlm"] = {k: v for k, v in vlm_out.items() if not k.startswith("_")} | {"model": vlm_model}
+        if "error" not in vlm_out:
+            ctx["cross_check"] = cross_check(m, ctx["detections"], vlm_out)
+    if llm.enabled:
+        images = images_fn() if llm.vision else []
+        step(f"{llm.name} ({llm.model}) сверяет все слои")
+        try:
+            llm_res = llm.ask(C.snapshot_instructions(llm.vision), ctx, snapshot_schema(sorted(m.classes)),
+                              "snapshot_review", images)
+            if "raw" in llm_res.output:
+                errors.append(f"{llm.name} ответила не JSON")
+        except (LLMError, httpx.HTTPError, ValueError) as e:
+            log.warning("LLM: %s", e)
+            errors.append(f"{llm.name}: {e}")
+    return vlm_model, vlm_out, llm_res
+
+
+def _layers_meta(layers: dict, vlm_model: str, llm_res) -> dict:
+    llm = get_llm()
+    return {**layers, "vlm_model": vlm_model, "llm_model": llm_res.model if llm_res else (llm.model if llm.enabled else ""),
+            "llm_provider": llm_res.provider if llm_res else (llm.provider if llm.enabled else ""),
+            "llm_name": llm.name if llm.enabled else "", "llm_vision": llm.vision if llm.enabled else None}
+
+
+def _ok(llm_out, vlm_out, layers) -> bool:
+    return (bool(llm_out) and "raw" not in llm_out) or (vlm_out is not None and "error" not in vlm_out) \
+        or bool(layers.get("readiness_model"))
+
+
 def run_snapshot(rid: int) -> None:
     t0 = time.perf_counter()
     s = SessionLocal()
     r = s.get(M.AIReview, rid)
     try:
         snap = s.get(M.Snapshot, r.snapshot_id)
-        m = get_methodology()
-        rd, vlm, llm = get_readiness(), get_vlm(), get_llm()
+        rd, llm = get_readiness(), get_llm()
         errors, layers = [], {}
 
         if rd.enabled and snap.quality_ok:
@@ -151,52 +198,25 @@ def run_snapshot(rid: int) -> None:
 
         _step(s, r, "сбор выводов детектора, модели готовности и правил")
         ctx = C.snapshot_context(s, snap)
-
-        vlm_out = None
-        if vlm.enabled:
-            plan = vlm.plan()
-            _step(s, r, " ".join(x for x in ("локальная VLM", plan.get("model") or "", "описывает кадр") if x))
-            try:
-                zones = ", ".join(z["name"] for z in ctx["zones"]) or "вся площадка"
-                res = vlm.describe(load_image(Path(snap.file_path).read_bytes()),
-                                   hint=f"камера {ctx['camera']['name']}, зоны: {zones}")
-                r.vlm_model = res.model
-                vlm_out = {**res.output, "_seconds": round(res.seconds, 1), "_device": res.device}
-            except Exception as e:           # нет памяти, нет transformers — анализ продолжается без VLM
-                log.warning("VLM: %s", e)
-                vlm_out = {"error": str(e)[:500]}
-                errors.append(f"VLM: {e}")
-            r.vlm_output = vlm_out
-            ctx["vlm"] = {k: v for k, v in vlm_out.items() if not k.startswith("_")} | {"model": r.vlm_model}
-            if "error" not in vlm_out:
-                ctx["cross_check"] = cross_check(m, ctx["detections"], vlm_out)
-            s.commit()
-
-        llm_out = None
-        if llm.enabled:
-            images = C.llm_images(s, snap) if llm.vision else []   # до commit: транзакция не держится во время запроса
-            _step(s, r, f"{llm.name} ({llm.model}) сверяет все слои")
-            try:
-                res = llm.ask(C.snapshot_instructions(llm.vision), ctx, snapshot_schema(sorted(m.classes)),
-                              "snapshot_review", images)
-                llm_out = res.output
-                r.llm_provider, r.llm_model = res.provider, res.model
-                r.tokens_in, r.tokens_out = res.tokens_in, res.tokens_out
-                r.llm_output = llm_out
-                if "raw" in llm_out:
-                    errors.append(f"{llm.name} ответила не JSON")
-            except (LLMError, httpx.HTTPError, ValueError) as e:
-                log.warning("LLM: %s", e)
-                errors.append(f"{llm.name}: {e}")
-                r.llm_provider, r.llm_model = llm.provider, llm.model
+        # изображения для LLM — до commit: во время запроса к LLM транзакция не держится
+        vlm_model, vlm_out, llm_res = _vlm_and_llm(
+            ctx, lambda: load_image(Path(snap.file_path).read_bytes()), lambda: C.llm_images(s, snap),
+            lambda text: _step(s, r, text), errors,
+            hint=f"камера {ctx['camera']['name']}, зоны: {', '.join(z['name'] for z in ctx['zones']) or 'вся площадка'}")
+        r.vlm_model, r.vlm_output = vlm_model, vlm_out
+        llm_out = llm_res.output if llm_res else None
+        if llm_res:
+            r.llm_provider, r.llm_model = llm_res.provider, llm_res.model
+            r.tokens_in, r.tokens_out = llm_res.tokens_in, llm_res.tokens_out
+            r.llm_output = llm_out
+        elif llm.enabled:
+            r.llm_provider, r.llm_model = llm.provider, llm.model
 
         _step(s, r, "сведение результатов")
         r.context = ctx
-        layers.update({"vlm_model": r.vlm_model, "llm_model": r.llm_model, "llm_provider": r.llm_provider,
-                       "llm_name": llm.name if llm.enabled else "", "llm_vision": llm.vision if llm.enabled else None})
+        layers = _layers_meta(layers, vlm_model, llm_res)
         r.final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
-        ok = (bool(llm_out) and "raw" not in llm_out) or (vlm_out is not None and "error" not in vlm_out) \
-            or bool(layers.get("readiness_model"))
+        ok = _ok(llm_out, vlm_out, layers)
         r.status, r.step, r.error = ("done" if ok else "error"), "", "; ".join(errors)[:2000]
         r.duration_ms = round((time.perf_counter() - t0) * 1000)
         s.commit()
@@ -264,3 +284,86 @@ def recover(s: Session) -> int:
         r.status, r.step, r.error = "error", "", "прервано перезапуском сервиса — запустите анализ снова"
         n += 1
     return n
+
+
+# ------------------------------------------------------------------ быстрая проверка без проекта
+
+_quick: dict[str, dict] = {}
+_quick_lock = threading.Lock()
+QUICK_KEEP = 30                 # результаты быстрых проверок хранятся в памяти, последние 30
+
+
+def _qset(jid: str, **kw) -> None:
+    with _quick_lock:
+        if jid in _quick:
+            _quick[jid].update(kw)
+
+
+def quick_view(jid: str, full: bool = False) -> dict | None:
+    with _quick_lock:
+        j = _quick.get(jid)
+        if j is None:
+            return None
+        return {k: v for k, v in j.items() if not k.startswith("_") and (full or k != "context")}
+
+
+def submit_quick(img, res: dict, work_type_ids: list[str], filename: str) -> dict:
+    """Снимок из «Проверить снимок»: тот же конвейер ИИ, результат — в памяти (в БД снимок не попадает)."""
+    if not status()["enabled"]:
+        raise AIDisabled("ИИ-анализ выключен: задайте OKO_LLM_PROVIDER=yandex, OKO_VLM=auto и/или положите "
+                         "веса модели готовности в weights/readiness/")
+    jid = "q" + uuid.uuid4().hex[:12]
+    with _quick_lock:
+        for old in sorted(_quick, key=lambda k: _quick[k]["created"])[:-QUICK_KEEP + 1 or None]:
+            _quick.pop(old, None)
+        _quick[jid] = {"id": jid, "kind": "quick", "status": "queued", "step": "в очереди", "created": time.time(),
+                       "final": None, "error": "", "applied": None, "_img": img, "_res": res, "_wts": work_type_ids,
+                       "_name": filename}
+    _submit(run_quick, jid)
+    return quick_view(jid)
+
+
+def run_quick(jid: str) -> None:
+    t0 = time.perf_counter()
+    with _quick_lock:
+        job = _quick.get(jid)
+        if job is None:
+            return
+        img, res, wts, name = job.pop("_img"), job.pop("_res"), job.pop("_wts"), job.pop("_name")
+    try:
+        m = get_methodology()
+        rd = get_readiness()
+        errors, layers = [], {}
+        ctx = C.quick_context(res, wts, name)
+        step = lambda text: _qset(jid, status="running", step=text)  # noqa: E731
+        assessment = None
+        if rd.enabled and res["quality"]["ok"]:
+            step("модель готовности (DINOv2 + голова): стадия и готовность")
+            try:
+                dets = [(b["cls"], b["conf"], tuple(b["xyxy"])) for b in res["boxes"] if b["conf"] >= 0.3]
+                assessment = rd.predict(img, dets, m.normalize_class)
+                assessment["note"] = "модель обучена на общих планах площадки; на крупном плане оценка ориентировочная"
+                ctx["stage"]["readiness_model"] = C.assessment_brief(assessment)
+                layers["readiness_model"] = assessment.get("model")
+            except Exception as e:
+                log.warning("модель готовности: %s", e)
+                errors.append(f"модель готовности: {e}")
+        boxes = [{"id": b["id"], "label": f"#{b['id']} {b['label']}", "conf": b["conf"], "color": b.get("color") or "#E1A21C",
+                  "x1": b["xyxy"][0], "y1": b["xyxy"][1], "x2": b["xyxy"][2], "y2": b["xyxy"][3],
+                  "dashed": not b["strong"]} for b in res["boxes"]]
+        vlm_model, vlm_out, llm_res = _vlm_and_llm(ctx, lambda: img, lambda: C.frame_images(img, boxes), step, errors,
+                                                   hint="быстрая проверка снимка стройплощадки")
+        step("сведение результатов")
+        llm_out = llm_res.output if llm_res else None
+        layers = _layers_meta(layers, vlm_model, llm_res)
+        final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
+        final["assessment"] = assessment
+        ok = _ok(llm_out, vlm_out, layers)
+        _qset(jid, status="done" if ok else "error", step="", final=final, error="; ".join(errors)[:2000],
+              vlm={"model": vlm_model, "output": vlm_out} if vlm_out else None,
+              llm={"provider": llm_res.provider, "model": llm_res.model, "tokens_in": llm_res.tokens_in,
+                   "tokens_out": llm_res.tokens_out, "output": llm_out} if llm_res else None,
+              context=ctx, duration_ms=round((time.perf_counter() - t0) * 1000))
+    except Exception as e:
+        _qset(jid, status="error", step="", error=str(e)[:2000], duration_ms=round((time.perf_counter() - t0) * 1000))
+        raise

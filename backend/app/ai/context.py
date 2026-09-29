@@ -260,7 +260,7 @@ def llm_images(s: Session, snap: M.Snapshot, width: int = 1280) -> list[bytes]:
              for d in snap.detections if not d.is_rejected]
     zones = [{"name": zmeta[cz.zone_id].name, "color": zmeta[cz.zone_id].color, "polygon": cz.polygon}
              for cz in cam.zone_polygons if cz.zone_id in zmeta]
-    return [_jpeg(img, width), render_annotated(img, boxes, zones, width=width)]
+    return frame_images(img, boxes, zones, width)
 
 
 def day_images(s: Session, p: M.Project, day: dt.date, limit: int = 4, width: int = 1024) -> list[bytes]:
@@ -276,3 +276,42 @@ def day_images(s: Session, p: M.Project, day: dt.date, limit: int = 4, width: in
         if Path(sn.file_path).exists():
             out.append(llm_images(s, sn, width)[1])
     return out
+
+
+# ------------------------------------------------------------------ быстрая проверка (вкладка «Проверить снимок»)
+
+def quick_context(res: dict, work_type_ids: list[str], filename: str) -> dict:
+    """Контекст для снимка без проекта: результат POST /api/analyze (рамки, проверки методики по выбранным видам
+    работ, предупреждения). Поля — как у snapshot_context, чтобы сведение слоёв и интерфейс были общими."""
+    m = get_methodology()
+    det = get_detector()
+    W, H = res["width"] or 1, res["height"] or 1
+    stages = sorted({m.work_types[w].stage for w in work_type_ids if w in m.work_types and m.work_types[w].stage})
+    return {
+        "project": None,
+        "camera": {"key": "снимок", "name": filename or "загруженный снимок", "overview": None,
+                   "note": "быстрая проверка: снимок без проекта, этапы выбраны вручную"},
+        "taken_at": res["taken_at"][:16],
+        "image": {"width": res["width"], "height": res["height"]},
+        "quality": res["quality"],
+        "detector": {"model": res["detector"], "classes": sorted(det.classes),
+                     "presence_threshold": {c: m.presence_threshold(c) for c in sorted(det.classes)}},
+        "classes": {k: v.get("name", k) for k, v in m.classes.items()},
+        "detections": [{"id": b["id"], "cls": b["cls"], "name": b["label"], "conf": round(b["conf"], 2),
+                        "box": [_r(b["xyxy"][0] / W), _r(b["xyxy"][1] / H), _r(b["xyxy"][2] / W), _r(b["xyxy"][3] / H)],
+                        "zone": "кадр", "above_threshold": b["strong"], "source": "model"} for b in res["boxes"]],
+        "rejected_by_engineer": [],
+        "zones": [],
+        "schedule": [res["check"]],
+        "deviations": [{"id": i, "rule": f["rule"], "title": f["title"], "severity": f["severity"],
+                        "status": f["status"], "review_status": None, "zone": "кадр", "task": None,
+                        "equipment_class": f.get("cls"), "message": f["message"], "snapshots_count": 1, "metrics": {}}
+                       for i, f in enumerate(res["findings"], 1)],
+        "stage": {"planned": {"кадр": stages}, "readiness_model": None},
+        "vlm": {"available": False},
+    }
+
+
+def frame_images(img, boxes: list[dict], zones: list[dict] | None = None, width: int = 1280) -> list[bytes]:
+    """Исходный кадр и кадр с рамками «#id класс» (boxes — как для render_annotated)."""
+    return [_jpeg(img, width), render_annotated(img, boxes, zones, width=width)]

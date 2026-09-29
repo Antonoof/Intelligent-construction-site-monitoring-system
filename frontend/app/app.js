@@ -402,7 +402,7 @@ function renderAI(d, r, view, redraw) {
   if ($('#aiRevert')) $('#aiRevert').onclick = () => act(`/api/ai/reviews/${r.id}/revert`, 'Исправления отменены');
 }
 
-function aiResultHTML(d, r) {
+function aiResultHTML(d, r, { quick = false } = {}) {
   const f = r.final, L = f.layers || {};
   const src = [L.readiness_model && 'модель готовности', L.vlm_model && `VLM ${L.vlm_model.split('/').pop()}`,
     L.llm_model && `${L.llm_name || L.llm_provider} ${L.llm_model}`].filter(Boolean);
@@ -455,13 +455,14 @@ function aiResultHTML(d, r) {
   if (corr.length) {
     const ap = r.applied && !r.applied.reverted;
     const n = corr.filter((c) => c.apply).length;
-    h += `<div class="ai-fix"><div class="lbl">исправления данных${ap ? ' — применены' : ''}:</div>`
-      + corr.map((c) => `<div>${c.apply ? '<span class="ok-mark">●</span>' : '<span class="wait-mark">○</span>'} ${esc(c.text)}${c.apply ? '' : ` <span class="hint">уверенность ниже ${f.min_conf} — не применяется</span>`}</div>`).join('')
-      + `<div class="row" style="margin-top:6px">${ap ? `<button class="btn small" id="aiRevert">Отменить исправления</button><span class="hint">применены ${esc(r.applied.at.replace('T', ' '))} UTC</span>`
-        : n ? `<button class="btn small good" id="aiApply">Применить исправления (${n})</button><span class="hint">рамки изменятся, отклонения пересчитаются; можно отменить</span>` : ''}</div></div>`;
+    h += `<div class="ai-fix"><div class="lbl">${quick ? 'исправления ИИ' : `исправления данных${ap ? ' — применены' : ''}`}:</div>`
+      + corr.map((c) => `<div>${c.apply ? '<span class="ok-mark">●</span>' : '<span class="wait-mark">○</span>'} ${esc(c.text)}${c.apply ? '' : ` <span class="hint">уверенность ниже ${f.min_conf}</span>`}</div>`).join('')
+      + (quick ? `<div class="hint" style="margin-top:4px">В быстрой проверке снимок не сохраняется — исправления только показываются. Чтобы применить их, загрузите снимок в проект.</div>`
+        : `<div class="row" style="margin-top:6px">${ap ? `<button class="btn small" id="aiRevert">Отменить исправления</button><span class="hint">применены ${esc(r.applied.at.replace('T', ' '))} UTC</span>`
+          : n ? `<button class="btn small good" id="aiApply">Применить исправления (${n})</button><span class="hint">рамки изменятся, отклонения пересчитаются; можно отменить</span>` : ''}</div>`) + `</div>`;
   }
   h += `<details class="calc"><summary>Что видели и ответили модели</summary><pre>${esc(JSON.stringify({ vlm: r.vlm?.output, stage: f.stage, cross_check: f.cross_check }, null, 1))}</pre>`
-    + `<a href="/api/ai/reviews/${r.id}?full=1" target="_blank" rel="noopener">все данные, отправленные в LLM, и её ответ (JSON)</a></details>`;
+    + `<a href="${quick ? `/api/analyze/ai/${r.id}` : `/api/ai/reviews/${r.id}`}?full=1" target="_blank" rel="noopener">все данные, отправленные в LLM, и её ответ (JSON)</a></details>`;
   return h;
 }
 
@@ -707,12 +708,68 @@ async function vAnalyze(main) {
       const r = await api('/api/analyze', { method: 'POST', body: fd });
       const url = URL.createObjectURL(file);
       const snap = { id: 0, camera: 'снимок', taken_at: r.taken_at, width: r.width, height: r.height, image: url, quality_ok: r.quality.ok };
-      let h = `<div class="card">${frameHTML(snap, { boxes: r.boxes })}<div class="hint" style="margin-top:6px">детектор ${esc(r.detector)} · ${r.timing_ms.total} мс${r.detector_note ? ` · ${esc(r.detector_note)}` : ''}</div>`;
+      let h = `<div class="card"><div class="row" id="qTg" style="margin-bottom:6px" hidden><label id="qTgAIl" hidden><input type="checkbox" id="qTgAI" checked> находки ИИ</label><label id="qTgAl" hidden><input type="checkbox" id="qTgA"> внимание модели</label></div>`
+        + `<div id="qFrame">${frameHTML(snap, { boxes: r.boxes })}</div><div class="hint" style="margin-top:6px">детектор ${esc(r.detector)} · ${r.timing_ms.total} мс${r.detector_note ? ` · ${esc(r.detector_note)}` : ''}</div>`;
+      h += `<section class="ai" id="qAi" style="margin-top:10px"><h3>Анализ ИИ</h3><div id="qAiBody">${state.ai?.enabled
+        ? `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM проверяет рамки детектора и предупреждения, находит пропущенную технику и даёт рекомендации. На CPU — 1–2 минуты.</p><button class="btn small primary" id="qAiRun">Запустить анализ ИИ</button>`
+        : '<div class="hint">ИИ-анализ выключен: модель готовности — веса в <span class="mono">weights/readiness/</span>, VLM — <span class="mono">OKO_VLM=auto</span>, YandexGPT — <span class="mono">OKO_LLM_PROVIDER=yandex</span>.</div>'}</div></section>`;
       h += `<h3 style="margin-top:10px">Предупреждения</h3>` + (r.findings.length ? r.findings.map((f) => `<div class="dev ${f.severity}"><div class="title">${esc(f.title)}</div><div class="row">${sevChip(f.severity)}</div><div class="msg">${esc(f.message)}</div><div class="rec">${esc(f.recommendation)}</div></div>`).join('') : '<div class="hint">Отклонений нет.</div>');
       h += `<h3 style="margin-top:10px">Проверки методики</h3>${checkHTML({ ...r.check, zone: 'FRAME', zone_name: 'Кадр' })}</div>`;
       $('#aOut').innerHTML = h;
+      bindQuickAI(snap, r, () => {
+        const q = new FormData();
+        q.append('file', file); q.append('work_types', $('#aWT').value); q.append('planned', $('#aPlan').value);
+        q.append('tiles', $('#aTiles').checked ? '3' : '0');
+        return q;
+      });
     } catch (e) { $('#aOut').innerHTML = `<div class="card">Ошибка: ${esc(e.message)}</div>`; }
   };
+}
+
+// ИИ-анализ снимка из «Проверить снимок»: тот же конвейер, результат хранится в памяти сервиса
+function bindQuickAI(snap, r, formData, view = { aiBoxes: [], attention: null }) {
+  const redraw = () => {
+    $('#qFrame').innerHTML = frameHTML(snap, { boxes: r.boxes, aiBoxes: $('#qTgAI').checked ? view.aiBoxes : [],
+      attention: $('#qTgA').checked ? view.attention : null });
+  };
+  $('#qTgAI').onchange = redraw; $('#qTgA').onchange = redraw;
+  const run = $('#qAiRun');
+  if (!run) return;
+  run.onclick = async () => {
+    run.disabled = true;
+    try {
+      const j = await api('/api/analyze/ai', { method: 'POST', body: formData() });
+      $('#qAi').dataset.jid = j.id;
+      pollQuickAI(j.id, view, redraw, formData, snap, r);
+    } catch (e) { toast(e.message); run.disabled = false; }
+  };
+}
+
+async function pollQuickAI(jid, view, redraw, formData, snap, r) {
+  const box = $('#qAiBody');
+  if (!box || $('#qAi').dataset.jid !== jid) return;
+  let j;
+  try { j = await api(`/api/analyze/ai/${jid}`); } catch (e) { box.innerHTML = `<div class="hint">Ошибка: ${esc(e.message)}</div>`; return; }
+  if (j.status === 'queued' || j.status === 'running') {
+    box.innerHTML = `<p><span class="spinner"></span> ${esc(j.step || 'в очереди')}…</p><p class="hint">На CPU модель готовности и VLM работают до минуты-двух.</p>`;
+    setTimeout(() => pollQuickAI(jid, view, redraw, formData, snap, r), 2500);
+    return;
+  }
+  const f = j.final;
+  let h = '';
+  if (!f) h = `<p class="bad-mark">Ошибка анализа</p><p class="hint">${esc(j.error)}</p>`;
+  else {
+    if (f.assessment) h += `<div class="ai-row"><span class="lbl">модель готовности:</span> ${assessmentHTML(f.assessment)}</div>`;
+    h += aiResultHTML(null, j, { quick: true });
+  }
+  box.innerHTML = h + `<div class="row" style="margin-top:8px"><button class="btn small primary" id="qAiRun">Повторить анализ</button></div>`;
+  view.aiBoxes = f?.missed || [];
+  view.attention = f?.assessment?.attention || null;
+  $('#qTgAIl').hidden = !view.aiBoxes.length;
+  $('#qTgAl').hidden = !view.attention;
+  $('#qTg').hidden = !view.aiBoxes.length && !view.attention;
+  redraw();
+  bindQuickAI(snap, r, formData, view);
 }
 
 // ------------------------------------------------------------------ загрузка снимков в проект
