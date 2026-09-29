@@ -206,6 +206,3 @@ tr.summary .tname{font-weight:600}
 .ai-day-h h2{margin:0}
 tr.muted td{opacity:.55}
 select.mini{padding:3px 6px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);font-size:12.5px;max-width:260px}
-.ov-box.obj{stroke:#0B9AA2;stroke-width:2.5;stroke-dasharray:4 4}
-.vchip.obj{color:#0B6F75;background:rgba(11,154,162,.14)}
-@media (prefers-color-scheme:dark){.vchip.obj{color:#5FD3D9;background:rgba(11,154,162,.22)}}

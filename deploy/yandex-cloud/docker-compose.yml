@@ -44,7 +44,6 @@ services:
       # ИИ-анализ: модель готовности (weights/readiness) → локальная VLM → YandexGPT сверяет все слои
       OKO_READINESS: ${OKO_READINESS:-auto}
       OKO_READINESS_DTYPE: ${OKO_READINESS_DTYPE:-bfloat16}
-      OKO_OPENVOCAB: ${OKO_OPENVOCAB:-auto}
       OKO_VLM: ${OKO_VLM:-auto}
       OKO_LLM_PROVIDER: ${OKO_LLM_PROVIDER:-yandex}
       OKO_LLM_MODEL: ${OKO_LLM_MODEL:-yandexgpt-5.1}

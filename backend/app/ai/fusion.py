@@ -175,7 +175,7 @@ def clean_day_output(out: dict) -> dict:
 
 
 def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_conf: float,
-                  meta: dict | None = None, open_vocab: dict | None = None) -> dict:
+                  meta: dict | None = None) -> dict:
     m = get_methodology()
     llm = clean_snapshot_output(llm_out)
     has_llm = bool(llm_out) and "raw" not in llm
@@ -228,11 +228,9 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
             llm_c[r["correct_class"]] += 1
     for x in missed:
         llm_c[x["cls"]] += 1
-    ov_c = Counter((open_vocab or {}).get("equipment_counts") or {})
     equipment = []
-    for c in sorted(set(det_c) | set(vlm_c) | set(llm_c) | set(ov_c), key=lambda k: m.class_name(k)):
+    for c in sorted(set(det_c) | set(vlm_c) | set(llm_c), key=lambda k: m.class_name(k)):
         row = {"cls": c, "name": m.class_name(c), "detector": det_c.get(c, 0),
-               "open_vocab": ov_c.get(c, 0) if open_vocab else None,
                "vlm": vlm_c.get(c, 0) if vlm_ok else None, "llm": llm_c.get(c, 0) if has_llm else None}
         row["final"] = row["llm"] if has_llm else row["detector"]
         votes = [v for v in (row["detector"], row["vlm"], row["llm"]) if v is not None]
@@ -289,7 +287,7 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
     summary = llm.get("summary") if has_llm else (vlm_out.get("scene") if vlm_ok else "")
     return {
         "summary": summary or "", "scene": scene, "equipment": equipment, "detections": det_rows, "missed": missed,
-        "stage": st, "deviations": devs, "cross_check": ctx.get("cross_check"), "open_vocab": open_vocab,
+        "stage": st, "deviations": devs, "cross_check": ctx.get("cross_check"),
         "new_findings": [x for x in llm.get("new_findings") or [] if isinstance(x, dict)],
         "forecast": llm.get("forecast", "") if has_llm else "",
         "recommendations": [str(x) for x in llm.get("recommendations") or []],

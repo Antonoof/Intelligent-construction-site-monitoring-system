@@ -19,7 +19,6 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from app.ai import jobs  # noqa: E402
 from app.ai import llm as L  # noqa: E402
-from app.ai import openvocab as O  # noqa: E402
 from app.ai import readiness as R  # noqa: E402
 from app.ai import vlm as V  # noqa: E402
 from app.ai.fusion import cross_check, fuse_snapshot  # noqa: E402
@@ -84,42 +83,7 @@ class ReadinessTest(unittest.TestCase):
         self.assertIsNone(R.find_run("off"))
 
 
-# ------------------------------------------------------------------ Grounding DINO
-
-class OpenVocabTest(unittest.TestCase):
-    def test_config_like_ml_part(self):
-        cfg = O.load_config()
-        self.assertEqual(cfg["model"], "IDEA-Research/grounding-dino-base")
-        self.assertEqual(cfg["objects"]["formwork"], "опалубка")
-        self.assertEqual(cfg["objects"]["unfinished building"]["threshold"], 0.55)
-        prompts = list(cfg["equipment"]["prompts"])
-        words = [w for p in prompts for w in p.split()]
-        self.assertEqual(len(words), len(set(words)))            # слова не повторяются — фраза по ответу однозначна
-        self.assertEqual(O.phrase_for("truck", prompts), "dump truck")
-        self.assertIsNone(O.phrase_for("tower crane", prompts))
-
-    def test_filters_as_in_ml_part(self):
-        found = [{"xyxy": [0, 0, 1000, 700], "conf": 0.9, "label": "строящееся здание"},   # на весь кадр
-                 {"xyxy": [100, 100, 300, 300], "conf": 0.5, "label": "рабочий"},          # это экскаватор RF-DETR
-                 {"xyxy": [500, 400, 700, 600], "conf": 0.7, "label": "опалубка"},
-                 {"xyxy": [505, 405, 700, 600], "conf": 0.45, "label": "леса"}]            # повтор опалубки
-        out = O.filter_objects(found, [[90, 95, 310, 305]], 1000 * 720, 0.6)
-        self.assertEqual([o["label"] for o in out], ["опалубка"])
-
-    def test_match_equipment(self):
-        dets = [{"id": 1, "cls": "excavator", "box": [0.1, 0.4, 0.3, 0.8]},
-                {"id": 2, "cls": "truck", "box": [0.5, 0.4, 0.7, 0.8]}]
-        found = [{"cls": "excavator", "box": [0.11, 0.41, 0.3, 0.8], "conf": 0.6},
-                 {"cls": "dump_truck", "box": [0.51, 0.41, 0.7, 0.8], "conf": 0.5},
-                 {"cls": "excavator", "box": [0.75, 0.5, 0.9, 0.7], "conf": 0.45}]
-        confirmed, only, conflicts = O.match_equipment(found, dets)
-        self.assertEqual(confirmed, [1])
-        self.assertEqual([o["cls"] for o in only], ["excavator"])
-        self.assertEqual(conflicts[0]["detection_id"], 2)
-        self.assertEqual(conflicts[0]["open_vocab_cls"], "dump_truck")
-
-
-class CacheAndBackboneTest(unittest.TestCase):
+class CacheTest(unittest.TestCase):
     def test_cache_roundtrip(self):
         from app.ai import cache
         k = cache.key("t", "sha", [1, 2])
@@ -129,37 +93,6 @@ class CacheAndBackboneTest(unittest.TestCase):
         v1, hit1 = cache.cached("test", k, lambda: calls.append(1) or {"a": 1})
         v2, hit2 = cache.cached("test", k, lambda: calls.append(1) or {"a": 2})
         self.assertEqual((v1, hit1, v2, hit2, len(calls)), ({"a": 1}, False, {"a": 1}, True, 1))
-
-    def test_grounding_dino_backbone_computed_once(self):
-        """Признаки кадра не зависят от текста: на один кадр backbone считается один раз на все фразы."""
-        class T:
-            shape = (1, 3, 8, 8)
-
-            def __init__(self, ptr):
-                self.ptr = ptr
-
-            def data_ptr(self):
-                return self.ptr
-
-        class Backbone:
-            calls = 0
-
-            def forward(self, pixel_values, pixel_mask):
-                Backbone.calls += 1
-                return ("признаки", pixel_values.ptr)
-
-        ov = O.OpenVocab("off")
-        bb = Backbone()
-        ov._model = SimpleNamespace(model=SimpleNamespace(backbone=bb))
-        pv, pm = T(1), T(2)
-        with ov._shared_backbone():
-            outs = [bb.forward(pv, pm) for _ in range(7)]
-            other = bb.forward(T(3), pm)
-        self.assertEqual((Backbone.calls, outs[0], other), (2, ("признаки", 1), ("признаки", 3)))
-        self.assertNotIn("forward", vars(bb))       # после запроса — снова метод класса
-        bb.forward(pv, pm)
-        self.assertEqual(Backbone.calls, 3)
-
 
 # ------------------------------------------------------------------ VLM
 
@@ -174,11 +107,9 @@ class VLMTest(unittest.TestCase):
         self.assertIn("не помещается", why)
 
     def test_budget_16gb_vm(self):
-        """ВМ 16 ГБ (MemTotal ≈15.6): RF-DETR + Grounding DINO + модель готовности в bfloat16 оставляют место для
-        Qwen3-VL-2B; в float32 модель готовности вытесняет её до SmolVLM2 — так было на стенде."""
+        """ВМ 16 ГБ (MemTotal ≈15.6): после RF-DETR и модели готовности (в bfloat16 и во float32) остаётся место
+        для Qwen3-VL-2B — не SmolVLM2, как было на стенде с Grounding DINO."""
         from unittest import mock
-        gd = SimpleNamespace(footprint_gb=lambda: O.OpenVocab.footprint_gb(
-            SimpleNamespace(enabled=True, model_name="IDEA-Research/grounding-dino-base")))
         det = SimpleNamespace(name="rfdetr-large")
         picked = {}
         for dtype in ("bfloat16", "float32"):
@@ -186,13 +117,11 @@ class VLMTest(unittest.TestCase):
                 SimpleNamespace(enabled=True, dtype_name=d)))
             with mock.patch.object(V, "_ram_total_gb", return_value=15.6), \
                     mock.patch("app.detection.get_detector", return_value=det), \
-                    mock.patch.object(O, "get_openvocab", return_value=gd), \
                     mock.patch.object(R, "get_readiness", return_value=rd):
                 budget, parts = V.ram_budget_gb(1.5)
             picked[dtype] = V.choose_from(budget)[0]
-            self.assertIn("Grounding DINO", parts)
-        self.assertEqual(picked["bfloat16"], "Qwen/Qwen3-VL-2B-Instruct")
-        self.assertEqual(picked["float32"], "HuggingFaceTB/SmolVLM2-500M-Video-Instruct")
+            self.assertEqual(parts.split(",")[0], "RF-DETR 1.0")
+        self.assertEqual(picked, {"bfloat16": "Qwen/Qwen3-VL-2B-Instruct", "float32": "Qwen/Qwen3-VL-2B-Instruct"})
         from app.config import Settings
         env = {k: v for k, v in os.environ.items() if k != "OKO_READINESS_DTYPE"}
         with mock.patch.dict(os.environ, env, clear=True):
@@ -453,33 +382,6 @@ class FakeVLM:
             "activity": "работы ведутся", "people": 1}, 0.1)
 
 
-class FakeOpenVocab:
-    enabled = True
-    model_name = "fake-gdino"
-    calls = 0
-
-    def cache_key(self, sha, eq_px):
-        from app.ai import cache
-        return cache.key("fake-gdino", sha, [[round(v, 1) for v in b] for b in eq_px])
-
-    def plan(self):
-        return {"enabled": True, "model": self.model_name, "loaded": True}
-
-    def footprint_gb(self):
-        return 0.0
-
-    def detect(self, img, equipment_boxes_px):
-        FakeOpenVocab.calls += 1
-        W, H = img.size
-        eq = [{"xyxy": b, "box": [b[0] / W, b[1] / H, b[2] / W, b[3] / H], "conf": 0.55, "cls": "excavator",
-               "prompt": "excavator"} for b in equipment_boxes_px[:1]]
-        eq.append({"xyxy": [0.1 * W, 0.6 * H, 0.2 * W, 0.8 * H], "box": [0.1, 0.6, 0.2, 0.8], "conf": 0.42,
-                   "cls": "dump_truck", "prompt": "dump truck"})
-        return {"model": self.model_name, "seconds": 0.1, "device": "cpu", "equipment": eq,
-                "objects": [{"xyxy": [0.6 * W, 0.6 * H, 0.9 * W, 0.9 * H], "box": [0.6, 0.6, 0.9, 0.9], "conf": 0.52,
-                             "label": "опалубка", "prompt": "formwork"}]}
-
-
 class FakeReadiness:
     enabled = True
     calls = 0
@@ -535,7 +437,6 @@ class AIReviewApiTest(unittest.TestCase):
     def enable(cls):
         V.set_vlm(FakeVLM())
         R.set_readiness(FakeReadiness())
-        O.set_openvocab(FakeOpenVocab())
         L.set_llm(L.LLMClient("yandex", api_key="test", folder_id=FOLDER, transport=httpx.MockTransport(cls.handler)))
 
     @classmethod
@@ -543,7 +444,6 @@ class AIReviewApiTest(unittest.TestCase):
         jobs.SYNC = False
         V.set_vlm(None)
         R.set_readiness(None)
-        O.set_openvocab(None)
         L.set_llm(None)
         cls.ctx.__exit__(None, None, None)
 
@@ -576,14 +476,7 @@ class AIReviewApiTest(unittest.TestCase):
         self.assertIn(a["status"], ("ahead", "on_track", "risk", "late"))
         self.assertEqual((f["stage"]["model"], f["stage"]["vlm"], f["stage"]["llm"], f["stage"]["final"]),
                          ("S1", "S1", "S1", "S1"))
-        # Grounding DINO: опалубка с зоной, экскаватор детектора подтверждён, самосвал — только у Grounding DINO
-        ov = f["open_vocab"]
-        self.assertEqual((f["layers"]["open_vocab_model"], ov["counts"]), ("fake-gdino", {"опалубка": 1}))
-        self.assertEqual(ov["objects"][0]["zone"], "Z1")
-        self.assertEqual(len(ov["detector_confirmed"]), 1)
-        self.assertEqual([o["cls"] for o in ov["only_open_vocab"]], ["dump_truck"])
-        exc = next(e for e in f["equipment"] if e["cls"] == "excavator")
-        self.assertEqual((exc["detector"], exc["open_vocab"]), (1, 1))
+        self.assertNotIn("open_vocab", f)                    # слоя Grounding DINO в сервисе нет
         # сверка детектора и VLM: самосвал видит только VLM, YandexGPT подтверждает его рамкой VLM
         self.assertEqual(f["cross_check"]["vlm_only"][0]["cls"], "dump_truck")
         dump = next(e for e in f["equipment"] if e["cls"] == "dump_truck")
@@ -598,7 +491,6 @@ class AIReviewApiTest(unittest.TestCase):
         for key in ("detections", "schedule", "deviations", "stage", "vlm", "cross_check", "classes", "zones"):
             self.assertIn(key, full["context"])
         self.assertNotIn("attention", full["context"]["stage"]["readiness_model"])
-        self.assertNotIn("xyxy", full["context"]["open_vocab"]["objects"][0])   # в LLM — доли кадра, без пикселей
 
         # применить: пропущенный самосвал добавляется рамкой source=llm в зоне камеры, правила пересчитываются
         ap = self.c.post(f"/api/ai/reviews/{rv['id']}/apply").json()
@@ -638,7 +530,6 @@ class AIReviewApiTest(unittest.TestCase):
         f = j["final"]
         self.assertEqual(f["assessment"]["stage"], "S1")
         self.assertEqual(f["stage"]["planned"], ["S1"])
-        self.assertEqual(f["open_vocab"]["objects"][0]["zone"], "кадр")
         self.assertEqual(f["cross_check"]["vlm_only"][0]["cls"], "dump_truck")
         self.assertEqual(f["detections"][0]["verdict"], "confirmed")
         self.assertNotIn("context", j)
@@ -651,17 +542,17 @@ class AIReviewApiTest(unittest.TestCase):
         sid = self._tz_deviation()["evidence"][1]["snapshot_id"]
         first = self.c.post(f"/api/snapshots/{sid}/ai-review").json()
         self.assertEqual(first["status"], "done", first.get("error"))
-        calls = (FakeVLM.calls, FakeOpenVocab.calls, FakeReadiness.calls)
+        calls = (FakeVLM.calls, FakeReadiness.calls)
         n_llm = len(self.requests)
         again = self.c.post(f"/api/snapshots/{sid}/ai-review").json()
         self.assertEqual(again["status"], "done", again.get("error"))
-        self.assertEqual((FakeVLM.calls, FakeOpenVocab.calls, FakeReadiness.calls), calls)
+        self.assertEqual((FakeVLM.calls, FakeReadiness.calls), calls)
         self.assertEqual(len(self.requests), n_llm + 1)
         L_ = again["final"]["layers"]
-        self.assertTrue({"vlm", "open_vocab", "readiness"} <= set(L_["cached"]))
+        self.assertTrue({"vlm", "readiness"} <= set(L_["cached"]))
         self.assertIn("llm", L_["timings"])
         self.assertEqual(L_["vlm_reason"], "тест")           # почему выбрана эта VLM — в карточке
-        self.assertEqual(again["final"]["open_vocab"]["counts"], first["final"]["open_vocab"]["counts"])
+        self.assertEqual(again["final"]["equipment"], first["final"]["equipment"])
 
     def test_background_pipeline(self):
         """Без SYNC: модели — в рабочем потоке, LLM — в своём пуле; интерфейс опрашивает статус до «готово»."""
@@ -685,7 +576,6 @@ class AIReviewApiTest(unittest.TestCase):
         L.set_llm(L.LLMClient("off"))
         V.set_vlm(V.LocalVLM("off"))
         R.set_readiness(R.ReadinessModel("off"))
-        O.set_openvocab(O.OpenVocab("off"))
         try:
             self.assertEqual(self.c.post("/api/snapshots/1/ai-review").status_code, 409)
             self.assertEqual(self.c.post("/api/projects/1/ai-summary", params={"day": DAY}).status_code, 409)

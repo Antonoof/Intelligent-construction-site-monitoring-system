@@ -51,7 +51,7 @@ function plural(n, one, few, many) { const a = Math.abs(n) % 100, b = a % 10; re
 
 // ------------------------------------------------------------------ кадр с разметкой (SVG поверх снимка)
 function frameHTML(snap, { boxes = [], zones = [], highlight = null, thumb = false, onlyZone = null, labels = true,
-  attention = null, aiBoxes = [], objBoxes = [] } = {}) {
+  attention = null, aiBoxes = [] } = {}) {
   const W = snap.width, H = snap.height, fs = Math.round(W / 70);
   let svg = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
   if (attention) {             // карта внимания модели готовности: сетка 9×16, ярче — важнее для вывода
@@ -79,12 +79,6 @@ function frameHTML(snap, { boxes = [], zones = [], highlight = null, thumb = fal
       svg += `<rect x="${x1}" y="${Math.max(0, y1 - fs - 8)}" width="${tw}" height="${fs + 7}" fill="${esc(b.color)}" rx="3"/>`
         + `<text x="${x1 + 5}" y="${Math.max(fs, y1 - 6)}" class="ov-label" style="font-size:${fs}px" fill="#fff">${esc(t)}</text>`;
     }
-  }
-  for (const b of objBoxes) {  // Grounding DINO: опалубка, леса, рабочие… и техника, которой нет у детектора
-    const [x1, y1, x2, y2] = b.xyxy, t = `${b.label} ${b.conf.toFixed(2)}`, tw = t.length * fs * 0.52 + 10;
-    svg += `<rect class="ov-box obj" x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}" rx="2"/>`
-      + `<rect x="${x1}" y="${Math.max(0, y1 - fs - 6)}" width="${tw}" height="${fs + 5}" fill="#0B7F86" rx="2"/>`
-      + `<text x="${x1 + 5}" y="${Math.max(fs - 2, y1 - 5)}" class="ov-label" style="font-size:${fs * 0.92}px" fill="#fff">${esc(t)}</text>`;
   }
   for (const b of aiBoxes) {   // техника, которую нашёл ИИ, а детектор пропустил (ещё не применено)
     const [x1, y1, x2, y2] = b.xyxy, t = `ИИ: ${b.name} ${b.conf.toFixed(2)}`, tw = t.length * fs * 0.56 + 10;
@@ -129,7 +123,7 @@ async function init() {
   });
   api('/api/health').then((hh) => {
     const a = state.ai;
-    const layers = a ? [a.readiness?.enabled && 'модель готовности', a.open_vocab?.enabled && 'Grounding DINO', a.vlm?.enabled && `VLM ${a.vlm.model || '—'}`,
+    const layers = a ? [a.readiness?.enabled && 'модель готовности', a.vlm?.enabled && `VLM ${a.vlm.model || '—'}`,
       a.llm?.provider !== 'off' && `${a.llm.name} ${a.llm.model}`].filter(Boolean) : [];
     $('#status').innerHTML = `<span>Детектор: <b>${esc(hh.detector)}</b> (${hh.detector_classes.length} классов)</span>`
       + `<span>ИИ-анализ: ${layers.length ? esc(layers.join(' · ')) : 'выключен'}</span>`
@@ -307,7 +301,6 @@ async function openSnapshot(id, hl = '', zone = '') {
   let h = `<button class="btn small close" id="dlgClose">Закрыть ✕</button><h2>${esc(d.camera)} · ${esc(d.camera_name)} · ${fDay(d.taken_at)} ${fTime(d.taken_at)}</h2>`;
   h += `<div class="snapview"><div><div class="row" style="margin-bottom:8px"><label><input type="checkbox" id="tgZ" checked> зоны</label><label><input type="checkbox" id="tgB" checked> рамки</label>`
     + `<label id="tgAIl" hidden><input type="checkbox" id="tgAI" checked> находки ИИ</label>`
-    + `<label id="tgOVl" hidden title="Grounding DINO: объекты по текстовым подсказкам"><input type="checkbox" id="tgOV" checked> объекты</label>`
     + (a?.attention ? `<label title="Куда смотрела модель готовности, оценивая стадию"><input type="checkbox" id="tgA"> внимание модели</label>` : '')
     + `<a class="btn small ghost" href="/api/snapshots/${d.id}/image?annotate=1" target="_blank" rel="noopener">разметка JPEG</a><a class="btn small ghost" href="/api/snapshots/${d.id}/image" target="_blank" rel="noopener">оригинал</a></div>`
     + `<div id="bigFrame"></div>`;
@@ -334,10 +327,9 @@ async function openSnapshot(id, hl = '', zone = '') {
   const view = { aiBoxes: [] };
   const redraw = () => {
     $('#bigFrame').innerHTML = frameHTML(d, { boxes: $('#tgB').checked ? d.boxes : [], zones: $('#tgZ').checked ? d.zones : [], highlight,
-      attention: $('#tgA')?.checked ? a.attention : null, aiBoxes: $('#tgAI').checked ? view.aiBoxes : [],
-      objBoxes: $('#tgOV').checked ? view.objBoxes || [] : [] });
+      attention: $('#tgA')?.checked ? a.attention : null, aiBoxes: $('#tgAI').checked ? view.aiBoxes : [] });
   };
-  ['#tgZ', '#tgB', '#tgA', '#tgAI', '#tgOV'].forEach((s) => { if ($(s)) $(s).onchange = redraw; });
+  ['#tgZ', '#tgB', '#tgA', '#tgAI'].forEach((s) => { if ($(s)) $(s).onchange = redraw; });
   redraw();
   $('#fzSel').onchange = async () => {
     try {
@@ -366,19 +358,11 @@ const VERDICT = { confirmed: ['ok', '✓ подтверждена'], false_posit
 const DVERDICT = { confirmed: ['bad', 'подтверждено'], doubtful: ['warn', 'сомнительно'], rejected: ['ok', 'не подтверждено'], not_checked: ['muted', 'не проверялось'] };
 const vchip = ([cls, text]) => `<span class="vchip ${cls}">${esc(text)}</span>`;
 
-// рамки Grounding DINO для кадра: прочие объекты и техника, которой нет у детектора
-function ovBoxes(ov) {
-  if (!ov) return [];
-  return [...(ov.objects || []).map((o) => ({ xyxy: o.xyxy, label: o.label, conf: o.conf })),
-    ...(ov.only_open_vocab || []).map((o) => ({ xyxy: o.xyxy, label: `GDINO: ${clsName(o.cls)}`, conf: o.conf }))];
-}
-
 function aiLayersHint() {
   const a = state.ai;
   if (!a) return '';
   const l = [];
   l.push(a.readiness?.enabled ? 'модель готовности (DINOv2 + голова)' : null);
-  l.push(a.open_vocab?.enabled ? 'Grounding DINO (опалубка, леса, рабочие, техника по подсказкам)' : null);
   l.push(a.vlm?.enabled ? `локальная VLM ${a.vlm.model || '(не помещается в память)'}` : null);
   l.push(a.llm?.provider !== 'off' ? `${a.llm.name} ${a.llm.model}${a.llm.vision ? '' : ' (текст: судит по VLM и рамкам)'}` : null);
   return l.filter(Boolean).join(' → ');
@@ -403,7 +387,6 @@ function renderAI(d, r, view, redraw) {
   const box = $('#aiBody');
   const start = (label) => `<button class="btn small primary" id="aiRun">${label}</button>`;
   view.aiBoxes = [];
-  view.objBoxes = [];
   if (!r) {
     box.innerHTML = `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM исправляет ошибки детектора и правил, прогнозирует и даёт рекомендации.</p>${start('Запустить анализ ИИ')}`;
   } else if (r.status === 'queued' || r.status === 'running') {
@@ -414,10 +397,8 @@ function renderAI(d, r, view, redraw) {
     box.innerHTML = aiResultHTML(d, r) + `<div class="row" style="margin-top:8px">${start('Повторить анализ')}</div>`;
     const f = r.final;
     view.aiBoxes = r.applied && !r.applied.reverted ? [] : (f.missed || []);
-    view.objBoxes = ovBoxes(f.open_vocab);
   }
   $('#tgAIl').hidden = !view.aiBoxes.length;
-  $('#tgOVl').hidden = !view.objBoxes.length;
   redraw();
   const run = $('#aiRun');
   if (run) run.onclick = async () => {
@@ -433,12 +414,12 @@ function renderAI(d, r, view, redraw) {
 
 function aiResultHTML(d, r, { quick = false } = {}) {
   const f = r.final, L = f.layers || {};
-  const src = [L.readiness_model && 'модель готовности', L.open_vocab_model && 'Grounding DINO', L.vlm_model && `VLM ${L.vlm_model.split('/').pop()}`,
+  const src = [L.readiness_model && 'модель готовности', L.vlm_model && `VLM ${L.vlm_model.split('/').pop()}`,
     L.llm_model && `${L.llm_name || L.llm_provider} ${L.llm_model}`].filter(Boolean);
   let h = `<div class="ai-head">${src.map((x) => `<span class="chip plain s-info">${esc(x)}</span>`).join('')}`
     + `${f.confidence != null ? `<span class="hint">уверенность ${Math.round(f.confidence * 100)}%</span>` : ''}`
     + `<span class="hint">${(r.duration_ms / 1000).toFixed(1)} с${r.llm?.tokens_in ? ` · токенов ${r.llm.tokens_in}+${r.llm.tokens_out}` : ''}</span></div>`;
-  const TL = { readiness: 'модель готовности', open_vocab: 'Grounding DINO', vlm: 'VLM', llm: L.llm_name || 'LLM' };
+  const TL = { readiness: 'модель готовности', vlm: 'VLM', llm: L.llm_name || 'LLM' };
   const hit = new Set(L.cached || []);
   const tline = Object.entries(L.timings || {}).map(([k, v]) => `${TL[k] || k} ${hit.has(k) ? 'из кеша' : `${v} с`}`).join(' · ');
   if (tline) h += `<div class="hint">время слоёв: ${esc(tline)}</div>`;
@@ -447,9 +428,8 @@ function aiResultHTML(d, r, { quick = false } = {}) {
   if (r.error) h += `<p class="hint">Не все слои отработали: ${esc(r.error)}</p>`;
   // техника: детектор / VLM / LLM
   if (f.equipment?.length) {
-    const gd = f.equipment.some((e) => e.open_vocab != null);
-    h += `<table class="eqtab"><thead><tr><th>Техника</th><th>Детектор</th>${gd ? '<th title="Grounding DINO по текстовым подсказкам">GDINO</th>' : ''}<th>VLM</th><th>ИИ-итог</th></tr></thead><tbody>`
-      + f.equipment.map((e) => `<tr class="${e.agree ? '' : 'dis'}"><td>${eqChip(e.cls)}</td><td>${e.detector}</td>${gd ? `<td>${e.open_vocab ?? '—'}</td>` : ''}<td>${e.vlm ?? '—'}</td><td><b>${e.final}</b>${e.agree ? '' : ' <span class="vchip warn">расхождение</span>'}</td></tr>`).join('')
+    h += `<table class="eqtab"><thead><tr><th>Техника</th><th>Детектор</th><th>VLM</th><th>ИИ-итог</th></tr></thead><tbody>`
+      + f.equipment.map((e) => `<tr class="${e.agree ? '' : 'dis'}"><td>${eqChip(e.cls)}</td><td>${e.detector}</td><td>${e.vlm ?? '—'}</td><td><b>${e.final}</b>${e.agree ? '' : ' <span class="vchip warn">расхождение</span>'}</td></tr>`).join('')
       + `</tbody></table>`;
   }
   // стадия по всем слоям
@@ -461,16 +441,6 @@ function aiResultHTML(d, r, { quick = false } = {}) {
     h += `<div class="ai-row"><span class="lbl">стадия:</span> ${esc(parts.join(' · '))}${st.final ? ` → <b>${esc(STAGES[st.final] || st.final)}</b>` : ''}`
       + `${st.final ? (st.agree ? ' <span class="vchip ok">слои согласны</span>' : ' <span class="vchip warn">слои расходятся</span>') : ''}`
       + `${st.matches_plan === false ? ' <span class="vchip bad">не совпадает с графиком</span>' : ''}${st.comment ? `<div class="hint">${esc(st.comment)}</div>` : ''}</div>`;
-  }
-  const ov = f.open_vocab;
-  if (ov) {
-    const objs = Object.entries(ov.counts || {});
-    const only = (ov.only_open_vocab || []).reduce((a, o) => ({ ...a, [o.cls]: (a[o.cls] || 0) + 1 }), {});
-    h += `<div class="ai-row"><span class="lbl">Grounding DINO:</span> ${objs.length ? objs.map(([k, n]) => `<span class="vchip obj">${esc(k)} ×${n}</span>`).join(' ') : '<span class="hint">прочих объектов нет</span>'}`
-      + `<div class="hint">техника: подтвердил рамок детектора ${ov.detector_confirmed.length}`
-      + `${Object.keys(only).length ? ` · только у Grounding DINO: ${Object.entries(only).map(([c, n]) => `${esc(clsName(c))} ×${n}`).join(', ')}` : ''}`
-      + `${ov.class_conflict?.length ? ` · спорный класс: ${ov.class_conflict.map((c) => `#${c.detection_id} ${esc(clsName(c.detector_cls))} → ${esc(clsName(c.open_vocab_cls))}`).join(', ')}` : ''}`
-      + ` · ${ov.seconds ?? '—'} с</div></div>`;
   }
   const cc = f.cross_check;
   if (cc) {
@@ -753,7 +723,7 @@ async function vAnalyze(main) {
       const r = await api('/api/analyze', { method: 'POST', body: fd });
       const url = URL.createObjectURL(file);
       const snap = { id: 0, camera: 'снимок', taken_at: r.taken_at, width: r.width, height: r.height, image: url, quality_ok: r.quality.ok };
-      let h = `<div class="card"><div class="row" id="qTg" style="margin-bottom:6px" hidden><label id="qTgAIl" hidden><input type="checkbox" id="qTgAI" checked> находки ИИ</label><label id="qTgOVl" hidden><input type="checkbox" id="qTgOV" checked> объекты</label><label id="qTgAl" hidden><input type="checkbox" id="qTgA"> внимание модели</label></div>`
+      let h = `<div class="card"><div class="row" id="qTg" style="margin-bottom:6px" hidden><label id="qTgAIl" hidden><input type="checkbox" id="qTgAI" checked> находки ИИ</label><label id="qTgAl" hidden><input type="checkbox" id="qTgA"> внимание модели</label></div>`
         + `<div id="qFrame">${frameHTML(snap, { boxes: r.boxes })}</div><div class="hint" style="margin-top:6px">детектор ${esc(r.detector)} · ${r.timing_ms.total} мс${r.detector_note ? ` · ${esc(r.detector_note)}` : ''}</div>`;
       h += `<section class="ai" id="qAi" style="margin-top:10px"><h3>Анализ ИИ</h3><div id="qAiBody">${state.ai?.enabled
         ? `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM проверяет рамки детектора и предупреждения, находит пропущенную технику и даёт рекомендации. На CPU — 1–2 минуты.</p><button class="btn small primary" id="qAiRun">Запустить анализ ИИ</button>`
@@ -772,12 +742,12 @@ async function vAnalyze(main) {
 }
 
 // ИИ-анализ снимка из «Проверить снимок»: тот же конвейер, результат хранится в памяти сервиса
-function bindQuickAI(snap, r, formData, view = { aiBoxes: [], attention: null, objBoxes: [] }) {
+function bindQuickAI(snap, r, formData, view = { aiBoxes: [], attention: null }) {
   const redraw = () => {
     $('#qFrame').innerHTML = frameHTML(snap, { boxes: r.boxes, aiBoxes: $('#qTgAI').checked ? view.aiBoxes : [],
-      attention: $('#qTgA').checked ? view.attention : null, objBoxes: $('#qTgOV').checked ? view.objBoxes || [] : [] });
+      attention: $('#qTgA').checked ? view.attention : null });
   };
-  $('#qTgAI').onchange = redraw; $('#qTgA').onchange = redraw; $('#qTgOV').onchange = redraw;
+  $('#qTgAI').onchange = redraw; $('#qTgA').onchange = redraw;
   const run = $('#qAiRun');
   if (!run) return;
   run.onclick = async () => {
@@ -810,11 +780,9 @@ async function pollQuickAI(jid, view, redraw, formData, snap, r) {
   box.innerHTML = h + `<div class="row" style="margin-top:8px"><button class="btn small primary" id="qAiRun">Повторить анализ</button></div>`;
   view.aiBoxes = f?.missed || [];
   view.attention = f?.assessment?.attention || null;
-  view.objBoxes = ovBoxes(f?.open_vocab);
   $('#qTgAIl').hidden = !view.aiBoxes.length;
   $('#qTgAl').hidden = !view.attention;
-  $('#qTgOVl').hidden = !view.objBoxes.length;
-  $('#qTg').hidden = !view.aiBoxes.length && !view.attention && !view.objBoxes.length;
+  $('#qTg').hidden = !view.aiBoxes.length && !view.attention;
   redraw();
   bindQuickAI(snap, r, formData, view);
 }

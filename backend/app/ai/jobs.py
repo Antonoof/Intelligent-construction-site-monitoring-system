@@ -5,13 +5,12 @@
     1. модель готовности (DINOv2 + голова): стадия, готовность, план по графику → snapshots.assessment,
        пересчёт отклонений дня (STAGE_MISMATCH);
     2. сбор выводов детектора, модели готовности и правил (context.snapshot_context);
-    3. Grounding DINO: прочие объекты по подсказкам (опалубка, леса, рабочие…) и проверка техники RF-DETR;
-    4. локальная VLM описывает кадр и отмечает технику рамками; сверка рамок VLM и детектора (cross_check);
-    5. LLM (YandexGPT / Claude / ChatGPT) проверяет все слои и исправляет ошибки моделей;
-    6. сведение (fusion.fuse_snapshot) и, при OKO_AI_APPLY=auto, применение исправлений.
+    3. локальная VLM описывает кадр и отмечает технику рамками; сверка рамок VLM и детектора (cross_check);
+    4. LLM (YandexGPT / Claude / ChatGPT) проверяет все слои и исправляет ошибки моделей;
+    5. сведение (fusion.fuse_snapshot) и, при OKO_AI_APPLY=auto, применение исправлений.
 
 Скорость без потери качества:
-  • шаги 1–4 (модели на CPU) идут в одном рабочем потоке, шаги 5–6 (сеть) — в отдельном пуле: пока LLM отвечает по
+  • шаги 1–3 (модели на CPU) идут в одном рабочем потоке, шаги 4–5 (сеть) — в отдельном пуле: пока LLM отвечает по
     одному кадру, модели уже считают следующий;
   • выводы детерминированных слоёв кешируются по содержимому кадра (cache.py): повторный анализ того же кадра и
     анализ кадра общего плана, оценённого в фоне при загрузке, заново вызывают только LLM;
@@ -34,7 +33,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models as M
-from .. import services as S
 from ..config import settings
 from ..db import SessionLocal
 from ..imaging import load_image
@@ -43,7 +41,6 @@ from . import cache
 from . import context as C
 from .fusion import apply_corrections, clean_day_output, cross_check, fuse_snapshot
 from .llm import DAY_SCHEMA, LLMError, get_llm, snapshot_schema
-from .openvocab import get_openvocab, summarize
 from .readiness import assess_snapshot, assess_snapshot_ex, cached_predict, get_readiness
 from .vlm import get_vlm
 
@@ -70,10 +67,10 @@ def not_json(llm, res) -> str:
 
 
 def status() -> dict:
-    rd, vlm, llm, ov = get_readiness(), get_vlm(), get_llm(), get_openvocab()
-    return {"readiness": rd.plan(), "open_vocab": ov.plan(), "vlm": vlm.plan(), "llm": llm.info(),
+    rd, vlm, llm = get_readiness(), get_vlm(), get_llm()
+    return {"readiness": rd.plan(), "vlm": vlm.plan(), "llm": llm.info(),
             "auto": settings.ai_auto, "apply": settings.ai_apply, "min_conf": settings.ai_apply_min_conf,
-            "enabled": rd.enabled or ov.enabled or vlm.enabled or llm.enabled}
+            "enabled": rd.enabled or vlm.enabled or llm.enabled}
 
 
 def _submit(fn, *args) -> None:
@@ -99,9 +96,8 @@ def _safe(fn, *args) -> None:
 
 def warmup() -> None:
     """Загрузить модели ИИ-слоя в память после старта: первый анализ не ждёт загрузки весов.
-    Порядок важен: VLM выбирается под память, оставшуюся после модели готовности и Grounding DINO."""
-    for name, obj in (("модель готовности", get_readiness()), ("Grounding DINO", get_openvocab()),
-                      ("VLM", get_vlm())):
+    Порядок важен: VLM выбирается под память, оставшуюся после модели готовности."""
+    for name, obj in (("модель готовности", get_readiness()), ("VLM", get_vlm())):
         if getattr(obj, "enabled", False) and hasattr(obj, "warm"):
             t0 = time.perf_counter()
             try:
@@ -114,7 +110,7 @@ def warmup() -> None:
 def submit_warmup() -> bool:
     if not settings.ai_warmup:
         return False
-    if not any(getattr(o, "enabled", False) for o in (get_readiness(), get_openvocab(), get_vlm())):
+    if not any(getattr(o, "enabled", False) for o in (get_readiness(), get_vlm())):
         return False
     _executor.submit(_safe, warmup)
     return True
@@ -188,33 +184,6 @@ def _timed(layers: dict, name: str, t0: float, hit: bool = False) -> None:
         layers.setdefault("cached", []).append(name)
 
 
-def _open_vocab(ctx: dict, img_fn, sha: str, step, errors: list, layers: dict, zone_of=None) -> dict | None:
-    """Слой Grounding DINO: прочие объекты и техника по подсказкам → ctx["open_vocab"] (без пиксельных рамок).
-    Возвращает полный итог слоя (с рамками в пикселях — для интерфейса) или None."""
-    ov = get_openvocab()
-    if not ov.enabled or not ctx["quality"]["ok"]:
-        return None
-    step(f"Grounding DINO ({ov.model_name.split('/')[-1]}): опалубка, леса, рабочие и техника по подсказкам")
-    t0 = time.perf_counter()
-    try:
-        W, H = ctx["image"]["width"], ctx["image"]["height"]
-        eq_px = [[d["box"][0] * W, d["box"][1] * H, d["box"][2] * W, d["box"][3] * H] for d in ctx["detections"]]
-        if hasattr(ov, "cache_key"):
-            raw, hit = cache.cached("open_vocab", ov.cache_key(sha, eq_px), lambda: ov.detect(img_fn(), eq_px))
-        else:
-            raw, hit = ov.detect(img_fn(), eq_px), False
-        full = summarize(raw, ctx["detections"], zone_of)
-    except Exception as e:                   # нет памяти или весов — анализ продолжается без слоя
-        log.warning("Grounding DINO: %s", e)
-        errors.append(f"Grounding DINO: {e}")
-        return None
-    _timed(layers, "open_vocab", t0, hit)
-    strip = lambda items: [{k: v for k, v in x.items() if k != "xyxy"} for x in items]  # noqa: E731
-    ctx["open_vocab"] = {**full, "objects": strip(full["objects"]), "only_open_vocab": strip(full["only_open_vocab"])}
-    layers["open_vocab_model"] = full["model"]
-    return full
-
-
 def _vlm(ctx: dict, img_fn, sha: str, step, errors: list, layers: dict, hint: str = "") -> tuple[str, dict | None]:
     """Слой VLM и сверка её рамок с детектором. Дополняет ctx (vlm, cross_check); возвращает (модель, ответ)."""
     vlm = get_vlm()
@@ -275,7 +244,7 @@ def _layers_meta(layers: dict, vlm_model: str, llm_res) -> dict:
 
 def _ok(llm_out, vlm_out, layers) -> bool:
     return (bool(llm_out) and "raw" not in llm_out) or (vlm_out is not None and "error" not in vlm_out) \
-        or bool(layers.get("readiness_model")) or bool(layers.get("open_vocab_model"))
+        or bool(layers.get("readiness_model"))
 
 
 def _fail(rid: int, s: Session, t0: float, e: Exception) -> None:
@@ -287,7 +256,7 @@ def _fail(rid: int, s: Session, t0: float, e: Exception) -> None:
 
 
 def run_snapshot(rid: int) -> None:
-    """Шаги 1–4 на CPU; шаги 5–6 уходят в пул LLM (finish_snapshot), модели берутся за следующий кадр."""
+    """Шаги 1–3 на CPU; шаги 4–5 уходят в пул LLM (finish_snapshot), модели берутся за следующий кадр."""
     t0 = time.perf_counter()
     s = SessionLocal()
     r = s.get(M.AIReview, rid)
@@ -319,12 +288,6 @@ def run_snapshot(rid: int) -> None:
             if "img" not in loaded:
                 loaded["img"] = load_image(Path(snap.file_path).read_bytes())
             return loaded["img"]
-        p = s.get(M.Project, snap.project_id)
-        zkeys = {z.id: z.key for z in p.zones}
-        assign = S.zone_assigner(s.get(M.Camera, snap.camera_id), zkeys, snap.frame_zone, snap.width, snap.height,
-                                 get_methodology())
-        ov_full = _open_vocab(ctx, img_fn, snap.sha256, step, errors, layers,
-                              zone_of=lambda xyxy: zkeys.get(assign("", xyxy)))
         hint = f"камера {ctx['camera']['name']}, зоны: {', '.join(z['name'] for z in ctx['zones']) or 'вся площадка'}"
         vlm_model, vlm_out = _vlm(ctx, img_fn, snap.sha256, step, errors, layers, hint)
         r.vlm_model, r.vlm_output = vlm_model, vlm_out
@@ -334,7 +297,7 @@ def run_snapshot(rid: int) -> None:
             step(f"{llm.name} ({llm.model}) сверяет все слои")
         else:
             s.commit()
-        payload = {"ctx": ctx, "images": images, "vlm_model": vlm_model, "vlm_out": vlm_out, "ov_full": ov_full,
+        payload = {"ctx": ctx, "images": images, "vlm_model": vlm_model, "vlm_out": vlm_out,
                    "errors": errors, "layers": layers, "t0": t0}
     except Exception as e:
         _fail(rid, s, t0, e)
@@ -345,7 +308,7 @@ def run_snapshot(rid: int) -> None:
 
 
 def finish_snapshot(rid: int, payload: dict) -> None:
-    """Шаги 5–6: LLM сверяет слои, сведение, сохранение, при OKO_AI_APPLY=auto — применение исправлений."""
+    """Шаги 4–5: LLM сверяет слои, сведение, сохранение, при OKO_AI_APPLY=auto — применение исправлений."""
     t0 = payload["t0"]
     s = SessionLocal()
     try:
@@ -363,8 +326,7 @@ def finish_snapshot(rid: int, payload: dict) -> None:
             r.llm_provider, r.llm_model = llm.provider, llm.model
         r.context = ctx
         layers = _layers_meta(layers, payload["vlm_model"], llm_res)
-        r.final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers,
-                                open_vocab=payload["ov_full"])
+        r.final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
         ok = _ok(llm_out, vlm_out, layers)
         r.status, r.step, r.error = ("done" if ok else "error"), "", "; ".join(errors)[:2000]
         r.duration_ms = round((time.perf_counter() - t0) * 1000)
@@ -499,12 +461,11 @@ def run_quick(jid: str) -> None:
         boxes = [{"id": b["id"], "label": f"#{b['id']} {b['label']}", "conf": b["conf"], "color": b.get("color") or "#E1A21C",
                   "x1": b["xyxy"][0], "y1": b["xyxy"][1], "x2": b["xyxy"][2], "y2": b["xyxy"][3],
                   "dashed": not b["strong"]} for b in res["boxes"]]
-        ov_full = _open_vocab(ctx, lambda: img, sha, step, errors, layers, zone_of=lambda xyxy: "кадр")
         vlm_model, vlm_out = _vlm(ctx, lambda: img, sha, step, errors, layers, "быстрая проверка снимка стройплощадки")
         images = C.frame_images(img, boxes) if llm.enabled and llm.vision else []
         if llm.enabled:
             step(f"{llm.name} ({llm.model}) сверяет все слои")
-        payload = {"ctx": ctx, "images": images, "vlm_model": vlm_model, "vlm_out": vlm_out, "ov_full": ov_full,
+        payload = {"ctx": ctx, "images": images, "vlm_model": vlm_model, "vlm_out": vlm_out,
                    "errors": errors, "layers": layers, "t0": t0, "assessment": assessment}
     except Exception as e:
         _qset(jid, status="error", step="", error=str(e)[:2000], duration_ms=round((time.perf_counter() - t0) * 1000))
@@ -519,8 +480,7 @@ def finish_quick(jid: str, payload: dict) -> None:
         llm_res = _ask_llm(ctx, payload["images"], errors, layers)
         llm_out = llm_res.output if llm_res else None
         layers = _layers_meta(layers, payload["vlm_model"], llm_res)
-        final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers,
-                              open_vocab=payload["ov_full"])
+        final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
         final["assessment"] = payload["assessment"]
         ok = _ok(llm_out, vlm_out, layers)
         _qset(jid, status="done" if ok else "error", step="", final=final, error="; ".join(errors)[:2000],

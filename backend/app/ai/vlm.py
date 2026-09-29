@@ -87,21 +87,13 @@ def _ram_total_gb() -> float:
 
 def ram_budget_gb(reserve_gb: float) -> tuple[float, str]:
     """Память под VLM на CPU по бюджету, а не только по MemAvailable: веса safetensors читаются через mmap и
-    числятся «доступными» (страничный кеш), хотя заняты. Бюджет = вся память − детектор − Grounding DINO − модель готовности − запас."""
+    числятся «доступными» (страничный кеш), хотя заняты. Бюджет = вся память − детектор − модель готовности − запас."""
     parts, budget = [], _ram_total_gb() - reserve_gb
     try:
         from ..detection import get_detector
         if get_detector().name.startswith("rfdetr"):
             budget -= 1.0
             parts.append("RF-DETR 1.0")
-    except Exception:
-        pass
-    try:
-        from .openvocab import get_openvocab
-        gd = get_openvocab().footprint_gb()
-        if gd:
-            budget -= gd
-            parts.append(f"Grounding DINO {gd:.1f}")
     except Exception:
         pass
     try:

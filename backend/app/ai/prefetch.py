@@ -1,6 +1,6 @@
 """Заранее скачать веса моделей ИИ-слоя в кеш Hugging Face (HF_HOME), чтобы первый анализ не ждал загрузки.
 
-    python -m app.ai.prefetch          # DINOv2 (модель готовности), Grounding DINO и VLM, которую выберет OKO_VLM=auto
+    python -m app.ai.prefetch          # DINOv2 (модель готовности) и VLM, которую выберет OKO_VLM=auto
 
 deploy/yandex-cloud/deploy.sh запускает это в фоне после старта контейнера: DINOv2 ViT-g ≈ 4.5 ГБ,
 Qwen3-VL-2B ≈ 4.5 ГБ — на канале ВМ это несколько минут.
@@ -11,7 +11,6 @@ import logging
 
 from huggingface_hub import snapshot_download
 
-from .openvocab import get_openvocab
 from .readiness import get_readiness
 from .vlm import get_vlm
 
@@ -27,9 +26,6 @@ def main() -> None:
         import torch
         ck = torch.load(rd.run / "head.pt", map_location="cpu", weights_only=True)
         names.append(ck["backbone"])
-    ov = get_openvocab()
-    if ov.enabled:
-        names.append(ov.model_name)
     vlm = get_vlm()
     plan = vlm.plan()
     if plan.get("model"):

@@ -49,11 +49,6 @@ SNAPSHOT_REST = """
 6. forecast — чем ситуация грозит этапам зон (сроки этапов — в schedule[].tasks[].period).
 7. recommendations — 1–5 конкретных действий для инженера строительного контроля.
 
-open_vocab — Grounding DINO, поиск по текстовым подсказкам: objects — прочие объекты (рабочие, леса, опалубка,
-строящееся здание, котлован, ограждение) с зоной; это признаки работ там, где техники мало (монолит, фасад,
-отделка) — учитывай их в вердиктах по отклонениям «работы не ведутся» / «нет техники» и в стадии. only_open_vocab —
-техника, которую нашёл только Grounding DINO: в missed бери её, если подтверждают другие слои (VLM, изображение);
-class_conflict — рамка детектора, которую Grounding DINO считает другим классом.
 VLM — более слабая локальная модель, она может ошибаться. Детектор распознаёт только классы
 detector.classes: если на кадре нет техники других классов, это не отклонение."""
 
@@ -65,7 +60,7 @@ def snapshot_instructions(vision: bool) -> str:
 DAY_INSTRUCTIONS = """Сделай итоговый анализ стройплощадки за день по данным всех слоёв:
 board — зоны: идущие этапы графика, требуемая техника и итог проверки, увиденная за день техника;
 deviations — отклонения правил (review_status — вердикт инженера); ai_snapshots — итоги ИИ-анализа отдельных
-снимков (исправления детектора, новые находки, objects — прочие объекты Grounding DINO: опалубка, леса, рабочие);
+снимков (исправления детектора, новые находки);
 stage — стадия и готовность по модели готовности (с планом
 по графику) и стадии идущих этапов графика; history — снимки и отклонения по дням; upcoming и finishing —
 ближайшие этапы.{images}
@@ -208,7 +203,6 @@ def day_context(s: Session, p: M.Project, day: dt.date) -> dict:
                          "stage": (f.get("stage") or {}).get("final"),
                          "corrections": [c["text"] for c in f.get("corrections", [])],
                          "applied": bool(r.applied and not r.applied.get("reverted")),
-                         "objects": ((f.get("open_vocab") or {}).get("counts") or {}),
                          "new_findings": [n.get("title") for n in f.get("new_findings", [])]})
     # стадию площадки дают кадры общего плана: на них обучена модель готовности
     assessed = [{"camera": cams[sn.camera_id].key, "time": f"{sn.taken_at:%H:%M}", **assessment_brief(sn.assessment)}
