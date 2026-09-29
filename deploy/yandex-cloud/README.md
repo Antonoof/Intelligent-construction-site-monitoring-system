@@ -12,6 +12,7 @@ YandexGPT в Yandex AI Studio, которая сверяет все слои, и
 | `service-account.sh` | общая функция: аккаунт `oko-ai` с ролью `ai.languageModels.user` в каталоге |
 | `cloud-init.yaml` | пользователь `oko` с вашим SSH-ключом, Docker, зеркало Docker Hub, swap 4 ГБ |
 | `deploy.sh` | копирует код и веса (без данных обучения: `training/data`, `training/runs`, видео, датасеты), собирает образ, запускает, в фоне скачивает DINOv2 и VLM; повторный запуск — обновление |
+| `reset-data.sh` | стенд «с нуля»: удаляет всё внесённое (база, снимки, кеш ИИ-анализа), при старте создаётся демо-проект; веса моделей остаются |
 | `docker-compose.yml` | PostgreSQL + сервис из `backend/Dockerfile.ai` (PyTorch CPU, rfdetr, transformers), порт 80 |
 | `.env.example` | веса детектора, YandexGPT (каталог, модель), модель готовности, VLM, автоанализ |
 
@@ -93,7 +94,7 @@ deploy/yandex-cloud/deploy.sh <публичный IP>
 | Логи сервиса | `sudo docker compose -f deploy/yandex-cloud/docker-compose.yml logs -f app` |
 | Загрузка весов ИИ-слоя | `sudo docker compose -f deploy/yandex-cloud/docker-compose.yml exec app tail /data/prefetch.log` |
 | Перезапуск | `sudo docker compose -f deploy/yandex-cloud/docker-compose.yml restart app` |
-| Сбросить данные к демо | `sudo docker compose -f deploy/yandex-cloud/docker-compose.yml down -v`, затем `deploy.sh` |
+| Сбросить данные к демо | `deploy/yandex-cloud/reset-data.sh <IP>` с ноутбука: удаляет проекты, снимки, вердикты и ИИ-анализы, веса моделей не трогает |
 | Обновить код или веса | `deploy.sh <IP>` с ноутбука |
 | Остановить ВМ после показа | `yc compute instance stop <имя ВМ>` (статический IP сохраняется) |
 
