@@ -696,6 +696,7 @@ async function vAnalyze(main) {
     <datalist id="wtList">${leaf.map((w) => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('')}</datalist>
     <label class="sel" style="margin:8px 0"><span>Техника по графику (необязательно)</span><input id="aPlan" placeholder="Экскаватор ×1; Самосвал ×3" style="max-width:none"></label>
     <label class="row" style="margin:8px 0"><input type="checkbox" id="aTiles"> общий план с высоты: детекция по фрагментам 3×3</label>
+    ${state.ai?.enabled ? '<label class="row" style="margin:8px 0" title="Модели и LLM проверяют снимок сразу после детекции"><input type="checkbox" id="aAI" checked> сразу запустить анализ ИИ</label>' : ''}
     <button class="btn primary" id="aGo">Проверить</button>
     <p class="hint" style="margin-top:12px">Демо-детектор знает только снимки из data/demo. Для своих фото подключите веса RF-DETR из ML-части: <span class="mono">OKO_DETECTOR=rfdetr</span>.</p></section>
     <section id="aOut"><div class="card empty">Здесь появятся снимок с рамками техники, проверки методики для выбранного вида работ и предупреждения.<br><br>Пример: снимок <span class="mono">data/demo/housing/snapshots/CAM-01_2026-09-24_10-30.jpg</span> и вид работ <span class="mono">12.3.1</span> — пример из ТЗ.</div></section></div>`;
@@ -737,6 +738,10 @@ async function vAnalyze(main) {
         q.append('tiles', $('#aTiles').checked ? '3' : '0');
         return q;
       });
+      if ($('#aAI')?.checked && $('#qAiRun')) {
+        if (r.quality.ok) $('#qAiRun').click();
+        else $('#qAiBody').insertAdjacentHTML('afterbegin', '<p class="hint">Снимок не прошёл контроль качества — анализ ИИ не запущен автоматически, его можно запустить вручную.</p>');
+      }
     } catch (e) { $('#aOut').innerHTML = `<div class="card">Ошибка: ${esc(e.message)}</div>`; }
   };
 }
