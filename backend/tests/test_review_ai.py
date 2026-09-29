@@ -156,6 +156,37 @@ class LLMClientTest(unittest.TestCase):
         self.assertEqual(res.output["summary"], "ок")
         self.assertEqual(seen, [("Bearer t1.iam", "json_schema"), ("Bearer t1.iam", "json_object")])
 
+    def test_reasoning_model_truncated_then_retried(self):
+        """Qwen3 в AI Studio рассуждает: ответ обрезан на лимите → один повтор с вдвое большим лимитом."""
+        seen = []
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            body = json.loads(req.content)
+            seen.append(body)
+            if len(seen) == 1:
+                return httpx.Response(200, json={"model": "gpt://qwen3.6-35b-a3b/latest",
+                                                 "usage": {"prompt_tokens": 5147, "completion_tokens": 4096},
+                                                 "choices": [{"finish_reason": "length", "message": {
+                                                     "content": "<think>Посмотрим на рамки {id: 1…"}}]})
+            return httpx.Response(200, json={"usage": {"prompt_tokens": 5147, "completion_tokens": 900},
+                                             "choices": [{"finish_reason": "stop", "message": {
+                                                 "content": "<think>кратко</think>\n```json\n{\"summary\": \"ок\"}\n```"}}]})
+
+        c = L.LLMClient("yandex", model="qwen3.6-35b-a3b", api_key="k", folder_id=FOLDER, max_tokens=4096,
+                        transport=httpx.MockTransport(handler))
+        self.assertEqual(c.name, "Yandex AI Studio")
+        res = c.ask("проверь", {}, {"type": "object"}, "snapshot_review")
+        self.assertEqual(res.output, {"summary": "ок"})
+        self.assertEqual([b["max_tokens"] for b in seen], [4096, 8192])
+        self.assertTrue(seen[0]["messages"][1]["content"].endswith("/no_think"))
+        self.assertEqual((res.tokens_in, res.tokens_out, res.model), (10294, 4996, "qwen3.6-35b-a3b"))
+
+    def test_parse_json_variants(self):
+        self.assertEqual(V.parse_json('<think>{черновик}</think>{"a": 1}'), {"a": 1})
+        self.assertEqual(V.parse_json('Итог: {"a": {"b": 2}} — готово'), {"a": {"b": 2}})
+        self.assertEqual(V.parse_json('рассуждение без конца</think>\n{"a": 3}'), {"a": 3})
+        self.assertIn("raw", V.parse_json("<think>ещё думаю {"))
+
     def test_anthropic_forced_tool(self):
         seen = {}
 

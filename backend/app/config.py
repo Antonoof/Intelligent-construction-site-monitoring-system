@@ -87,7 +87,9 @@ class Settings:
     llm_base_url: str = field(default_factory=lambda: os.environ.get("OKO_LLM_BASE_URL", ""))
     # отправлять ли в LLM изображения: auto — если модель их понимает (Claude, GPT, Qwen3.6 в AI Studio)
     llm_images: str = field(default_factory=lambda: os.environ.get("OKO_LLM_IMAGES", "auto"))
-    llm_timeout: float = field(default_factory=lambda: float(os.environ.get("OKO_LLM_TIMEOUT", "180")))
+    llm_timeout: float = field(default_factory=lambda: float(os.environ.get("OKO_LLM_TIMEOUT", "300")))
+    # лимит токенов ответа LLM; если ответ обрезан на лимите, запрос повторяется один раз с вдвое большим
+    llm_max_tokens: int = field(default_factory=lambda: int(os.environ.get("OKO_LLM_MAX_TOKENS", "8000")))
     # автоматический анализ каждого нового снимка (платные вызовы LLM) — по умолчанию только по кнопке
     ai_auto: bool = field(default_factory=lambda: os.environ.get("OKO_AI_AUTO", "0") in ("1", "true", "yes"))
     # минимальная уверенность LLM, чтобы её исправление (ложная рамка, пропущенная техника) можно было применить

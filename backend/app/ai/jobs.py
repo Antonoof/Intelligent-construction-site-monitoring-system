@@ -47,6 +47,18 @@ class AIDisabled(RuntimeError):
     pass
 
 
+def not_json(llm, res) -> str:
+    """Понятная причина, почему ответ LLM не разобрался как JSON."""
+    raw = res.raw or {}
+    if raw.get("finish_reason") == "length":
+        why = f"ответ обрезан на лимите {raw.get('max_tokens')} токенов"
+        if raw.get("reasoning"):
+            why += " (модель рассуждала)"
+        return f"{llm.name} ({llm.model}): {why} — увеличьте OKO_LLM_MAX_TOKENS или выберите модель без рассуждений"
+    head = str(res.output.get("raw", ""))[:200].replace("\n", " ")
+    return f"{llm.name} ({llm.model}) ответила не JSON: «{head}…»"
+
+
 def status() -> dict:
     rd, vlm, llm = get_readiness(), get_vlm(), get_llm()
     return {"readiness": rd.plan(), "vlm": vlm.plan(), "llm": llm.info(), "auto": settings.ai_auto,
@@ -157,7 +169,7 @@ def _vlm_and_llm(ctx: dict, load_img, images_fn, step, errors: list, hint: str =
             llm_res = llm.ask(C.snapshot_instructions(llm.vision), ctx, snapshot_schema(sorted(m.classes)),
                               "snapshot_review", images)
             if "raw" in llm_res.output:
-                errors.append(f"{llm.name} ответила не JSON")
+                errors.append(not_json(llm, llm_res))
         except (LLMError, httpx.HTTPError, ValueError) as e:
             log.warning("LLM: %s", e)
             errors.append(f"{llm.name}: {e}")
@@ -262,7 +274,7 @@ def run_day(rid: int) -> None:
                    "layers": {"llm_provider": res.provider, "llm_model": res.model, "llm_name": llm.name,
                               "snapshots_reviewed": len(ctx["ai_snapshots"]),
                               "readiness_frames": len(ctx["stage"]["readiness_model"])}}
-        r.status, r.step, r.error = ("error" if bad else "done"), "", (f"{llm.name} ответила не JSON" if bad else "")
+        r.status, r.step, r.error = ("error" if bad else "done"), "", (not_json(llm, res) if bad else "")
         r.duration_ms = round((time.perf_counter() - t0) * 1000)
         s.commit()
     except Exception as e:

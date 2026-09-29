@@ -134,7 +134,7 @@ class LLMError(RuntimeError):
 class LLMClient:
     def __init__(self, provider: str, model: str = "", api_key: str = "", base_url: str = "",
                  timeout: float = 180.0, transport: httpx.BaseTransport | None = None, folder_id: str = "",
-                 images: str = "auto"):
+                 images: str = "auto", max_tokens: int = 8000):
         self.provider = (provider or "off").lower()
         self.model = model or DEFAULT_MODELS.get(self.provider, "")
         self.api_key = api_key
@@ -143,6 +143,7 @@ class LLMClient:
         self.transport = transport
         self.folder_id = folder_id
         self.images_mode = (images or "auto").lower()
+        self.max_tokens = max_tokens
         self._iam: tuple[str, float] | None = None     # IAM-токен ВМ и время его истечения
 
     @property
@@ -151,7 +152,16 @@ class LLMClient:
 
     @property
     def name(self) -> str:
+        if self.provider == "yandex":             # в AI Studio не только YandexGPT: Alice AI, Qwen, gpt-oss
+            m = self.model.lower()
+            return "YandexGPT" if "yandexgpt" in m else "Alice AI" if "aliceai" in m else "Yandex AI Studio"
         return PROVIDER_NAMES.get(self.provider, self.provider)
+
+    @property
+    def reasoning(self) -> bool:
+        """Модель по умолчанию рассуждает (Qwen3, gpt-oss): рассуждения съедают лимит токенов ответа."""
+        m = self.model.lower()
+        return any(k in m for k in ("qwen3", "gpt-oss", "deepseek"))
 
     @property
     def vision(self) -> bool:
@@ -256,30 +266,47 @@ class LLMClient:
                 for im in images]
         else:
             content = prompt                      # текстовым моделям — обычная строка
-        base = {"model": self.model_uri, "temperature": 0.2, token_param: 4096,
+        if self.reasoning and isinstance(content, str):
+            content += "\n\n/no_think"          # Qwen3: без рассуждений — сразу JSON (другие модели это игнорируют)
+        elif self.reasoning:
+            content[0]["text"] += "\n\n/no_think"
+        base = {"model": self.model_uri, "temperature": 0.2,
                 "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": content}]}
         if self.provider == "openai" and "api.openai.com" in self.base_url:
             base.pop("temperature")               # новые модели OpenAI принимают только значение по умолчанию
-        r = fmt = None
-        for i, fmt in enumerate(formats):
-            body = dict(base)
-            if fmt == "json_schema":
-                body["response_format"] = {"type": "json_schema", "json_schema": {"name": tool_name, "schema": schema}}
-            elif fmt == "json_object":
-                body["response_format"] = {"type": "json_object"}
-            r = http.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
-            # схему или формат ответа модель может не поддерживать — пробуем формат попроще
-            if r.status_code in (400, 422) and i < len(formats) - 1:
-                continue
-            break
-        if r.status_code >= 400:
-            raise LLMError(f"{self.name} API {r.status_code}: {r.text[:500]}")
-        data = r.json()
-        msg = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
-        u = data.get("usage") or {}
-        return LLMResult(self.provider, data.get("model") or self.model, parse_json(msg),
-                         int(u.get("prompt_tokens") or 0), int(u.get("completion_tokens") or 0),
-                         raw={"id": data.get("id"), "format": fmt})
+        budget, tin, tout = self.max_tokens, 0, 0
+        for attempt in range(2):
+            r = fmt = None
+            for i, fmt in enumerate(formats):
+                body = {**base, token_param: budget}
+                if fmt == "json_schema":
+                    body["response_format"] = {"type": "json_schema", "json_schema": {"name": tool_name, "schema": schema}}
+                elif fmt == "json_object":
+                    body["response_format"] = {"type": "json_object"}
+                r = http.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
+                # схему или формат ответа модель может не поддерживать — пробуем формат попроще
+                if r.status_code in (400, 422) and i < len(formats) - 1:
+                    continue
+                break
+            if r.status_code >= 400:
+                raise LLMError(f"{self.name} API {r.status_code}: {r.text[:500]}")
+            formats = (fmt,)                      # формат, который модель приняла, — и для повтора
+            data = r.json()
+            choice = (data.get("choices") or [{}])[0]
+            msg = choice.get("message") or {}
+            text_out = msg.get("content") or ""
+            u = data.get("usage") or {}
+            tin += int(u.get("prompt_tokens") or 0)
+            tout += int(u.get("completion_tokens") or 0)
+            out = parse_json(text_out)
+            finish = choice.get("finish_reason")
+            # ответ обрезан на лимите (модель долго рассуждала) — один повтор с вдвое большим лимитом
+            if "raw" not in out or finish != "length" or attempt:
+                break
+            budget = min(budget * 2, 32000)
+        return LLMResult(self.provider, self.model, out, tin, tout,
+                         raw={"id": data.get("id"), "format": fmt, "finish_reason": finish, "max_tokens": budget,
+                              "reasoning": bool(msg.get("reasoning_content")) or "<think>" in text_out})
 
 
 _override: LLMClient | None = None
@@ -294,7 +321,8 @@ def get_llm() -> LLMClient:
     if _client is None:
         from ..config import settings
         _client = LLMClient(settings.llm_provider, settings.llm_model, settings.llm_api_key, settings.llm_base_url,
-                            settings.llm_timeout, folder_id=settings.yc_folder_id, images=settings.llm_images)
+                            settings.llm_timeout, folder_id=settings.yc_folder_id, images=settings.llm_images,
+                            max_tokens=settings.llm_max_tokens)
     return _client
 
 

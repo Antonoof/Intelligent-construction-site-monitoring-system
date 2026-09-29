@@ -74,6 +74,39 @@ def _ram_available_gb() -> float:
         return 8.0
 
 
+def _ram_total_gb() -> float:
+    try:
+        with open("/proc/meminfo", encoding="ascii") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    return int(line.split()[1]) / 1024 / 1024
+    except OSError:
+        pass
+    return _ram_available_gb()
+
+
+def ram_budget_gb(reserve_gb: float) -> tuple[float, str]:
+    """Память под VLM на CPU по бюджету, а не только по MemAvailable: веса safetensors читаются через mmap и
+    числятся «доступными» (страничный кеш), хотя заняты. Бюджет = вся память − детектор − модель готовности − запас."""
+    parts, budget = [], _ram_total_gb() - reserve_gb
+    try:
+        from ..detection import get_detector
+        if get_detector().name.startswith("rfdetr"):
+            budget -= 1.5
+            parts.append("RF-DETR 1.5")
+    except Exception:
+        pass
+    try:
+        from .readiness import get_readiness
+        rd = get_readiness().footprint_gb()
+        if rd:
+            budget -= rd
+            parts.append(f"модель готовности {rd:.1f}")
+    except Exception:
+        pass
+    return budget, ", ".join(parts)
+
+
 def resolve_device(pref: str) -> tuple[str, float]:
     """Устройство и доступная на нём память, ГБ."""
     try:
@@ -87,16 +120,27 @@ def resolve_device(pref: str) -> tuple[str, float]:
 
 
 def parse_json(text: str) -> dict:
-    """JSON из ответа модели: целиком или первый объект {...}; иначе — сырой текст."""
-    text = text.strip()
-    for candidate in (text, *re.findall(r"\{.*\}", text, flags=re.S)):
+    """JSON из ответа модели: целиком, из блока ```json или самый большой объект {...} в тексте; рассуждения
+    <think>…</think> отбрасываются. Не нашёлся — {"raw": текст}."""
+    raw = text
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.S)
+    text = re.sub(r"^.*?</think>", "", text, flags=re.S).strip()      # начало рассуждения обрезано
+    for candidate in (text, *re.findall(r"```(?:json)?\s*(\{.*?\})\s*```", text, flags=re.S)):
         try:
             v = json.loads(candidate)
             if isinstance(v, dict):
                 return v
         except json.JSONDecodeError:
             continue
-    return {"raw": text}
+    dec, best, best_len = json.JSONDecoder(), None, 0
+    for mt in re.finditer(r"\{", text):
+        try:
+            v, end = dec.raw_decode(text, mt.start())
+        except json.JSONDecodeError:
+            continue
+        if isinstance(v, dict) and end - mt.start() > best_len:
+            best, best_len = v, end - mt.start()
+    return best if best is not None else {"raw": raw.strip()}
 
 
 def normalize_boxes(out: dict, size: tuple[int, int], per_mille: bool = True) -> dict:
@@ -167,7 +211,14 @@ class LocalVLM:
                 avail -= get_readiness().pending_gb()
             except Exception:
                 pass
-            name, why = choose_from(avail - self.reserve_gb)
+            avail -= self.reserve_gb
+            note = ""
+            if device == "cpu":
+                budget, parts = ram_budget_gb(self.reserve_gb)
+                if budget < avail:
+                    avail, note = budget, f" (бюджет ОЗУ за вычетом: {parts})" if parts else ""
+            name, why = choose_from(avail)
+            why += note
         else:
             name, why = self.setting, "задана в OKO_VLM"
         return {"enabled": True, "model": name, "device": device, "loaded": False, "reason": why}

@@ -152,11 +152,15 @@ class ReadinessModel:
     def enabled(self) -> bool:
         return self.run is not None
 
-    def pending_gb(self) -> float:
-        """Сколько памяти займёт модель, когда загрузится (VLM выбирается с учётом этого запаса)."""
-        if not self.enabled or self._ready:
+    def footprint_gb(self) -> float:
+        """Сколько памяти занимает модель (загруженная или будущая)."""
+        if not self.enabled:
             return 0.0
         return BACKBONE_PARAMS_B["facebook/dinov2-giant"] * (4 if self.dtype_name == "float32" else 2) * 1.15 + 0.5
+
+    def pending_gb(self) -> float:
+        """Сколько памяти займёт модель, когда загрузится (VLM выбирается с учётом этого запаса)."""
+        return 0.0 if self._ready else self.footprint_gb()
 
     def plan(self) -> dict:
         if not self.enabled:
