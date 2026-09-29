@@ -18,7 +18,7 @@ const ZSTATUS = { ok: 'по графику', critical: 'критично', warni
 const STAGES = { S1: 'S1 подготовка и котлован', S2: 'S2 фундамент', S3: 'S3 каркас', S4: 'S4 фасад и сети', S5: 'S5 отделка, благоустройство' };
 
 const state = { projects: [], project: null, pid: null, day: null, tab: 'summary', eq: {}, rules: null, workTypes: null,
-  profiles: null, filters: { sev: '', status: '', zone: '' }, camFilter: '' };
+  profiles: null, filters: { sev: '', status: '', zone: '' }, camFilter: '', ai: null };
 
 // ------------------------------------------------------------------ API
 async function api(path, opts = {}) {
@@ -50,9 +50,16 @@ function eqChip(cls, n, mod = '') {
 function plural(n, one, few, many) { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many; }
 
 // ------------------------------------------------------------------ кадр с разметкой (SVG поверх снимка)
-function frameHTML(snap, { boxes = [], zones = [], highlight = null, thumb = false, onlyZone = null, labels = true } = {}) {
+function frameHTML(snap, { boxes = [], zones = [], highlight = null, thumb = false, onlyZone = null, labels = true,
+  attention = null, aiBoxes = [] } = {}) {
   const W = snap.width, H = snap.height, fs = Math.round(W / 70);
   let svg = `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">`;
+  if (attention) {             // карта внимания модели готовности: сетка 9×16, ярче — важнее для вывода
+    const gh = attention.length, gw = attention[0].length, cw = W / gw, ch = H / gh;
+    attention.forEach((row, i) => row.forEach((v, j) => {
+      if (v > 0.05) svg += `<rect x="${(j * cw).toFixed(1)}" y="${(i * ch).toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="#FF6A00" fill-opacity="${(v * 0.55).toFixed(2)}"/>`;
+    }));
+  }
   for (const z of zones) {
     if (onlyZone && z.key !== onlyZone) continue;
     const pts = z.polygon.map(([x, y]) => `${(x * W).toFixed(1)},${(y * H).toFixed(1)}`).join(' ');
@@ -73,6 +80,12 @@ function frameHTML(snap, { boxes = [], zones = [], highlight = null, thumb = fal
         + `<text x="${x1 + 5}" y="${Math.max(fs, y1 - 6)}" class="ov-label" style="font-size:${fs}px" fill="#fff">${esc(t)}</text>`;
     }
   }
+  for (const b of aiBoxes) {   // техника, которую нашёл ИИ, а детектор пропустил (ещё не применено)
+    const [x1, y1, x2, y2] = b.xyxy, t = `ИИ: ${b.name} ${b.conf.toFixed(2)}`, tw = t.length * fs * 0.56 + 10;
+    svg += `<rect class="ov-box ai" x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}" rx="3"/>`
+      + `<rect x="${x1}" y="${Math.min(H - fs - 7, y2 + 2)}" width="${tw}" height="${fs + 7}" fill="#C0198C" rx="3"/>`
+      + `<text x="${x1 + 5}" y="${Math.min(H - 5, y2 + fs + 2)}" class="ov-label" style="font-size:${fs}px" fill="#fff">${esc(t)}</text>`;
+  }
   svg += '</svg>';
   const src = thumb ? snap.thumb || `/api/snapshots/${snap.id}/image?w=480` : snap.image || `/api/snapshots/${snap.id}/image`;
   return `<div class="frame${snap.quality_ok === false ? ' nodata' : ''}" data-snap="${snap.id}"><img src="${src}" alt="${esc(snap.camera)} ${esc(snap.taken_at)}" loading="lazy">${svg}`
@@ -81,8 +94,10 @@ function frameHTML(snap, { boxes = [], zones = [], highlight = null, thumb = fal
 
 // ------------------------------------------------------------------ инициализация
 async function init() {
-  const [projects, eq, rules] = await Promise.all([api('/api/projects'), api('/api/reference/equipment'), api('/api/reference/rules')]);
+  const [projects, eq, rules, ai] = await Promise.all([api('/api/projects'), api('/api/reference/equipment'), api('/api/reference/rules'),
+    api('/api/ai/status').catch(() => null)]);
   state.projects = projects;
+  state.ai = ai;
   eq.forEach((e) => { state.eq[e.key] = e; });
   state.rules = rules;
   const h = new URLSearchParams(location.hash.slice(1));
@@ -107,7 +122,11 @@ async function init() {
     if (reload) { $('#project').value = p; loadProject(); } else { $('#day').value = d; render(); }
   });
   api('/api/health').then((hh) => {
+    const a = state.ai;
+    const layers = a ? [a.readiness?.enabled && 'модель готовности', a.vlm?.enabled && `VLM ${a.vlm.model || '—'}`,
+      a.llm?.provider !== 'off' && `${a.llm.name} ${a.llm.model}`].filter(Boolean) : [];
     $('#status').innerHTML = `<span>Детектор: <b>${esc(hh.detector)}</b> (${hh.detector_classes.length} классов)</span>`
+      + `<span>ИИ-анализ: ${layers.length ? esc(layers.join(' · ')) : 'выключен'}</span>`
       + `<span>Методика ${esc(hh.methodology_version)} · правила ${esc(hh.rules_version)}</span><span>БД: ${esc(hh.database)}</span>`;
   });
   if (state.pid) await loadProject(); else render();
@@ -158,6 +177,7 @@ async function vSummary(main) {
     + kpi('К сведению', k.info, 'опережение, нет данных', 'k-info')
     + kpi('Нарушений открыто', k.violations, 'подтверждены инженером')
     + kpi('Обработка снимка', `${k.avg_processing_ms} мс`, `этапов в работе: ${k.active_tasks}`) + `</div>`;
+  html += `<section class="card ai-day" id="aiDay"></section>`;
   html += `<div class="grid2"><section><h2>Зоны площадки · ${fDay(s.day)}</h2><div class="zones">`;
   for (const z of s.board) html += zoneCard(z);
   html += `</div></section><section><h2>Отклонения · ${s.deviations.length}</h2><div class="devlist">`;
@@ -166,6 +186,7 @@ async function vSummary(main) {
   html += `</div></section></div>`;
   main.innerHTML = html;
   bindCommon(main);
+  loadDayAI(state.day);
 }
 
 function zoneCard(z) {
@@ -275,20 +296,25 @@ async function openSnapshot(id, hl = '', zone = '') {
   const body = $('#dlgBody');
   const q = d.quality_ok ? '<span class="chip s-ok">годен</span>' : `<span class="chip s-no_data">нет данных: ${esc(d.quality_reason)}</span>`;
   const TS = { form: 'указано при загрузке', exif: 'EXIF снимка', filename: 'имя файла', ocr: 'дата на кадре (OCR)', upload: 'время загрузки' };
+  const SRC = { demo: 'демо-разметка', model: 'детектор', llm: 'добавлено ИИ', manual: 'вручную' };
+  const a = d.assessment;
   let h = `<button class="btn small close" id="dlgClose">Закрыть ✕</button><h2>${esc(d.camera)} · ${esc(d.camera_name)} · ${fDay(d.taken_at)} ${fTime(d.taken_at)}</h2>`;
   h += `<div class="snapview"><div><div class="row" style="margin-bottom:8px"><label><input type="checkbox" id="tgZ" checked> зоны</label><label><input type="checkbox" id="tgB" checked> рамки</label>`
+    + `<label id="tgAIl" hidden><input type="checkbox" id="tgAI" checked> находки ИИ</label>`
+    + (a?.attention ? `<label title="Куда смотрела модель готовности, оценивая стадию"><input type="checkbox" id="tgA"> внимание модели</label>` : '')
     + `<a class="btn small ghost" href="/api/snapshots/${d.id}/image?annotate=1" target="_blank" rel="noopener">разметка JPEG</a><a class="btn small ghost" href="/api/snapshots/${d.id}/image" target="_blank" rel="noopener">оригинал</a></div>`
-    + `<div id="bigFrame">${frameHTML(d, { boxes: d.boxes, zones: d.zones, highlight })}</div>`;
+    + `<div id="bigFrame"></div>`;
   h += `<h3 style="margin-top:12px">Техника на снимке</h3>`;
-  h += d.boxes.length ? `<table><thead><tr><th>Класс</th><th>Уверенность</th><th>Зона</th><th>Источник</th></tr></thead><tbody>`
-    + d.boxes.map((b) => `<tr><td>${eqChip(b.cls)}</td><td>${b.conf.toFixed(2)}${b.strong ? '' : ' <span class="hint">ниже порога</span>'}</td><td>${esc(b.zone ? (d.zones.find((z) => z.key === b.zone)?.name || b.zone) : (state.eq[b.cls]?.site_wide ? 'вся площадка' : '—'))}</td><td>${esc(b.source === 'demo' ? 'демо-разметка' : b.source)}</td></tr>`).join('')
+  h += d.boxes.length ? `<table><thead><tr><th>#</th><th>Класс</th><th>Уверенность</th><th>Зона</th><th>Источник</th></tr></thead><tbody>`
+    + d.boxes.map((b) => `<tr${b.rejected ? ' class="muted"' : ''}><td class="mono">${b.id}</td><td>${eqChip(b.cls)}${b.rejected ? ' <span class="hint">исключена</span>' : ''}</td><td>${b.conf.toFixed(2)}${b.strong ? '' : ' <span class="hint">ниже порога</span>'}</td><td>${esc(b.zone ? (d.zones.find((z) => z.key === b.zone)?.name || b.zone) : (state.eq[b.cls]?.site_wide ? 'вся площадка' : '—'))}</td><td>${esc(SRC[b.source] || b.source)}</td></tr>`).join('')
     + `</tbody></table>` : `<div class="hint">${d.quality_ok ? 'Техника не обнаружена' : 'Детекция не выполнялась: снимок не прошёл контроль качества'}</div>`;
-  h += `</div><div><dl class="kv"><dt>Качество</dt><dd>${q}</dd><dt>Яркость / контраст / резкость</dt><dd>${d.brightness} / ${d.contrast} / ${d.sharpness}</dd>`
+  h += `</div><div><section class="ai" id="aiBox" data-sid="${d.id}"><h3>Анализ ИИ</h3><div id="aiBody"><span class="spinner"></span></div></section>`
+    + `<dl class="kv"><dt>Качество</dt><dd>${q}</dd><dt>Яркость / контраст / резкость</dt><dd>${d.brightness} / ${d.contrast} / ${d.sharpness}</dd>`
     + `<dt>Время съёмки</dt><dd>${fDay(d.taken_at)} ${d.taken_at.slice(11, 19)} <span class="hint">(${TS[d.time_source] || d.time_source})</span></dd>`
     + `<dt>Детектор</dt><dd class="mono">${esc(d.detector)}</dd><dt>Обработка</dt><dd>${d.processing_ms} мс</dd><dt>Файл</dt><dd class="mono">${esc(d.original_name)}</dd>`
-    + (d.assessment ? `<dt>Стадия по кадру</dt><dd>${esc(STAGES[d.assessment.stage] || d.assessment.stage)}, готовность ${d.assessment.readiness}% <div class="hint">${esc(d.assessment.model || '')}</div></dd>` : '')
+    + (a ? `<dt>Стадия по кадру</dt><dd>${assessmentHTML(a)}</dd>` : '')
     + `</dl><h3 style="margin-top:14px">Сопоставление с графиком</h3>`;
-  const checks = [...d.checks].sort((a, b) => (a.zone === zone ? -1 : b.zone === zone ? 1 : 0));
+  const checks = [...d.checks].sort((x, y) => (x.zone === zone ? -1 : y.zone === zone ? 1 : 0));
   h += checks.length ? checks.map(checkHTML).join('') : '<div class="hint">Камера не привязана к зонам.</div>';
   if (d.deviations.length) h += `<h3>Отклонения, где снимок — доказательство</h3><div class="devlist">${d.deviations.map((x) => devCard(x, { compact: true })).join('')}</div>`;
   h += `</div></div>`;
@@ -296,9 +322,187 @@ async function openSnapshot(id, hl = '', zone = '') {
   const dlg = $('#dlg');
   if (!dlg.open) dlg.showModal();
   $('#dlgClose').onclick = () => dlg.close();
-  const redraw = () => { $('#bigFrame').innerHTML = frameHTML(d, { boxes: $('#tgB').checked ? d.boxes : [], zones: $('#tgZ').checked ? d.zones : [], highlight }); };
-  $('#tgZ').onchange = redraw; $('#tgB').onchange = redraw;
+  const view = { aiBoxes: [] };
+  const redraw = () => {
+    $('#bigFrame').innerHTML = frameHTML(d, { boxes: $('#tgB').checked ? d.boxes : [], zones: $('#tgZ').checked ? d.zones : [], highlight,
+      attention: $('#tgA')?.checked ? a.attention : null, aiBoxes: $('#tgAI').checked ? view.aiBoxes : [] });
+  };
+  ['#tgZ', '#tgB', '#tgA', '#tgAI'].forEach((s) => { if ($(s)) $(s).onchange = redraw; });
+  redraw();
   bindCommon(body);
+  loadAI(d, view, redraw);
+}
+
+function assessmentHTML(a) {
+  const plan = a.expected != null
+    ? `<div>план по графику ${a.expected}% · <b class="${a.status === 'late' || a.status === 'risk' ? 'bad-mark' : 'ok-mark'}">${esc(a.status_ru)}</b> (${a.delta_pp > 0 ? '+' : ''}${a.delta_pp} п.п., ≈ ${a.delta_days > 0 ? '+' : ''}${a.delta_days} дн.)</div>` : '';
+  const extra = [a.stage_prob != null && `уверенность ${Math.round(a.stage_prob * 100)}%`,
+    a.neighbors_readiness != null && `похожие кадры обучения ≈ ${a.neighbors_readiness}%`].filter(Boolean).join(' · ');
+  return `${esc(STAGES[a.stage] || a.stage)}, готовность ${a.readiness}%${plan}${extra ? `<div class="hint">${esc(extra)}</div>` : ''}`
+    + `${a.note ? `<div class="hint">${esc(a.note)}</div>` : ''}<div class="hint">${esc(a.model || '')}</div>`;
+}
+
+// ------------------------------------------------------------------ ИИ-анализ снимка
+const VERDICT = { confirmed: ['ok', '✓ подтверждена'], false_positive: ['bad', '✗ ложная рамка'], wrong_class: ['warn', '↻ другой класс'],
+  uncertain: ['muted', '? не разобрать'], not_checked: ['muted', 'не проверялась'] };
+const DVERDICT = { confirmed: ['bad', 'подтверждено'], doubtful: ['warn', 'сомнительно'], rejected: ['ok', 'не подтверждено'], not_checked: ['muted', 'не проверялось'] };
+const vchip = ([cls, text]) => `<span class="vchip ${cls}">${esc(text)}</span>`;
+
+function aiLayersHint() {
+  const a = state.ai;
+  if (!a) return '';
+  const l = [];
+  l.push(a.readiness?.enabled ? 'модель готовности (DINOv2 + голова)' : null);
+  l.push(a.vlm?.enabled ? `локальная VLM ${a.vlm.model || '(не помещается в память)'}` : null);
+  l.push(a.llm?.provider !== 'off' ? `${a.llm.name} ${a.llm.model}${a.llm.vision ? '' : ' (текст: судит по VLM и рамкам)'}` : null);
+  return l.filter(Boolean).join(' → ');
+}
+
+async function loadAI(d, view, redraw) {
+  const box = $('#aiBody');
+  if (!box || $('#aiBox').dataset.sid !== String(d.id)) return;
+  if (!state.ai?.enabled) {
+    box.innerHTML = `<div class="hint">ИИ-анализ выключен. Включите слои: модель готовности — веса в <span class="mono">weights/readiness/</span>, локальная VLM — <span class="mono">OKO_VLM=auto</span>, YandexGPT — <span class="mono">OKO_LLM_PROVIDER=yandex</span> и <span class="mono">OKO_YC_FOLDER_ID</span>.</div>`;
+    return;
+  }
+  let r;
+  try { r = await api(`/api/snapshots/${d.id}/ai-review`); } catch (e) { box.innerHTML = `<div class="hint">Ошибка: ${esc(e.message)}</div>`; return; }
+  renderAI(d, r, view, redraw);
+  if (r && (r.status === 'queued' || r.status === 'running')) {
+    setTimeout(() => { if ($('#dlg').open) loadAI(d, view, redraw); }, 2500);
+  }
+}
+
+function renderAI(d, r, view, redraw) {
+  const box = $('#aiBody');
+  const start = (label) => `<button class="btn small primary" id="aiRun">${label}</button>`;
+  view.aiBoxes = [];
+  if (!r) {
+    box.innerHTML = `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM исправляет ошибки детектора и правил, прогнозирует и даёт рекомендации.</p>${start('Запустить анализ ИИ')}`;
+  } else if (r.status === 'queued' || r.status === 'running') {
+    box.innerHTML = `<p><span class="spinner"></span> ${esc(r.step || 'в очереди')}…</p><p class="hint">На CPU модель готовности и VLM работают до минуты-двух; окно можно закрыть — анализ продолжится.</p>`;
+  } else if (r.status === 'error' && !r.final) {
+    box.innerHTML = `<p class="bad-mark">Ошибка анализа</p><p class="hint">${esc(r.error)}</p>${start('Повторить')}`;
+  } else {
+    box.innerHTML = aiResultHTML(d, r) + `<div class="row" style="margin-top:8px">${start('Повторить анализ')}</div>`;
+    const f = r.final;
+    view.aiBoxes = r.applied && !r.applied.reverted ? [] : (f.missed || []);
+  }
+  $('#tgAIl').hidden = !view.aiBoxes.length;
+  redraw();
+  const run = $('#aiRun');
+  if (run) run.onclick = async () => {
+    run.disabled = true;
+    try { await api(`/api/snapshots/${d.id}/ai-review`, { method: 'POST' }); loadAI(d, view, redraw); } catch (e) { toast(e.message); run.disabled = false; }
+  };
+  const act = async (url, msg) => {
+    try { await api(url, { method: 'POST' }); toast(msg); openSnapshot(d.id); if (state.tab === 'summary' || state.tab === 'deviations') render(); } catch (e) { toast(e.message); }
+  };
+  if ($('#aiApply')) $('#aiApply').onclick = () => act(`/api/ai/reviews/${r.id}/apply`, 'Исправления применены, отклонения пересчитаны');
+  if ($('#aiRevert')) $('#aiRevert').onclick = () => act(`/api/ai/reviews/${r.id}/revert`, 'Исправления отменены');
+}
+
+function aiResultHTML(d, r) {
+  const f = r.final, L = f.layers || {};
+  const src = [L.readiness_model && 'модель готовности', L.vlm_model && `VLM ${L.vlm_model.split('/').pop()}`,
+    L.llm_model && `${L.llm_name || L.llm_provider} ${L.llm_model}`].filter(Boolean);
+  let h = `<div class="ai-head">${src.map((x) => `<span class="chip plain s-info">${esc(x)}</span>`).join('')}`
+    + `${f.confidence != null ? `<span class="hint">уверенность ${Math.round(f.confidence * 100)}%</span>` : ''}`
+    + `<span class="hint">${(r.duration_ms / 1000).toFixed(1)} с${r.llm?.tokens_in ? ` · токенов ${r.llm.tokens_in}+${r.llm.tokens_out}` : ''}</span></div>`;
+  if (f.summary) h += `<p class="ai-sum">${esc(f.summary)}</p>`;
+  if (r.error) h += `<p class="hint">Не все слои отработали: ${esc(r.error)}</p>`;
+  // техника: детектор / VLM / LLM
+  if (f.equipment?.length) {
+    h += `<table class="eqtab"><thead><tr><th>Техника</th><th>Детектор</th><th>VLM</th><th>ИИ-итог</th></tr></thead><tbody>`
+      + f.equipment.map((e) => `<tr class="${e.agree ? '' : 'dis'}"><td>${eqChip(e.cls)}</td><td>${e.detector}</td><td>${e.vlm ?? '—'}</td><td><b>${e.final}</b>${e.agree ? '' : ' <span class="vchip warn">расхождение</span>'}</td></tr>`).join('')
+      + `</tbody></table>`;
+  }
+  // стадия по всем слоям
+  const st = f.stage || {};
+  const parts = [st.planned?.length && `график ${st.planned.join('/')}`,
+    st.model && `модель готовности ${st.model}${st.model_readiness != null ? ` (${st.model_readiness}%${st.model_expected != null ? `, план ${st.model_expected}%` : ''})` : ''}`,
+    st.vlm && `VLM ${st.vlm}`, st.llm && `${L.llm_name || 'LLM'} ${st.llm}`].filter(Boolean);
+  if (parts.length) {
+    h += `<div class="ai-row"><span class="lbl">стадия:</span> ${esc(parts.join(' · '))}${st.final ? ` → <b>${esc(STAGES[st.final] || st.final)}</b>` : ''}`
+      + `${st.final ? (st.agree ? ' <span class="vchip ok">слои согласны</span>' : ' <span class="vchip warn">слои расходятся</span>') : ''}`
+      + `${st.matches_plan === false ? ' <span class="vchip bad">не совпадает с графиком</span>' : ''}${st.comment ? `<div class="hint">${esc(st.comment)}</div>` : ''}</div>`;
+  }
+  const cc = f.cross_check;
+  if (cc) {
+    h += `<div class="ai-row"><span class="lbl">детектор ↔ VLM:</span> совпали ${cc.agree.length} · спорный класс ${cc.class_conflict.length} · только VLM ${cc.vlm_only.length} · только детектор ${cc.detector_only.length}</div>`;
+  }
+  // вердикты по рамкам детектора
+  const checked = (f.detections || []).filter((x) => x.verdict !== 'not_checked');
+  if (checked.length) {
+    h += `<div class="ai-list"><div class="lbl">рамки детектора:</div>` + checked.map((x) => `<div><span class="mono">#${x.id}</span> ${esc(x.name)} ${x.conf.toFixed(2)} ${vchip(VERDICT[x.verdict] || ['muted', x.verdict])}`
+      + `${x.correct_name ? ` → <b>${esc(x.correct_name)}</b>` : ''}${x.comment ? ` <span class="hint">${esc(x.comment)}</span>` : ''}</div>`).join('') + `</div>`;
+  }
+  if (f.missed?.length) {
+    h += `<div class="ai-list"><div class="lbl">пропустил детектор:</div>` + f.missed.map((x) => `<div><span class="vchip ai">+ ${esc(x.name)} ${x.conf.toFixed(2)}</span>${x.comment ? ` <span class="hint">${esc(x.comment)}</span>` : ''}</div>`).join('') + `</div>`;
+  }
+  const devs = (f.deviations || []).filter((x) => x.verdict !== 'not_checked');
+  if (devs.length) {
+    h += `<div class="ai-list"><div class="lbl">отклонения правил:</div>` + devs.map((x) => `<div>${esc(x.title)} ${vchip(DVERDICT[x.verdict] || ['muted', x.verdict])}${x.comment ? ` <span class="hint">${esc(x.comment)}</span>` : ''}</div>`).join('') + `</div>`;
+  }
+  if (f.new_findings?.length) {
+    h += `<div class="ai-list"><div class="lbl">новые находки:</div>` + f.new_findings.map((x) => `<div>${sevChip(x.severity)} <b>${esc(x.title)}</b>${x.zone ? ` · ${esc(x.zone)}` : ''} <span class="hint">${esc(x.reason || '')}</span></div>`).join('') + `</div>`;
+  }
+  if (f.forecast) h += `<div class="ai-row"><span class="lbl">прогноз:</span> ${esc(f.forecast)}</div>`;
+  if (f.recommendations?.length) h += `<div class="ai-list"><div class="lbl">рекомендации:</div><ol>${f.recommendations.map((x) => `<li>${esc(x)}</li>`).join('')}</ol></div>`;
+  if (f.scene?.vlm_scene) h += `<div class="ai-row"><span class="lbl">VLM видит:</span> ${esc(f.scene.vlm_scene)}${f.scene.vlm_notes ? ` <span class="hint">${esc(f.scene.vlm_notes)}</span>` : ''}</div>`;
+  // исправления
+  const corr = f.corrections || [];
+  if (corr.length) {
+    const ap = r.applied && !r.applied.reverted;
+    const n = corr.filter((c) => c.apply).length;
+    h += `<div class="ai-fix"><div class="lbl">исправления данных${ap ? ' — применены' : ''}:</div>`
+      + corr.map((c) => `<div>${c.apply ? '<span class="ok-mark">●</span>' : '<span class="wait-mark">○</span>'} ${esc(c.text)}${c.apply ? '' : ` <span class="hint">уверенность ниже ${f.min_conf} — не применяется</span>`}</div>`).join('')
+      + `<div class="row" style="margin-top:6px">${ap ? `<button class="btn small" id="aiRevert">Отменить исправления</button><span class="hint">применены ${esc(r.applied.at.replace('T', ' '))} UTC</span>`
+        : n ? `<button class="btn small good" id="aiApply">Применить исправления (${n})</button><span class="hint">рамки изменятся, отклонения пересчитаются; можно отменить</span>` : ''}</div></div>`;
+  }
+  h += `<details class="calc"><summary>Что видели и ответили модели</summary><pre>${esc(JSON.stringify({ vlm: r.vlm?.output, stage: f.stage, cross_check: f.cross_check }, null, 1))}</pre>`
+    + `<a href="/api/ai/reviews/${r.id}?full=1" target="_blank" rel="noopener">все данные, отправленные в LLM, и её ответ (JSON)</a></details>`;
+  return h;
+}
+
+// ------------------------------------------------------------------ ИИ-анализ площадки за день
+async function loadDayAI(dayAtStart) {
+  const box = $('#aiDay');
+  if (!box || state.tab !== 'summary' || state.day !== dayAtStart) return;
+  if (!state.ai?.llm || state.ai.llm.provider === 'off') {
+    box.innerHTML = `<div class="ai-day-h"><h2>Анализ ИИ за день</h2></div><p class="hint">Итоговый анализ площадки делает LLM: включите YandexGPT — <span class="mono">OKO_LLM_PROVIDER=yandex</span>, <span class="mono">OKO_YC_FOLDER_ID</span> и API-ключ или сервисный аккаунт ВМ.</p>`;
+    return;
+  }
+  let r = null;
+  try { r = await api(`/api/projects/${state.pid}/ai-summary?day=${state.day}`); } catch (e) { /* нет анализа */ }
+  const busy = r && (r.status === 'queued' || r.status === 'running');
+  let h = `<div class="ai-day-h"><h2>Анализ ИИ за день · ${esc(state.ai.llm.name)}</h2>`
+    + (busy ? '' : `<button class="btn small primary" id="aiDayRun">${r ? 'Обновить анализ' : 'Проанализировать день'}</button>`) + `</div>`;
+  if (!r) h += `<p class="hint">${esc(state.ai.llm.name)} получит доску зон, отклонения правил, оценки модели готовности, итоги ИИ-анализа снимков и историю по дням — и вернёт статус, риски срыва сроков, прогноз задержек, ошибки моделей и рекомендации.</p>`;
+  else if (busy) h += `<p><span class="spinner"></span> ${esc(r.step || 'в очереди')}…</p>`;
+  else if (r.status === 'error') h += `<p class="bad-mark">Ошибка</p><p class="hint">${esc(r.error)}</p>`;
+  else h += dayAIHTML(r);
+  box.innerHTML = h;
+  if ($('#aiDayRun')) $('#aiDayRun').onclick = async () => {
+    try { await api(`/api/projects/${state.pid}/ai-summary?day=${state.day}`, { method: 'POST' }); loadDayAI(dayAtStart); } catch (e) { toast(e.message); }
+  };
+  if (busy) setTimeout(() => loadDayAI(dayAtStart), 3000);
+}
+
+function dayAIHTML(r) {
+  const f = r.final, L = f.layers || {};
+  const ST = { 'по графику': 's-ok', 'есть риски': 's-warning', 'отставание': 's-critical' };
+  const IMP = { 'высокое': 's-critical', 'среднее': 's-warning', 'низкое': 's-info' };
+  let h = `<div class="row"><span class="chip ${ST[f.status] || 's-info'}">${esc(f.status || '')}</span>`
+    + `<span class="hint">${esc(L.llm_model || '')} · снимков с ИИ-анализом ${L.snapshots_reviewed ?? 0} · оценок модели готовности ${L.readiness_frames ?? 0} · ${(r.duration_ms / 1000).toFixed(1)} с · уверенность ${Math.round((f.confidence || 0) * 100)}%</span></div>`;
+  h += `<p class="ai-sum">${esc(f.summary || '')}</p><div class="cols2">`;
+  h += `<div>${f.risks?.length ? `<div class="lbl">риски срыва сроков</div><table class="eqtab"><thead><tr><th>Риск</th><th>Вероятность</th><th>Влияние</th><th>Что сделать</th></tr></thead><tbody>`
+    + f.risks.map((x) => `<tr><td><b>${esc(x.title)}</b>${x.zone || x.task ? `<div class="hint">${esc([x.zone, x.task].filter(Boolean).join(' · '))}</div>` : ''}<div class="hint">${esc(x.reason || '')}</div></td><td>${Math.round((x.probability || 0) * 100)}%</td><td><span class="chip plain ${IMP[x.impact] || ''}">${esc(x.impact || '')}</span></td><td>${esc(x.mitigation || '')}</td></tr>`).join('')
+    + `</tbody></table>` : '<p class="hint">Рисков не выявлено.</p>'}</div>`;
+  h += `<div>${f.forecast?.length ? `<div class="lbl">прогноз по этапам</div>` + f.forecast.map((x) => `<div class="ai-row">${esc(x.task)}: <b>${x.expected_delay_days > 0 ? `+${x.expected_delay_days} дн.` : 'в срок'}</b> <span class="hint">${esc(x.reason || '')}</span></div>`).join('') : ''}`
+    + `${f.model_errors?.length ? `<div class="lbl" style="margin-top:8px">где модели и правила, вероятно, ошиблись</div><ul>${f.model_errors.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`
+    + `${f.recommendations?.length ? `<div class="lbl" style="margin-top:8px">рекомендации</div><ol>${f.recommendations.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}</div></div>`;
+  return h;
 }
 
 function checkHTML(c) {

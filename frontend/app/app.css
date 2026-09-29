@@ -183,3 +183,25 @@ tr.summary .tname{font-weight:600}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line-2);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media (max-width:700px){.top{flex-direction:column;align-items:stretch}.controls{justify-content:flex-start}main{padding:12px}}
+
+/* ---------- ИИ-анализ */
+.ov-box.ai{stroke:#C0198C;stroke-width:3;stroke-dasharray:10 6}
+.ai{border:1px solid var(--line);border-left:4px solid #7A5CC2;border-radius:10px;padding:10px 12px;margin-bottom:12px;background:var(--surface-2)}
+.ai h3{margin-bottom:8px}
+.ai-head{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.ai-sum{margin:6px 0 8px;font-size:13.5px}
+.ai-row{margin:5px 0;font-size:12.5px}
+.ai-list{margin:6px 0;font-size:12.5px;line-height:1.6}
+.ai-list ol,.ai-day ol,.ai-day ul{margin:2px 0;padding-left:20px}
+.ai-fix{margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px dashed var(--line-2);font-size:12.5px;line-height:1.6}
+.eqtab{font-size:12.5px;margin:4px 0 6px}
+.eqtab td,.eqtab th{padding:4px 6px}
+.eqtab tr.dis td{background:var(--warn-bg)}
+.vchip{display:inline-block;padding:0 7px;border-radius:999px;font-size:11.5px;font-weight:500;white-space:nowrap}
+.vchip.ok{color:var(--good);background:var(--good-bg)} .vchip.bad{color:var(--crit);background:var(--crit-bg)}
+.vchip.warn{color:var(--warn);background:var(--warn-bg)} .vchip.muted{color:var(--muted);background:var(--surface-3)}
+.vchip.ai{color:#fff;background:#C0198C}
+.ai-day{margin-bottom:16px;border-left:4px solid #7A5CC2}
+.ai-day-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.ai-day-h h2{margin:0}
+tr.muted td{opacity:.55}

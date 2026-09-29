@@ -13,7 +13,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
 from . import models as M
@@ -350,6 +350,9 @@ def _stage_mismatch(project: M.Project, day: dt.date, snaps: list[M.Snapshot], t
 
 def recompute_day(s: Session, project: M.Project, day: dt.date) -> list[M.Deviation]:
     """Пересчитать отклонения проекта за день по всем снимкам дня (идемпотентно)."""
+    if s.get_bind().dialect.name == "postgresql":
+        # загрузка снимков и фоновые задачи ИИ пересчитывают один и тот же день — по очереди, до конца транзакции
+        s.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": 0x4F4B4F00000 + project.id})
     m = get_methodology()
     ctx = _ctx(m)
     start = dt.datetime.combine(day, dt.time.min)

@@ -62,6 +62,39 @@ class Settings:
     seed_demo: bool = field(default_factory=lambda: os.environ.get("OKO_SEED_DEMO", "1") not in ("0", "false", "no"))
     max_upload_mb: int = field(default_factory=lambda: int(os.environ.get("OKO_MAX_UPLOAD_MB", "25")))
 
+    # ---- слой ИИ-анализа (app/ai): модель готовности, локальная VLM и LLM (YandexGPT / Claude / ChatGPT)
+    # модель готовности ML-части (DINOv2 + голова): auto — weights/readiness/<прогон>/head.pt | путь | off
+    readiness: str = field(default_factory=lambda: os.environ.get("OKO_READINESS", "auto"))
+    readiness_dtype: str = field(default_factory=lambda: os.environ.get("OKO_READINESS_DTYPE", "float32"))
+    # VLM: off | auto (самая крупная Qwen3-VL, которая помещается в память) | id модели Hugging Face
+    vlm: str = field(default_factory=lambda: os.environ.get("OKO_VLM", "off"))
+    vlm_device: str = field(default_factory=lambda: os.environ.get("OKO_VLM_DEVICE", "auto"))   # auto | cpu | cuda
+    vlm_max_tokens: int = field(default_factory=lambda: int(os.environ.get("OKO_VLM_MAX_TOKENS", "700")))
+    vlm_reserve_gb: float = field(default_factory=lambda: float(os.environ.get("OKO_VLM_RESERVE_GB", "1.5")))
+    # длинная сторона кадра для VLM: меньше — быстрее на CPU (768 px ≈ 600 токенов изображения у Qwen3-VL)
+    vlm_image_px: int = field(default_factory=lambda: int(os.environ.get("OKO_VLM_IMAGE_PX", "768")))
+    # LLM: off | yandex (YandexGPT, Yandex AI Studio) | anthropic (Claude) | openai (ChatGPT и совместимые шлюзы)
+    llm_provider: str = field(default_factory=lambda: os.environ.get("OKO_LLM_PROVIDER", "off"))
+    # yandex: yandexgpt-5.1 (по умолчанию), yandexgpt-5-lite, aliceai-llm, qwen3.6-35b-a3b (видит изображения)
+    llm_model: str = field(default_factory=lambda: os.environ.get("OKO_LLM_MODEL", ""))
+    # yandex: API-ключ сервисного аккаунта; без ключа на ВМ Yandex Cloud берётся IAM-токен её сервисного аккаунта
+    llm_api_key: str = field(default_factory=lambda: os.environ.get("OKO_LLM_API_KEY") or os.environ.get(
+        {"yandex": "YC_API_KEY", "anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}.get(
+            os.environ.get("OKO_LLM_PROVIDER", "off").lower(), "OKO_LLM_API_KEY"), ""))
+    # yandex: каталог Yandex Cloud, в котором работает AI Studio (yc config get folder-id)
+    yc_folder_id: str = field(default_factory=lambda: os.environ.get("OKO_YC_FOLDER_ID") or os.environ.get("YC_FOLDER_ID", ""))
+    # адрес API или прокси: из России api.anthropic.com и api.openai.com обычно недоступны напрямую
+    llm_base_url: str = field(default_factory=lambda: os.environ.get("OKO_LLM_BASE_URL", ""))
+    # отправлять ли в LLM изображения: auto — если модель их понимает (Claude, GPT, Qwen3.6 в AI Studio)
+    llm_images: str = field(default_factory=lambda: os.environ.get("OKO_LLM_IMAGES", "auto"))
+    llm_timeout: float = field(default_factory=lambda: float(os.environ.get("OKO_LLM_TIMEOUT", "180")))
+    # автоматический анализ каждого нового снимка (платные вызовы LLM) — по умолчанию только по кнопке
+    ai_auto: bool = field(default_factory=lambda: os.environ.get("OKO_AI_AUTO", "0") in ("1", "true", "yes"))
+    # минимальная уверенность LLM, чтобы её исправление (ложная рамка, пропущенная техника) можно было применить
+    ai_apply_min_conf: float = field(default_factory=lambda: float(os.environ.get("OKO_AI_APPLY_MIN_CONF", "0.6")))
+    # manual — исправления LLM применяет инженер кнопкой; auto — сразу после анализа (с возможностью отмены)
+    ai_apply: str = field(default_factory=lambda: os.environ.get("OKO_AI_APPLY", "manual"))
+
     def db_url(self) -> str:
         if self.database_url:
             return self.database_url

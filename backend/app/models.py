@@ -9,7 +9,8 @@
 3. Наблюдения: snapshots (снимок + качество + время), detections (рамки техники по зонам),
    snapshot_checks (объяснение сопоставления снимка с этапами по каждой зоне).
 4. Выводы: deviations (автоматические отклонения), deviation_evidence (снимки-доказательства),
-   deviation_reviews (вердикты инженера), violations (зарегистрированные нарушения).
+   deviation_reviews (вердикты инженера), violations (зарегистрированные нарушения),
+   ai_reviews (сводный ИИ-анализ снимка или дня: VLM + LLM поверх всех моделей и правил).
 
 Отклонение — вывод системы; нарушение — отклонение, подтверждённое инженером и поставленное
 на контроль (номер, подрядчик, срок устранения).
@@ -319,3 +320,36 @@ class Violation(Base):
     registered_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
     due_date: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
     closed_at: Mapped[dt.datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ============================================================ 5. ИИ-анализ
+
+class AIReview(Base):
+    """Сводный ИИ-анализ снимка (kind=snapshot) или дня площадки (kind=day).
+
+    Хранит всё, что видела и ответила каждая модель: контекст, отправленный в LLM (для аудита), ответ локальной
+    VLM, ответ LLM, итог слияния слоёв и применённые исправления — любой вывод можно перепроверить.
+    """
+    __tablename__ = "ai_reviews"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    snapshot_id: Mapped[int | None] = mapped_column(ForeignKey("snapshots.id", ondelete="CASCADE"), nullable=True,
+                                                    index=True)
+    day: Mapped[dt.date | None] = mapped_column(Date, nullable=True)
+    kind: Mapped[str] = mapped_column(String(16))                         # snapshot | day
+    status: Mapped[str] = mapped_column(String(16), default="queued")     # queued | running | done | error
+    step: Mapped[str] = mapped_column(String(120), default="")            # текущий шаг для интерфейса
+    vlm_model: Mapped[str] = mapped_column(String(120), default="")
+    vlm_output: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    llm_provider: Mapped[str] = mapped_column(String(32), default="")
+    llm_model: Mapped[str] = mapped_column(String(120), default="")
+    llm_output: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    context: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    final: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    applied: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    error: Mapped[str] = mapped_column(Text, default="")
+    tokens_in: Mapped[int] = mapped_column(Integer, default=0)
+    tokens_out: Mapped[int] = mapped_column(Integer, default=0)
+    duration_ms: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)

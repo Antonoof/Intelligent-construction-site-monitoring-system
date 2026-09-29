@@ -32,6 +32,11 @@ services:
       OKO_DETECTOR: ${OKO_DETECTOR:-auto}
       OKO_AI_URL: http://ai:8001
       OKO_SEED_DEMO: ${OKO_SEED_DEMO:-1}
+      # ИИ-анализ снимков: YandexGPT (Yandex AI Studio) — OKO_LLM_PROVIDER=yandex, каталог и API-ключ
+      OKO_LLM_PROVIDER: ${OKO_LLM_PROVIDER:-off}
+      OKO_LLM_MODEL: ${OKO_LLM_MODEL:-}
+      OKO_YC_FOLDER_ID: ${OKO_YC_FOLDER_ID:-}
+      OKO_LLM_API_KEY: ${OKO_LLM_API_KEY:-}
     volumes:
       - appdata:/data
       - ./weights:/srv/weights:ro

@@ -1,4 +1,5 @@
-# Публичное демо ОКО на одной ВМ Yandex Cloud: PostgreSQL + сервис с детектором RF-DETR на CPU (PyTorch).
+# Публичное демо ОКО на одной ВМ Yandex Cloud: PostgreSQL + сервис с детектором RF-DETR на CPU (PyTorch)
+# и слоем ИИ-анализа: модель готовности, локальная VLM, YandexGPT (Yandex AI Studio). Нужно 16 ГБ ОЗУ.
 #
 # Запуск на ВМ из корня репозитория (это делает deploy.sh):
 #   sudo docker compose -f deploy/yandex-cloud/docker-compose.yml up -d --build
@@ -40,7 +41,18 @@ services:
       OKO_RFDETR_CLASSES: ${OKO_RFDETR_CLASSES:-}
       OKO_DETECTOR_THRESHOLD: ${OKO_DETECTOR_THRESHOLD:-0.3}
       OKO_SEED_DEMO: "1"
-      # при первой сборке модели RF-DETR может скачать конфигурацию DINOv2 с Hugging Face — кешируем в томе
+      # ИИ-анализ: модель готовности (weights/readiness) → локальная VLM → YandexGPT сверяет все слои
+      OKO_READINESS: ${OKO_READINESS:-auto}
+      OKO_READINESS_DTYPE: ${OKO_READINESS_DTYPE:-float32}
+      OKO_VLM: ${OKO_VLM:-auto}
+      OKO_LLM_PROVIDER: ${OKO_LLM_PROVIDER:-yandex}
+      OKO_LLM_MODEL: ${OKO_LLM_MODEL:-yandexgpt-5.1}
+      OKO_YC_FOLDER_ID: ${OKO_YC_FOLDER_ID:-}
+      OKO_LLM_API_KEY: ${OKO_LLM_API_KEY:-}
+      OKO_AI_AUTO: ${OKO_AI_AUTO:-0}
+      OKO_AI_APPLY: ${OKO_AI_APPLY:-manual}
+      OKO_AI_APPLY_MIN_CONF: ${OKO_AI_APPLY_MIN_CONF:-0.6}
+      # веса DINOv2, VLM и конфигурация RF-DETR скачиваются с Hugging Face один раз — кешируем в томе
       HF_HOME: /data/hf
       HF_ENDPOINT: ${HF_ENDPOINT:-https://huggingface.co}
     volumes:

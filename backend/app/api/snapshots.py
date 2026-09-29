@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from .. import models as M
 from .. import services as S
+from ..ai import jobs as ai_jobs
 from ..config import settings
 from ..db import get_session
 from ..imaging import load_image, render_annotated, thumbnail
@@ -50,7 +51,17 @@ async def upload_snapshots(pid: int, camera: str = Form(..., description="клю
             raise HTTPException(422, f"{f.filename}: не изображение")
         s.commit()
         devs = s.scalars(select(M.DeviationEvidence.deviation_id).where(M.DeviationEvidence.snapshot_id == snap.id)).all()
-        out.append({**S.snapshot_brief(snap, cam, m), **info, "deviation_ids": sorted(set(devs))})
+        row = {**S.snapshot_brief(snap, cam, m), **info, "deviation_ids": sorted(set(devs))}
+        if settings.ai_auto and not info.get("duplicate") and snap.quality_ok:
+            # OKO_AI_AUTO=1: каждый новый годный снимок сразу уходит на ИИ-анализ (в фоне, ответ не ждёт)
+            try:
+                row["ai_review_id"] = ai_jobs.submit_snapshot(s, snap).id
+            except ai_jobs.AIDisabled:
+                pass
+        elif cam.is_overview and not info.get("duplicate") and snap.quality_ok:
+            # кадр общего плана: стадия и готовность по модели готовности — в фоне (DINOv2 на CPU ≈ 30 с)
+            ai_jobs.submit_readiness(snap.id)
+        out.append(row)
     return out
 
 

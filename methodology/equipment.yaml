@@ -74,8 +74,9 @@ classes:
     tz: false
     models: [v1, v2, v3]
     color: "#9C7A2B"
-    aliases: [loader, bucket loader big, bucket loader standart, bucket loader standard, wheel loader,
-              forklift standart, forklift standard, forklift giraffe, telehandler, погрузчик]
+    aliases: [loader, bucket loader, bucket loader big, bucket loader standart, bucket loader standard, wheel loader,
+              front loader, forklift, forklift standart, forklift standard, forklift giraffe, telehandler,
+              погрузчик, фронтальный погрузчик]
   grader:
     name: Грейдер
     name_en: Motor grader

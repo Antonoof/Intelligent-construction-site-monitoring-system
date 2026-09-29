@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Выкладка ОКО с RF-DETR на ВМ Yandex Cloud: копирует код и веса, собирает образ, запускает, ждёт готовности.
+# Выкладка ОКО на ВМ Yandex Cloud: копирует код и веса (RF-DETR и модель готовности), собирает образ, запускает,
+# ждёт готовности и в фоне скачивает веса DINOv2 и VLM. YandexGPT: каталог берётся из yc config.
 # Повторный запуск обновляет демо до текущего кода (данные в томах сохраняются).
 #
 #   deploy/yandex-cloud/deploy.sh <публичный_IP> [пользователь=oko]
@@ -31,6 +32,16 @@ COPYFILE_DISABLE=1 tar -C "$ROOT" \
   -czf - . | $SSH 'mkdir -p ~/oko && tar --warning=no-unknown-keyword -xzf - -C ~/oko \
                    && find ~/oko \( -name "._*" -o -name ".DS_Store" \) -type f -delete'
 $SSH "cd ~/oko && [ -f deploy/yandex-cloud/.env ] || echo 'OKO_WEIGHTS_FILE=$WEIGHTS' > deploy/yandex-cloud/.env"
+# каталог Yandex Cloud для YandexGPT: из настроек yc, если в .env его ещё нет
+FOLDER=$(yc config get folder-id 2>/dev/null || true)
+if [ -n "$FOLDER" ]; then
+  $SSH "cd ~/oko/deploy/yandex-cloud && { grep -q '^OKO_YC_FOLDER_ID=.' .env || { sed -i '/^OKO_YC_FOLDER_ID=/d' .env; echo 'OKO_YC_FOLDER_ID=$FOLDER' >> .env; }; }"
+fi
+MEM=$($SSH "awk '/MemTotal/{printf \"%d\", \$2/1024/1024 + 0.5}' /proc/meminfo")
+if [ "${MEM:-0}" -lt 15 ]; then
+  echo "   ВНИМАНИЕ: на ВМ $MEM ГБ памяти, а RF-DETR + модель готовности + VLM требуют 16 ГБ."
+  echo "   Увеличить: deploy/yandex-cloud/upgrade-vm.sh <имя ВМ>. Пока слои, которым не хватит памяти, будут пропущены."
+fi
 
 echo "→ сборка и запуск (первый раз 5–15 минут: PyTorch и rfdetr)"
 $SSH 'cd ~/oko && sudo docker compose -f deploy/yandex-cloud/docker-compose.yml up -d --build'
@@ -41,6 +52,11 @@ for _ in $(seq 1 60); do
     echo "$H"
     echo
     echo "Готово: http://$HOST  ·  API: http://$HOST/docs"
+    # веса DINOv2 (модель готовности) и VLM — в фоне, чтобы первый «Анализ ИИ» не ждал загрузки (~9 ГБ)
+    $SSH 'cd ~/oko && sudo docker compose -f deploy/yandex-cloud/docker-compose.yml exec -d app \
+          sh -c "python -m app.ai.prefetch > /data/prefetch.log 2>&1"' || true
+    echo "Модели ИИ-слоя скачиваются в фоне несколько минут. Проверить:"
+    echo "  ssh $USER_@$HOST 'sudo docker compose -f ~/oko/deploy/yandex-cloud/docker-compose.yml exec app tail -3 /data/prefetch.log'"
     exit 0
   fi
   sleep 10

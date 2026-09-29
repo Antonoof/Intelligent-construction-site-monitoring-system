@@ -1,0 +1,56 @@
+# Источники данных для дообучения детектора техники (v1 → v2: + каток, грузовик).
+# Ссылки — из списка организаторов хакатона (не более 5 ссылок на открытые данные).
+# Скачайте архивы в datasets/raw/<id>/ и запустите: python training/05_build_detector_dataset.py
+#
+# format: yolo | coco | voc — читатель ищет разметку рекурсивно, структура папок не важна.
+# classes: имена классов по индексу (для YOLO без data.yaml/classes.txt).
+# map: переопределение соответствия «класс датасета → класс ОКО»; skip — не использовать.
+# Остальные имена приводятся к классам ОКО по синонимам из methodology/equipment.yaml.
+
+target_classes: [excavator, dump_truck, roller, crane_manipulator, concrete_mixer, bulldozer, truck, mobile_crane,
+                 loader, grader, tower_crane, drilling_rig, concrete_pump]
+
+sources:
+  - id: ds1_construction_equipment
+    url: https://www.kaggle.com/datasets/xyzyxzzxy/construction-equipment/data
+    license: CC0 (Public Domain)
+    note: Главный источник для классов ТЗ — 17 классов, в т. ч. каток (Roller) и грузовик (Truck), ~17 ГБ.
+    format: yolo
+    classes: [Dump truck, Excavator, Motor grader, Roller, Crane manipulator, Gazelle, Forklift Standart,
+              Bucket loader Big, Mixer, Tanker, Bulldozer, Cleaning equipment, Truck, Trailer, Forklift Giraffe,
+              Bucket loader Standart, Autocran]
+    map: {Gazelle: truck, Tanker: truck, Trailer: truck, Cleaning equipment: skip,
+          Forklift Standart: loader, Forklift Giraffe: loader}
+
+  - id: ds2_arh_df
+    url: https://www.kaggle.com/datasets/kartaviychert/arh-df?select=images
+    license: GPL 2
+    note: «Construction equipment. Object detection», YOLO, ~430 МБ; имена классов — из data.yaml архива.
+    format: yolo
+
+  - id: ds3_miniexcav
+    url: https://github.com/miniexcav/Construction-Machines-Images-Dataset
+    license: только для исследований (снимки из поиска Google)
+    note: 223 снимка экскаваторов в формате YOLO.
+    format: yolo
+    classes: [excavator]
+
+  - id: ds4_dataclusterlabs
+    url: https://www.kaggle.com/datasets/dataclusterlabs/construction-vehicle-images
+    license: CC BY-NC-ND 4.0 — только некоммерческое использование
+    note: Снимки строительной техники в разных условиях съёмки; формат разметки зависит от выгрузки (COCO/YOLO/VOC).
+    format: voc
+
+  - id: ds5_roboflow_construction_machinery
+    url: https://universe.roboflow.com/jejung/construction-machinery-tbosw
+    license: CC BY 4.0
+    note: 78 снимков, 24 класса; ценен классом pump-truck (автобетононасос) для модели v3.
+    format: coco
+    map: {crane: skip, excavator-crane: excavator, smalldigger: excavator, concrete truck: concrete_mixer,
+          pump-truck: concrete_pump, trailer: truck, roller: roller, aerial work truck: skip, HondaSUV: skip,
+          motorcycle: skip, engineer vehicle: skip}
+
+split:
+  seed: 42
+  valid: 0.1
+  test: 0.1          # тестовая выборка стратифицируется по классам и условиям съёмки

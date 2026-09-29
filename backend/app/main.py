@@ -15,7 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
 from . import models as M
-from .api import analyze, deviations, projects, reference, snapshots
+from .ai import jobs as ai_jobs
+from .api import ai, analyze, deviations, projects, reference, snapshots
 from .config import settings
 from .db import SessionLocal, init_db, session_scope
 from .detection import get_detector
@@ -33,6 +34,11 @@ def startup() -> None:
     det = get_detector()
     log.info("методика %s, правила %s, детектор %s (%d классов)", m.version, m.rules_version, det.name,
              len(det.classes))
+    with session_scope() as s:
+        if ai_jobs.recover(s):
+            log.info("незавершённые ИИ-анализы помечены как прерванные")
+    ai_st = _ai_brief()
+    log.info("ИИ-анализ: VLM %s, LLM %s", ai_st["vlm"] or "выключена", ai_st["llm"] or "выключена")
     if settings.seed_demo:
         with session_scope() as s:
             if not s.scalar(select(func.count(M.Project.id))):
@@ -54,7 +60,7 @@ app = FastAPI(
                 "→ отклонения с зоной и снимками-доказательствами → проверка инженером → нарушения.",
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-for r in (reference.router, projects.router, snapshots.router, deviations.router, analyze.router):
+for r in (reference.router, projects.router, snapshots.router, deviations.router, analyze.router, ai.router):
     app.include_router(r)
 
 
@@ -66,7 +72,14 @@ def health():
         projects_n = s.scalar(select(func.count(M.Project.id)))
     return {"status": "ok", "methodology_version": m.version, "rules_version": m.rules_version,
             "detector": det.name, "detector_classes": sorted(det.classes),
-            "database": settings.db_url().split(":")[0], "projects": projects_n}
+            "database": settings.db_url().split(":")[0], "projects": projects_n, "ai": _ai_brief()}
+
+
+def _ai_brief() -> dict:
+    """Включённые ИИ-слои: VLM (какая модель будет загружена под доступную память) и LLM."""
+    st = ai_jobs.status()
+    return {"vlm": st["vlm"].get("model") if st["vlm"].get("enabled") else None,
+            "llm": f'{st["llm"]["provider"]}:{st["llm"]["model"]}' if st["llm"]["provider"] != "off" else None}
 
 
 if settings.frontend_dir.exists():

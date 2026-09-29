@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
-# Создаёт в Yandex Cloud ВМ для публичного демо ОКО: группа безопасности (22, 80, 443) и ВМ Ubuntu 24.04
-# 4 vCPU / 8 ГБ / 40 ГБ SSD с публичным IP; Docker ставится через cloud-init.
+# Создаёт в Yandex Cloud ВМ для публичного демо ОКО: группа безопасности (22, 80, 443), сервисный аккаунт
+# для YandexGPT (роль ai.languageModels.user — ключ API не нужен) и ВМ Ubuntu 24.04 4 vCPU / 16 ГБ / 60 ГБ SSD
+# с публичным IP; Docker ставится через cloud-init.
 #
 # Нужен настроенный yc CLI (yc init) и публичный SSH-ключ (~/.ssh/id_ed25519.pub или ~/.ssh/id_rsa.pub).
 #   deploy/yandex-cloud/create-vm.sh [имя_ВМ] [зона]
-# Переменные: SSH_KEY — путь к публичному ключу, NETWORK — облачная сеть (default), SUBNET — подсеть (default-<зона>).
+# Переменные: SSH_KEY — путь к публичному ключу, NETWORK — облачная сеть (default), SUBNET — подсеть (default-<зона>),
+#             CORES (4), MEMORY (16, ГБ: RF-DETR + модель готовности + VLM), DISK (60, ГБ: образы и веса моделей).
 set -euo pipefail
 
 NAME=${1:-oko-demo}
 ZONE=${2:-ru-central1-a}
 NETWORK=${NETWORK:-default}
 SUBNET=${SUBNET:-default-$ZONE}
+CORES=${CORES:-4}
+MEMORY=${MEMORY:-16}
+DISK=${DISK:-60}
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 KEY=${SSH_KEY:-}
@@ -35,16 +40,21 @@ if [ -z "$SG_ID" ]; then
 fi
 echo "   $SG_ID"
 
+# shellcheck source=service-account.sh
+. "$HERE/service-account.sh"
+SA_ID=$(ensure_service_account)
+
 USERDATA=$(mktemp)
 trap 'rm -f "$USERDATA"' EXIT
 sed "s|__SSH_PUBLIC_KEY__|$(tr -d '\n' < "$KEY")|" "$HERE/cloud-init.yaml" > "$USERDATA"
 
-echo "→ ВМ $NAME в зоне $ZONE"
+echo "→ ВМ $NAME в зоне $ZONE: $CORES vCPU, $MEMORY ГБ, диск $DISK ГБ"
 yc compute instance create \
   --name "$NAME" --hostname "$NAME" --zone "$ZONE" \
-  --platform standard-v3 --cores 4 --memory 8 \
-  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2404-lts,size=40,type=network-ssd \
+  --platform standard-v3 --cores "$CORES" --memory "$MEMORY" \
+  --create-boot-disk image-folder-id=standard-images,image-family=ubuntu-2404-lts,size="$DISK",type=network-ssd \
   --network-interface subnet-name="$SUBNET",nat-ip-version=ipv4,security-group-ids="$SG_ID" \
+  --service-account-id "$SA_ID" \
   --metadata-from-file user-data="$USERDATA" >/dev/null
 
 IP=$(yc compute instance get --name "$NAME" --format yaml | awk '/one_to_one_nat:/{f=1} f && /address:/{print $2; exit}')
