@@ -37,24 +37,35 @@ SNAPSHOT_TASKS = """
    (если опираешься на VLM — бери её рамку из vlm_only) и уверенность. Только то, что подтверждается
    уверенно; рамки детектора не дублируй."""
 
+# модели, которые видят кадр (Qwen3.x и др.), точнее всего дают рамки в своих «родных» тысячных долях кадра
+MISSED_VISION = """2. missed — техника из каталога classes, которую детектор пропустил: рамка [x1, y1, x2, y2] в тысячных
+   долях исходного кадра (0–1000 от левого верхнего угла изображения 1) и уверенность. Только то, что видно
+   уверенно; рамки детектора не дублируй."""
+
 SNAPSHOT_REST = """
 3. stage — стадия объекта на кадре (S1–S5, unknown) и готовность в %; сверь модель готовности
    (stage.readiness_model: стадия, готовность, план по графику и отставание; модель обучена на кадрах общего
-   плана — на кадре зоны её оценка ориентировочная),
-   VLM (vlm.stage) и график (stage.planned).
+   плана — на кадре зоны её оценка ориентировочная; stage.readiness_overview — её оценка по кадру общего плана
+   за этот день, для стадии объекта она надёжнее; readiness_model может не быть — тогда суди по кадру),
+   VLM (vlm.stage, если есть) и график (stage.planned).
 4. deviations — вердикт по каждому отклонению правил (по id) с учётом твоих исправлений техники:
    confirmed / doubtful / rejected и почему.
 5. new_findings — что правила не увидели, но явно следует из данных: несоответствие графику, технологии,
    безопасность (люди в зоне работы техники и т. п.).
 6. forecast — чем ситуация грозит этапам зон (сроки этапов — в schedule[].tasks[].period).
-7. recommendations — 1–5 конкретных действий для инженера строительного контроля.
+7. recommendations — 1–3 конкретных действия для инженера строительного контроля.
+
+Пиши коротко — ответ читают в карточке снимка, и каждое лишнее слово удлиняет ответ: summary и forecast —
+1–2 предложения; comment и reason — до 12 слов, у подтверждённых рамок comment не нужен; каждая рекомендация —
+до 15 слов. Входные данные не пересказывай.
 
 VLM — более слабая локальная модель, она может ошибаться. Детектор распознаёт только классы
 detector.classes: если на кадре нет техники других классов, это не отклонение."""
 
 
 def snapshot_instructions(vision: bool) -> str:
-    return (VISION_INTRO if vision else TEXT_INTRO) + SNAPSHOT_TASKS + SNAPSHOT_REST
+    tasks = SNAPSHOT_TASKS if not vision else SNAPSHOT_TASKS.split("\n2. missed")[0] + "\n" + MISSED_VISION
+    return (VISION_INTRO if vision else TEXT_INTRO) + tasks + SNAPSHOT_REST
 
 
 DAY_INSTRUCTIONS = """Сделай итоговый анализ стройплощадки за день по данным всех слоёв:
@@ -127,6 +138,22 @@ def _dev_brief(s: Session, d: M.Deviation, znames: dict[int, str]) -> dict:
             "metrics": {k: v for k, v in (d.metrics or {}).items() if k in keep}}
 
 
+def overview_assessment(s: Session, snap: M.Snapshot) -> dict | None:
+    """Оценка модели готовности по кадру общего плана за тот же день (последняя до снимка, иначе ближайшая после):
+    для кадра зоны это опора по стадии объекта — модель обучена на общих планах."""
+    start = dt.datetime.combine(snap.taken_at.date(), dt.time.min)
+    rows = s.execute(select(M.Snapshot, M.Camera.key).join(M.Camera, M.Camera.id == M.Snapshot.camera_id)
+                     .where(M.Snapshot.project_id == snap.project_id, M.Camera.is_overview.is_(True),
+                            M.Snapshot.taken_at >= start, M.Snapshot.taken_at < start + dt.timedelta(days=1))
+                     .order_by(M.Snapshot.taken_at)).all()
+    rows = [(sn, key) for sn, key in rows if sn.assessment and sn.id != snap.id]
+    if not rows:
+        return None
+    before = [x for x in rows if x[0].taken_at <= snap.taken_at]
+    sn, key = before[-1] if before else rows[0]
+    return {"camera": key, "time": f"{sn.taken_at:%H:%M}", **assessment_brief(sn.assessment)}
+
+
 def snapshot_context(s: Session, snap: M.Snapshot, vlm_output: dict | None = None) -> dict:
     m = get_methodology()
     p = s.get(M.Project, snap.project_id)
@@ -163,7 +190,8 @@ def snapshot_context(s: Session, snap: M.Snapshot, vlm_output: dict | None = Non
         "deviations": devs,
         "stage": {"planned": {zk: planned_stages(m, tasks, day, zk) for zk in cam_zones} or
                              {"вся площадка": planned_stages(m, tasks, day)},
-                  "readiness_model": assessment_brief(snap.assessment)},
+                  "readiness_model": assessment_brief(snap.assessment),
+                  **({"readiness_overview": overview_assessment(s, snap)} if not cam.is_overview else {})},
         "vlm": vlm_output if vlm_output is not None else {"available": False},
     }
 

@@ -113,12 +113,15 @@ def cross_check(m: Methodology, dets: list[dict], vlm_out: dict | None, min_iou:
     return out
 
 
-def _box01(box, width: int, height: int) -> list[float] | None:
-    """Рамка LLM в долях кадра; если пришли пиксели — пересчитываем; вырожденные отбрасываем."""
+def _box01(box, width: int, height: int, per_mille: bool = False) -> list[float] | None:
+    """Рамка LLM в долях кадра. per_mille — модель, которая видит кадр, даёт рамки в тысячных долях (0–1000);
+    иначе числа больше 1 — пиксели исходного кадра. Вырожденные рамки отбрасываются."""
     if not isinstance(box, (list, tuple)) or len(box) != 4:
         return None
     b = [_num(v, -1) for v in box]
-    if max(b) > 1.5:                                  # модель вернула пиксели
+    if max(b) > 1.5 and per_mille and max(b) <= 1000.5:
+        b = [v / 1000 for v in b]
+    elif max(b) > 1.5:                                # модель вернула пиксели
         b = [b[0] / width, b[1] / height, b[2] / width, b[3] / height]
     x1, y1, x2, y2 = (min(1.0, max(0.0, v)) for v in b)
     if x2 - x1 < 0.01 or y2 - y1 < 0.01:
@@ -181,6 +184,7 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
     has_llm = bool(llm_out) and "raw" not in llm
     vlm_ok = bool(vlm_out) and "error" not in vlm_out and "raw" not in vlm_out
     W, H = ctx["image"]["width"], ctx["image"]["height"]
+    per_mille = bool((meta or {}).get("llm_vision"))   # LLM видела кадр — рамки в тысячных долях
     llm_conf = conf01(llm.get("confidence"))
     if llm_conf is None:                         # общей нет — берём уверенность в стадии, если есть
         llm_conf = conf01((llm.get("stage") or {}).get("confidence"))
@@ -208,7 +212,7 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
     for x in llm.get("missed") or []:
         if not isinstance(x, dict) or x.get("cls") not in m.classes:
             continue
-        box = _box01(x.get("box"), W, H)
+        box = _box01(x.get("box"), W, H, per_mille)
         if box is None:
             continue
         conf = conf01(x.get("confidence"))

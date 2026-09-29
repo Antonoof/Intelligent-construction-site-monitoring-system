@@ -65,9 +65,14 @@ class Settings:
     # ---- слой ИИ-анализа (app/ai): модель готовности, локальная VLM и LLM (YandexGPT / Claude / ChatGPT)
     # модель готовности ML-части (DINOv2 + голова): auto — weights/readiness/<прогон>/head.pt | путь | off
     readiness: str = field(default_factory=lambda: os.environ.get("OKO_READINESS", "auto"))
-    readiness_dtype: str = field(default_factory=lambda: os.environ.get("OKO_READINESS_DTYPE", "bfloat16"))
+    # формат вычислений DINOv2: auto — bfloat16 на GPU и на CPU с аппаратным bf16 (AVX-512 BF16, AMX), иначе float32:
+    # без аппаратной поддержки bf16 на CPU не быстрее, а float32 — вычисления без преобразований | bfloat16 | float32
+    readiness_dtype: str = field(default_factory=lambda: os.environ.get("OKO_READINESS_DTYPE", "auto"))
     # VLM: off | auto (самая крупная Qwen3-VL, которая помещается в память) | id модели Hugging Face
     vlm: str = field(default_factory=lambda: os.environ.get("OKO_VLM", "off"))
+    # локальная VLM нужна, когда LLM не видит кадр (YandexGPT текстовая). Если LLM сама получает изображения
+    # (qwen3.6 в AI Studio, Claude, ChatGPT), VLM на CPU (1–3 мин на кадр) не запускается; 1 — запускать всегда
+    vlm_always: bool = field(default_factory=lambda: os.environ.get("OKO_VLM_ALWAYS", "0") in ("1", "true", "yes"))
     vlm_device: str = field(default_factory=lambda: os.environ.get("OKO_VLM_DEVICE", "auto"))   # auto | cpu | cuda
     vlm_max_tokens: int = field(default_factory=lambda: int(os.environ.get("OKO_VLM_MAX_TOKENS", "700")))
     vlm_reserve_gb: float = field(default_factory=lambda: float(os.environ.get("OKO_VLM_RESERVE_GB", "1.5")))
@@ -90,6 +95,9 @@ class Settings:
     llm_timeout: float = field(default_factory=lambda: float(os.environ.get("OKO_LLM_TIMEOUT", "300")))
     # лимит токенов ответа LLM; если ответ обрезан на лимите, запрос повторяется один раз с вдвое большим
     llm_max_tokens: int = field(default_factory=lambda: int(os.environ.get("OKO_LLM_MAX_TOKENS", "8000")))
+    # рассуждения моделей, которые по умолчанию рассуждают (Qwen3.x, gpt-oss, DeepSeek): off — выключить (у gpt-oss,
+    # где выключить нельзя, — минимальные): ответ в разы быстрее; model — как решит модель; low | medium | high
+    llm_reasoning: str = field(default_factory=lambda: os.environ.get("OKO_LLM_REASONING", "off"))
     # автоматический анализ каждого нового снимка (платные вызовы LLM) — по умолчанию только по кнопке
     ai_auto: bool = field(default_factory=lambda: os.environ.get("OKO_AI_AUTO", "0") in ("1", "true", "yes"))
     # минимальная уверенность LLM, чтобы её исправление (ложная рамка, пропущенная техника) можно было применить
@@ -100,6 +108,9 @@ class Settings:
     ai_cache: bool = field(default_factory=lambda: os.environ.get("OKO_AI_CACHE", "1") not in ("0", "false", "no"))
     # загрузить модели ИИ-слоя в память сразу после старта, а не при первом анализе
     ai_warmup: bool = field(default_factory=lambda: os.environ.get("OKO_AI_WARMUP", "1") not in ("0", "false", "no"))
+    # LLM, которая сама смотрит на кадр, не ждёт модель готовности, если оценки кадра ещё нет (кадр зоны, быстрая
+    # проверка): DINOv2 на CPU и запрос к LLM идут одновременно; 0 — по очереди, LLM видит оценку модели
+    ai_parallel: bool = field(default_factory=lambda: os.environ.get("OKO_AI_PARALLEL", "1") not in ("0", "false", "no"))
 
     def db_url(self) -> str:
         if self.database_url:

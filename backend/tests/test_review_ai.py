@@ -8,6 +8,7 @@ import os
 import tempfile
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 os.environ.setdefault("OKO_DATA_DIR", tempfile.mkdtemp(prefix="oko-ai-"))
 os.environ.setdefault("OKO_DETECTOR", "demo")
@@ -106,6 +107,17 @@ class VLMTest(unittest.TestCase):
         self.assertIsNone(name)
         self.assertIn("не помещается", why)
 
+    def test_readiness_dtype_by_cpu(self):
+        """auto: bfloat16 — только где он аппаратный (как при обучении на GPU), иначе float32 — быстрее на CPU."""
+        with mock.patch.object(R, "cpu_has_bf16", return_value=False):
+            self.assertEqual(R.auto_dtype("cpu"), "float32")             # Intel Ice Lake (Yandex Cloud standard-v3)
+        with mock.patch.object(R, "cpu_has_bf16", return_value=True):
+            self.assertEqual(R.auto_dtype("cpu"), "bfloat16")            # Sapphire Rapids (AMX), Zen 4
+        with mock.patch("builtins.open", mock.mock_open(read_data="processor : 0\nflags : fpu avx512f amx_bf16\n")):
+            self.assertTrue(R.cpu_has_bf16())
+        with mock.patch("builtins.open", mock.mock_open(read_data="flags : fpu avx2 avx512f avx512_vnni\n")):
+            self.assertFalse(R.cpu_has_bf16())
+
     def test_budget_16gb_vm(self):
         """ВМ 16 ГБ (MemTotal ≈15.6): после RF-DETR и модели готовности (в bfloat16 и во float32) остаётся место
         для Qwen3-VL-2B — не SmolVLM2, как было на стенде с Grounding DINO."""
@@ -125,7 +137,7 @@ class VLMTest(unittest.TestCase):
         from app.config import Settings
         env = {k: v for k, v in os.environ.items() if k != "OKO_READINESS_DTYPE"}
         with mock.patch.dict(os.environ, env, clear=True):
-            self.assertEqual(Settings().readiness_dtype, "bfloat16")    # по умолчанию — как в ML-части
+            self.assertEqual(Settings().readiness_dtype, "auto")        # под процессор: bf16 или float32
 
     def test_parse_json_and_boxes(self):
         self.assertEqual(V.parse_json('Ответ:\n```json\n{"a": 1}\n```'), {"a": 1})
@@ -187,6 +199,8 @@ class LLMClientTest(unittest.TestCase):
         res = c.ask("проверь", {}, {"type": "object"}, "day_review", [b"img"])
         self.assertEqual(res.output["summary"], "ок")
         self.assertEqual(seen, [("Bearer t1.iam", "json_schema"), ("Bearer t1.iam", "json_object")])
+        c.ask("проверь", {}, {"type": "object"}, "day_review", [b"img"])          # принятый формат запоминается
+        self.assertEqual(seen[2:], [("Bearer t1.iam", "json_object")])
 
     def test_reasoning_model_truncated_then_retried(self):
         """Qwen3 в AI Studio рассуждает: ответ обрезан на лимите → один повтор с вдвое большим лимитом."""
@@ -211,7 +225,65 @@ class LLMClientTest(unittest.TestCase):
         self.assertEqual(res.output, {"summary": "ок"})
         self.assertEqual([b["max_tokens"] for b in seen], [4096, 8192])
         self.assertTrue(seen[0]["messages"][1]["content"].endswith("/no_think"))
+        self.assertEqual(seen[0]["reasoning_effort"], "none")
         self.assertEqual((res.tokens_in, res.tokens_out, res.model), (10294, 4996, "qwen3.6-35b-a3b"))
+
+    def test_reasoning_off_by_default(self):
+        """Qwen3.6 не понимает /no_think — рассуждения выключает reasoning_effort; gpt-oss выключить нельзя — low."""
+        def body_for(model, **kw):
+            seen = []
+
+            def handler(req):
+                seen.append(json.loads(req.content))
+                return chat_response({"summary": "ок"}, model)
+            L.LLMClient("yandex", model=model, api_key="k", folder_id=FOLDER, transport=httpx.MockTransport(handler),
+                        **kw).ask("проверь", {}, {"type": "object"}, "snapshot_review")
+            return seen[-1]
+        self.assertEqual(body_for("qwen3.6-35b-a3b")["reasoning_effort"], "none")
+        self.assertEqual(body_for("gpt-oss-120b")["reasoning_effort"], "low")
+        self.assertNotIn("reasoning_effort", body_for("yandexgpt-5.1"))              # YandexGPT не рассуждает
+        self.assertNotIn("reasoning_effort", body_for("qwen3.6-35b-a3b", reasoning="model"))
+        self.assertEqual(body_for("qwen3.6-35b-a3b", reasoning="high")["reasoning_effort"], "high")
+
+    def test_reasoning_param_not_supported(self):
+        """API не принимает reasoning_effort — повтор без него, и дальше без него (лишних отказов нет)."""
+        seen = []
+
+        def handler(req):
+            body = json.loads(req.content)
+            seen.append(("reasoning_effort" in body, body.get("response_format", {}).get("type")))
+            if "reasoning_effort" in body:
+                return httpx.Response(400, json={"error": {"message": "unknown field: reasoning_effort"}})
+            return httpx.Response(200, json={"usage": {"prompt_tokens": 10, "completion_tokens": 5,
+                                                       "completion_tokens_details": {"reasoning_tokens": 3}},
+                                             "choices": [{"message": {"content": '{"summary": "ок"}'}}]})
+
+        c = L.LLMClient("yandex", model="qwen3.6-35b-a3b", api_key="k", folder_id=FOLDER,
+                        transport=httpx.MockTransport(handler))
+        res = c.ask("проверь", {}, {"type": "object"}, "snapshot_review")
+        self.assertEqual(res.output, {"summary": "ок"})
+        self.assertEqual((res.raw["reasoning"], res.raw["reasoning_tokens"]), (True, 3))
+        self.assertEqual(seen, [(True, "json_schema"), (False, "json_schema")])
+        c.ask("проверь", {}, {"type": "object"}, "snapshot_review")
+        self.assertEqual(seen[2:], [(False, "json_schema")])
+
+    def test_reasoning_param_rejected_silently(self):
+        """Отказ без упоминания параметра: сначала все форматы с ним, затем без него — и схема ответа сохраняется."""
+        seen = []
+
+        def handler(req):
+            body = json.loads(req.content)
+            seen.append(("reasoning_effort" in body, body.get("response_format", {}).get("type")))
+            if "reasoning_effort" in body:
+                return httpx.Response(400, json={"error": "invalid argument"})
+            return chat_response({"summary": "ок"}, "qwen3.6-35b-a3b")
+
+        c = L.LLMClient("yandex", model="qwen3.6-35b-a3b", api_key="k", folder_id=FOLDER,
+                        transport=httpx.MockTransport(handler))
+        self.assertEqual(c.ask("проверь", {}, {"type": "object"}, "x").output, {"summary": "ок"})
+        self.assertEqual(seen, [(True, "json_schema"), (True, "json_object"), (True, None), (False, "json_schema")])
+        c.ask("проверь", {}, {"type": "object"}, "x")
+        self.assertEqual(seen[4:], [(False, "json_schema")])
 
     def test_parse_json_variants(self):
         self.assertEqual(V.parse_json('<think>{черновик}</think>{"a": 1}'), {"a": 1})
@@ -314,6 +386,17 @@ class FusionTest(unittest.TestCase):
         self.assertEqual(acts, [("reclass", True), ("reject", True), ("add", True), ("add", False)])
         added = next(c for c in f["corrections"] if c["action"] == "add")
         self.assertEqual(added["box"], [0.6, 0.4, 0.8, 0.8])       # пиксели → доли кадра
+
+    def test_vision_llm_boxes_per_mille(self):
+        llm = {"summary": "ок", "confidence": 0.8, "detections": [], "stage": {"value": "S1"}, "deviations": [],
+               "missed": [{"cls": "dump_truck", "box": [600, 400, 800, 800], "confidence": 0.9}], "recommendations": []}
+        f = fuse_snapshot(_ctx([]), None, llm, 0.6, meta={"llm_vision": True})
+        self.assertEqual(f["missed"][0]["box"], [0.6, 0.4, 0.8, 0.8])            # 0–1000 → доли кадра
+        f = fuse_snapshot(_ctx([]), None, llm, 0.6)                              # текстовая LLM: пиксели 1000×500
+        self.assertEqual(f["missed"][0]["box"], [0.6, 0.8, 0.8, 1.0])
+        llm["missed"][0]["box"] = [0.6, 0.4, 0.8, 0.8]                           # доли — как есть в обоих режимах
+        self.assertEqual(fuse_snapshot(_ctx([]), None, llm, 0.6, meta={"llm_vision": True})["missed"][0]["box"],
+                         [0.6, 0.4, 0.8, 0.8])
 
     def test_low_confidence_blocks_corrections(self):
         llm = {"summary": "плохо видно", "confidence": 0.3, "detections": [{"id": 1, "verdict": "false_positive"}],
@@ -536,6 +619,188 @@ class AIReviewApiTest(unittest.TestCase):
         full = self.c.get(f"/api/analyze/ai/{j['id']}", params={"full": 1}).json()
         self.assertEqual(full["context"]["schedule"][0]["tasks"][0]["wbs"], "12.3.1")
         self.assertEqual(self.c.get("/api/analyze/ai/q000").status_code, 404)
+
+    def test_vision_llm_skips_vlm_single_request(self):
+        """qwen3.6 сама смотрит на кадр: локальная VLM не запускается и не грузится; анализ ставится тем же
+        запросом, что и детекция (ai=1); рамки LLM — в тысячных долях кадра."""
+        from pathlib import Path
+        from app.config import settings
+        seen = []
+
+        def handler(req):
+            body = json.loads(req.content)
+            seen.append(body)
+            content = body["messages"][1]["content"]
+            ctx, _ = json.JSONDecoder().raw_decode(content[0]["text"].split("(JSON):\n", 1)[1])
+            out = {"summary": "Самосвал у бровки детектор пропустил.", "confidence": 0.8, "stage": {"value": "S1"},
+                   "detections": [{"id": d["id"], "verdict": "confirmed"} for d in ctx["detections"]],
+                   "missed": [{"cls": "dump_truck", "box": [700, 550, 950, 900], "confidence": 0.8}],
+                   "deviations": [], "recommendations": [], "_vlm_in_ctx": "vlm" in ctx}
+            return chat_response(out, "qwen3.6-35b-a3b")
+
+        L.set_llm(L.LLMClient("yandex", model="qwen3.6-35b-a3b", api_key="test", folder_id=FOLDER,
+                              transport=httpx.MockTransport(handler)))
+        shot = Path(__file__).resolve().parents[2] / "data" / "demo" / "housing" / "snapshots" / "CAM-01_2026-09-24_10-30.jpg"
+        try:
+            st = self.c.get("/api/ai/status").json()
+            self.assertIn("сама смотрит на кадр", st["vlm"]["skipped"])
+            self.assertIsNone(self.c.get("/api/health").json()["ai"]["vlm"])
+            n_vlm = FakeVLM.calls
+            r = self.c.post("/api/analyze", data={"work_types": "12.3.1", "ai": "1"},
+                            files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+            self.assertEqual(r["check"]["zone"], "FRAME")                        # детекция и проверки — как обычно
+            j = r["ai_job"]
+            self.assertEqual(j["status"], "done", j.get("error"))
+            f = j["final"]
+            self.assertEqual(FakeVLM.calls, n_vlm)
+            self.assertIn("vlm_skipped", f["layers"])
+            self.assertNotIn("vlm", f["layers"].get("timings", {}))
+            self.assertEqual(f["missed"][0]["box"], [0.7, 0.55, 0.95, 0.9])
+            self.assertEqual(len(seen[0]["messages"][1]["content"]), 3)          # задание + кадр + кадр с рамками
+            self.assertEqual(seen[0]["reasoning_effort"], "none")
+            self.assertEqual(f["layers"]["llm_reasoning"], {"effort": "none", "used": False, "tokens": 0})
+            self.assertIn("тысячных", seen[0]["messages"][1]["content"][0]["text"])
+            ctx = self.c.get(f"/api/analyze/ai/{j['id']}", params={"full": 1}).json()["context"]
+            self.assertEqual(ctx["vlm"], {"available": False})                     # в LLM — без описания VLM
+            import dataclasses                                                    # OKO_VLM_ALWAYS=1
+            with mock.patch.object(jobs, "settings", dataclasses.replace(settings, vlm_always=True)):
+                self.assertNotIn("skipped", self.c.get("/api/ai/status").json()["vlm"])
+                j2 = self.c.post("/api/analyze/ai", data={"work_types": "12.3.1"},
+                                 files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+                self.assertEqual(j2["final"]["layers"]["vlm_model"], "fake-vlm")
+        finally:
+            self.enable()
+
+    def _vision_llm(self, seen: list):
+        """LLM, которая сама видит кадр (qwen3.6): запоминает контекст каждого запроса."""
+        def handler(req):
+            body = json.loads(req.content)
+            ctx, _ = json.JSONDecoder().raw_decode(body["messages"][1]["content"][0]["text"].split("(JSON):\n", 1)[1])
+            seen.append(ctx)
+            return chat_response({"summary": "ок", "confidence": 0.8, "stage": {"value": "S1"},
+                                  "detections": [{"id": d["id"], "verdict": "confirmed"} for d in ctx["detections"]],
+                                  "missed": [], "deviations": [], "recommendations": []}, "qwen3.6-35b-a3b")
+        L.set_llm(L.LLMClient("yandex", model="qwen3.6-35b-a3b", api_key="test", folder_id=FOLDER,
+                              transport=httpx.MockTransport(handler)))
+
+    @staticmethod
+    def _clear_readiness_cache():
+        import shutil
+        from app.config import settings
+        shutil.rmtree(settings.data_dir / "ai_cache" / "readiness", ignore_errors=True)
+
+    def test_parallel_readiness_and_llm(self):
+        """LLM видит кадр, оценки кадра зоны ещё нет: модель готовности и LLM работают одновременно, оценка модели —
+        в сведении; кадр общего плана — по очереди (его оценка меняет отклонения); повтор — оценка из кеша, по очереди."""
+        seen = []
+        self._vision_llm(seen)
+        self._clear_readiness_cache()
+        try:
+            over = self.c.get("/api/projects/1/snapshots", params={"day": DAY, "camera": "CAM-06"}).json()[0]
+            zone = self.c.get("/api/projects/1/snapshots", params={"day": DAY, "camera": "CAM-03"}).json()[0]
+            r1 = self.c.post(f"/api/snapshots/{over['id']}/ai-review").json()
+            self.assertEqual(r1["status"], "done", r1.get("error"))
+            self.assertNotIn("parallel", r1["final"]["layers"])
+            self.assertEqual(seen[-1]["stage"]["readiness_model"]["stage"], "S1")    # LLM дождалась оценки
+            self.assertNotIn("readiness_overview", seen[-1]["stage"])
+
+            n = FakeReadiness.calls
+            r2 = self.c.post(f"/api/snapshots/{zone['id']}/ai-review").json()
+            self.assertEqual(r2["status"], "done", r2.get("error"))
+            f = r2["final"]
+            self.assertEqual(f["layers"]["parallel"], ["readiness", "llm"])
+            self.assertEqual(FakeReadiness.calls, n + 1)
+            self.assertIsNone(seen[-1]["stage"]["readiness_model"])                  # LLM не ждала оценку кадра
+            self.assertEqual(seen[-1]["stage"]["readiness_overview"]["camera"], "CAM-06")   # опора — общий план
+            self.assertEqual((f["stage"]["model"], f["stage"]["llm"]), ("S1", "S1"))     # оценка модели — в сведении
+            self.assertEqual(set(f["layers"]["timings"]), {"readiness", "llm"})
+            self.assertEqual(self.c.get(f"/api/snapshots/{zone['id']}").json()["assessment"]["stage"], "S1")
+            full = self.c.get(f"/api/ai/reviews/{r2['id']}", params={"full": 1}).json()
+            self.assertIsNone(full["context"]["stage"]["readiness_model"])            # в аудите — то, что видела LLM
+
+            r3 = self.c.post(f"/api/snapshots/{zone['id']}/ai-review").json()         # оценка уже есть — по очереди
+            self.assertNotIn("parallel", r3["final"]["layers"])
+            self.assertEqual(seen[-1]["stage"]["readiness_model"]["stage"], "S1")
+            self.assertEqual(FakeReadiness.calls, n + 1)
+
+            import dataclasses                                                        # OKO_AI_PARALLEL=0
+            from app.config import settings
+            self._clear_readiness_cache()
+            zone2 = self.c.get("/api/projects/1/snapshots", params={"day": DAY, "camera": "CAM-04"}).json()[0]
+            with mock.patch.object(jobs, "settings", dataclasses.replace(settings, ai_parallel=False)):
+                r4 = self.c.post(f"/api/snapshots/{zone2['id']}/ai-review").json()
+            self.assertNotIn("parallel", r4["final"]["layers"])
+            self.assertEqual(seen[-1]["stage"]["readiness_model"]["stage"], "S1")
+        finally:
+            self.enable()
+
+    def test_parallel_quick_check(self):
+        """Быстрая проверка с LLM, которая видит кадр: модель готовности и LLM одновременно — и в фоновых потоках."""
+        import time as _t
+        from pathlib import Path
+        shot = Path(__file__).resolve().parents[2] / "data" / "demo" / "housing" / "snapshots" / "CAM-01_2026-09-24_10-30.jpg"
+        seen = []
+        self._vision_llm(seen)
+        self._clear_readiness_cache()
+        try:
+            r = self.c.post("/api/analyze", data={"work_types": "12.3.1", "ai": "1"},
+                            files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+            j = r["ai_job"]
+            self.assertEqual(j["status"], "done", j.get("error"))
+            f = j["final"]
+            self.assertEqual(f["layers"]["parallel"], ["readiness", "llm"])
+            self.assertIsNone(seen[-1]["stage"]["readiness_model"])
+            self.assertEqual((f["assessment"]["stage"], f["stage"]["model"]), ("S1", "S1"))
+
+            self._clear_readiness_cache()                                             # то же в рабочих потоках
+            jobs.SYNC = False
+            try:
+                j = self.c.post("/api/analyze/ai", data={"work_types": "12.3.1"},
+                                files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+                for _ in range(200):
+                    j = self.c.get(f"/api/analyze/ai/{j['id']}").json()
+                    if j["status"] in ("done", "error"):
+                        break
+                    _t.sleep(0.02)
+            finally:
+                jobs.SYNC = True
+            self.assertEqual(j["status"], "done", j.get("error"))
+            self.assertEqual(j["final"]["layers"]["parallel"], ["readiness", "llm"])
+            self.assertEqual(j["final"]["assessment"]["stage"], "S1")
+        finally:
+            self.enable()
+
+    def test_join_finishes_once(self):
+        """Сведение вызывается ровно один раз, даже если части приходят одновременно и повторно."""
+        import threading
+        got = []
+        j = jobs._Join(("readiness", "llm"), got.append)
+        ts = [threading.Thread(target=j.put, args=(n, i)) for i, n in enumerate(["readiness", "llm"] * 10)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
+        self.assertEqual(len(got), 1)
+        self.assertEqual(set(got[0]), {"readiness", "llm"})
+
+    def test_quick_check_detects_once(self):
+        """Повторная проверка того же файла и «Повторить анализ» не запускают детектор заново."""
+        from pathlib import Path
+        from app.api import analyze as A
+        from app.detection import get_detector
+        shot = Path(__file__).resolve().parents[2] / "data" / "demo" / "housing" / "snapshots" / "CAM-01_2026-09-24_10-30.jpg"
+        A._det_cache.clear()
+        det = get_detector()
+        with mock.patch.object(det, "detect", wraps=det.detect) as spy:
+            a = self.c.post("/api/analyze", data={"work_types": "12.3.1"},
+                            files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+            b = self.c.post("/api/analyze/ai", data={"work_types": "12.3.1"},
+                            files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+            c = self.c.post("/api/analyze", data={"work_types": "12.3.1", "tiles": "3"},
+                            files={"file": (shot.name, shot.read_bytes(), "image/jpeg")}).json()
+        self.assertEqual(spy.call_count, 2)                                       # тот же файл; 3×3 — отдельно
+        self.assertEqual(b["status"], "done", b.get("error"))
+        self.assertEqual(len(a["boxes"]), len(c["boxes"]))
 
     def test_repeat_analysis_reuses_model_layers(self):
         """Повторный анализ того же кадра: модели не запускаются, из кеша, заново — только LLM."""

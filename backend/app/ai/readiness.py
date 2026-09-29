@@ -17,8 +17,9 @@ training/runs/<дата>/, скопированный в weights/readiness/<да
 последнего этапа; статус — по порогам из training/config.yaml (plan: ahead / risk / late).
 
 OKO_READINESS: auto (weights/readiness/latest.txt или самый свежий прогон) | путь к прогону или head.pt | off.
-DINOv2 ViT-g в bfloat16 — как при обучении головы (training/config.yaml: backbone.dtype), ≈2.6 ГБ ОЗУ и 20–40 с на
-кадр на 4 vCPU; OKO_READINESS_DTYPE=float32 — вдвое больше памяти.
+OKO_READINESS_DTYPE=auto: bfloat16 (как при обучении головы, training/config.yaml: backbone.dtype; ≈2.6 ГБ) на GPU
+и на CPU с аппаратным bf16 (AVX-512 BF16, AMX); на остальных CPU — float32 (≈5 ГБ, ≈20 с на кадр на 4 vCPU):
+без аппаратной поддержки bf16 не ускоряет, а только добавляет преобразования. Не хватает памяти — bfloat16.
 """
 from __future__ import annotations
 
@@ -136,8 +137,30 @@ def build_head(dim: int, n_det: int, n_stages: int, hidden: int = 512):
     return StageProgressHead()
 
 
+def cpu_has_bf16() -> bool:
+    """Процессор считает bfloat16 аппаратно (AVX-512 BF16 или AMX)."""
+    try:
+        with open("/proc/cpuinfo", encoding="ascii", errors="ignore") as f:
+            flags = next((line for line in f if line.startswith("flags")), "")
+    except OSError:
+        return False
+    return bool({"avx512_bf16", "amx_bf16"} & set(flags.split()))
+
+
+def auto_dtype(device_pref: str = "auto") -> str:
+    """Формат вычислений DINOv2 для OKO_READINESS_DTYPE=auto: bfloat16 на GPU и на CPU с аппаратным bf16,
+    иначе float32 — на таком CPU bf16 не быстрее, а float32 считается без преобразований."""
+    try:
+        import torch
+        if device_pref in ("auto", "cuda") and torch.cuda.is_available():
+            return "bfloat16"
+    except ImportError:
+        pass
+    return "bfloat16" if cpu_has_bf16() else "float32"
+
+
 class ReadinessModel:
-    def __init__(self, setting: str, device_pref: str = "auto", dtype: str = "bfloat16", reserve_gb: float = 1.0):
+    def __init__(self, setting: str, device_pref: str = "auto", dtype: str = "auto", reserve_gb: float = 1.0):
         import importlib.util
         self.run = find_run(setting)
         self.setting = setting
@@ -148,6 +171,9 @@ class ReadinessModel:
                                            else "нет head.pt в weights/readiness/")
         if self.run and not all(importlib.util.find_spec(x) for x in ("torch", "transformers")):
             self.run, self.reason = None, "нет PyTorch и transformers (образ Dockerfile.ai)"
+        self.dtype_auto = dtype.lower() == "auto"
+        if self.dtype_auto:
+            self.dtype_name = auto_dtype(device_pref) if self.run else "float32"
 
     @property
     def enabled(self) -> bool:
@@ -166,7 +192,7 @@ class ReadinessModel:
     def plan(self) -> dict:
         if not self.enabled:
             return {"enabled": False, "reason": self.reason}
-        return {"enabled": True, "run": self.run.name, "loaded": self._ready,
+        return {"enabled": True, "run": self.run.name, "loaded": self._ready, "dtype": self.dtype_name,
                 "backbone": getattr(self, "backbone_name", None), "device": getattr(self, "device", None)}
 
     def warm(self) -> None:
@@ -186,6 +212,9 @@ class ReadinessModel:
         dtype = getattr(torch, self.dtype_name, torch.float32)
         name = ck["backbone"]
         need = BACKBONE_PARAMS_B.get(name, 1.14) * (2 if dtype != torch.float32 else 4) * 1.15 + 0.5
+        if avail - self.reserve_gb < need and self.dtype_auto and dtype == torch.float32:
+            log.info("модели готовности в float32 не хватает памяти (≈%.1f ГБ) — bfloat16", need)
+            dtype, self.dtype_name, need = torch.bfloat16, "bfloat16", need / 2 + 0.25
         if avail - self.reserve_gb < need:
             raise RuntimeError(f"модели готовности нужно ≈{need:.1f} ГБ, доступно {avail:.1f} ГБ "
                                f"(в float32 — вдвое больше, чем в bfloat16)")
@@ -300,14 +329,42 @@ def set_readiness(m) -> None:
     _model = m
 
 
+def _cache_key(model, dets, sha: str) -> str:
+    from . import cache
+    run = getattr(model, "run", None)
+    return cache.key("readiness", getattr(run, "name", type(model).__name__), getattr(model, "dtype_name", ""), sha,
+                     [(c, round(float(conf), 3), [round(float(v), 1) for v in box]) for c, conf, box in dets])
+
+
 def cached_predict(model, load_img, dets, class_key, sha: str) -> tuple[dict, bool]:
     """predict с кешем по содержимому кадра (ai/cache.py): тот же кадр, прогон, точность и рамки — тот же ответ.
     Возвращает (оценка, взята_из_кеша)."""
     from . import cache
-    run = getattr(model, "run", None)
-    k = cache.key("readiness", getattr(run, "name", type(model).__name__), getattr(model, "dtype_name", ""), sha,
-                  [(c, round(float(conf), 3), [round(float(v), 1) for v in box]) for c, conf, box in dets])
-    return cache.cached("readiness", k, lambda: model.predict(load_img(), dets, class_key))
+    return cache.cached("readiness", _cache_key(model, dets, sha), lambda: model.predict(load_img(), dets, class_key))
+
+
+def in_cache(model, dets, sha: str) -> bool:
+    """Оценка этого кадра уже посчитана — модель не запустится, ответ мгновенный."""
+    from . import cache
+    return cache.get("readiness", _cache_key(model, dets, sha)) is not None
+
+
+def snapshot_dets(snap) -> list[tuple]:
+    """Рамки детектора снимка, по которым модель готовности считает признаки техники (как common.det_features)."""
+    return [(d.equipment_class, d.confidence, (d.x1, d.y1, d.x2, d.y2)) for d in snap.detections
+            if not d.is_rejected and d.source != "llm" and d.confidence >= 0.3]
+
+
+def snapshot_assessed(s, snap) -> bool:
+    """Оценка снимка готова без запуска модели: демо-разметка или кеш по содержимому кадра."""
+    from .. import models as M
+    model = get_readiness()
+    if not model.enabled:
+        return True
+    p = s.get(M.Project, snap.project_id)
+    if p.is_demo and snap.assessment:
+        return True
+    return in_cache(model, snapshot_dets(snap), snap.sha256)
 
 
 def assess_snapshot(s, snap) -> dict | None:
@@ -330,9 +387,7 @@ def assess_snapshot_ex(s, snap) -> tuple[dict | None, bool]:
     if p.is_demo and snap.assessment:          # демо-сцены синтетические: оставляем оценку из разметки
         return snap.assessment, True
     m = get_methodology()
-    dets = [(d.equipment_class, d.confidence, (d.x1, d.y1, d.x2, d.y2)) for d in snap.detections
-            if not d.is_rejected and d.source != "llm" and d.confidence >= 0.3]
-    out, hit = cached_predict(model, lambda: load_image(Path(snap.file_path).read_bytes()), dets,
+    out, hit = cached_predict(model, lambda: load_image(Path(snap.file_path).read_bytes()), snapshot_dets(snap),
                               m.normalize_class, snap.sha256)
     cam = s.get(M.Camera, snap.camera_id)
     out["overview"] = bool(cam.is_overview)

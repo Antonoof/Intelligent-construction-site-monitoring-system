@@ -1,14 +1,17 @@
 """Быстрая проверка одного снимка без проекта и контракт AI-сервиса.
 
 POST /api/analyze — снимок + вид(ы) работ справочника → техника на снимке, проверки методики,
-отклонения. Удобно для жюри: любой снимок, любой этап, результат за один запрос.
+отклонения. Удобно для жюри: любой снимок, любой этап, результат за один запрос. С ai=1 в том же запросе
+ставится ИИ-анализ снимка — без повторной загрузки файла и повторной детекции.
 POST /internal/detect, GET /internal/info — контракт AI-сервиса (backend/readme.md): тот же код,
 запущенный на машине с GPU и весами RF-DETR, обслуживает основной сервис на CPU.
 """
 from __future__ import annotations
 
 import datetime as dt
+import threading
 import time
+from collections import OrderedDict
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
@@ -21,22 +24,52 @@ from ..schedule_io import parse_equipment
 
 router = APIRouter(tags=["Быстрая проверка и AI-сервис"])
 
+# Детекция по содержимому файла: «Повторить анализ» и повторная проверка того же снимка не запускают детектор
+# заново (RF-DETR на CPU — секунды, по фрагментам 3×3 — десятки секунд). Детектор детерминирован.
+_det_cache: OrderedDict = OrderedDict()
+_det_lock = threading.Lock()
+DET_CACHE_SIZE = 32
 
+
+def _detect(det, img, tiles: int, digest: str):
+    key = (id(det), det.name, getattr(det, "threshold", None), tiles, digest)
+    with _det_lock:
+        if key in _det_cache:
+            _det_cache.move_to_end(key)
+            return _det_cache[key]
+    res = det.detect(img, tiles=tiles, sha256=digest)
+    with _det_lock:
+        _det_cache[key] = res
+        while len(_det_cache) > DET_CACHE_SIZE:
+            _det_cache.popitem(last=False)
+    return res
+
+
+# обычные (не async) обработчики: детекция на CPU идёт в пуле потоков и не останавливает остальные запросы
 @router.post("/api/analyze", summary="Проверить снимок против этапа работ (без проекта)")
-async def analyze(file: UploadFile = File(...),
-                  work_types: str = Form(..., description="id видов работ через запятую, например 12.3.7-1"),
-                  planned: str = Form("", description="техника по графику: «экскаватор ×1; самосвал ×3»"),
-                  tiles: int = Form(0, description="детекция по фрагментам 3×3 для общих планов"),
-                  taken_at: str | None = Form(None)):
-    res, _img, _ids = quick_check(await file.read(), file.filename or "", work_types, planned, tiles, taken_at)
+def analyze(file: UploadFile = File(...),
+            work_types: str = Form(..., description="id видов работ через запятую, например 12.3.7-1"),
+            planned: str = Form("", description="техника по графику: «экскаватор ×1; самосвал ×3»"),
+            tiles: int = Form(0, description="детекция по фрагментам 3×3 для общих планов"),
+            taken_at: str | None = Form(None),
+            ai: int = Form(0, description="1 — сразу поставить ИИ-анализ снимка (ответ: ai_job)")):
+    res, img, ids = quick_check(file.file.read(), file.filename or "", work_types, planned, tiles, taken_at)
+    if ai:
+        if not res["quality"]["ok"]:
+            res["ai_note"] = "снимок не прошёл контроль качества — анализ ИИ не запущен автоматически"
+        else:
+            try:
+                res["ai_job"] = ai_jobs.submit_quick(img, dict(res), ids, file.filename or "")
+            except ai_jobs.AIDisabled as e:
+                res["ai_note"] = str(e)
     return res
 
 
 @router.post("/api/analyze/ai", status_code=202,
              summary="Быстрая проверка + ИИ-анализ: модель готовности, VLM и LLM (YandexGPT) по снимку без проекта")
-async def analyze_ai(file: UploadFile = File(...), work_types: str = Form(...), planned: str = Form(""),
-                     tiles: int = Form(0), taken_at: str | None = Form(None)):
-    res, img, ids = quick_check(await file.read(), file.filename or "", work_types, planned, tiles, taken_at)
+def analyze_ai(file: UploadFile = File(...), work_types: str = Form(...), planned: str = Form(""),
+               tiles: int = Form(0), taken_at: str | None = Form(None)):
+    res, img, ids = quick_check(file.file.read(), file.filename or "", work_types, planned, tiles, taken_at)
     try:
         return ai_jobs.submit_quick(img, res, ids, file.filename or "")
     except ai_jobs.AIDisabled as e:
@@ -67,7 +100,7 @@ def quick_check(data: bytes, filename: str, work_types: str, planned: str, tiles
     q = assess_quality(img, m.config.get("quality", {}))
     det = get_detector()
     digest = sha256(data)
-    res = det.detect(img, tiles=tiles, sha256=digest) if q.ok else None
+    res = _detect(det, img, tiles, digest) if q.ok else None
     t_det = time.perf_counter()
     valid, reason = q.ok, q.reason
     if res is not None and not res.recognized:          # детектор не подключён — «нет данных», а не «нет техники»
@@ -107,9 +140,9 @@ def internal_info():
 
 
 @router.post("/internal/detect", summary="AI-сервис: детекция техники на одном кадре")
-async def internal_detect(file: UploadFile = File(...), tiles: int = 0,
-                          sha256_hint: str = Query("", alias="sha256", description="SHA-256 исходного файла")):
-    data = await file.read()
+def internal_detect(file: UploadFile = File(...), tiles: int = 0,
+                    sha256_hint: str = Query("", alias="sha256", description="SHA-256 исходного файла")):
+    data = file.file.read()
     img = load_image(data)
     res = get_detector().detect(img, tiles=tiles, sha256=sha256_hint or sha256(data))
     return {"model_version": res.model, "note": res.note, "assessment": res.assessment, "recognized": res.recognized,

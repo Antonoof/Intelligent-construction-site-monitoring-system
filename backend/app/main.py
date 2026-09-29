@@ -38,7 +38,7 @@ def startup() -> None:
         if ai_jobs.recover(s):
             log.info("незавершённые ИИ-анализы помечены как прерванные")
     ai_st = _ai_brief()
-    log.info("ИИ-анализ: VLM %s, LLM %s", ai_st["vlm"] or "выключена", ai_st["llm"] or "выключена")
+    log.info("ИИ-анализ: VLM %s, LLM %s", ai_st["vlm"] or ai_st.get("vlm_note") or "выключена", ai_st["llm"] or "выключена")
     if ai_jobs.submit_warmup():
         log.info("ИИ-анализ: модели загружаются в память в фоне")
     if settings.seed_demo:
@@ -80,7 +80,9 @@ def health():
 def _ai_brief() -> dict:
     """Включённые ИИ-слои: VLM (какая модель будет загружена под доступную память) и LLM."""
     st = ai_jobs.status()
-    return {"vlm": st["vlm"].get("model") if st["vlm"].get("enabled") else None,
+    v = st["vlm"]
+    return {"vlm": v.get("model") if v.get("enabled") and not v.get("skipped") else None,
+            **({"vlm_note": "не нужна: LLM сама смотрит на кадр"} if v.get("skipped") else {}),
             "llm": f'{st["llm"]["provider"]}:{st["llm"]["model"]}' if st["llm"]["provider"] != "off" else None}
 
 

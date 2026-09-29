@@ -5,7 +5,9 @@
     1. модель готовности (DINOv2 + голова): стадия, готовность, план по графику → snapshots.assessment,
        пересчёт отклонений дня (STAGE_MISMATCH);
     2. сбор выводов детектора, модели готовности и правил (context.snapshot_context);
-    3. локальная VLM описывает кадр и отмечает технику рамками; сверка рамок VLM и детектора (cross_check);
+    3. локальная VLM описывает кадр и отмечает технику рамками; сверка рамок VLM и детектора (cross_check) —
+       только если LLM сама не видит кадр (YandexGPT текстовая); qwen3.6, Claude и ChatGPT получают изображения,
+       и VLM на CPU (1–3 минуты на кадр) не нужна (OKO_VLM_ALWAYS=1 — запускать всегда);
     4. LLM (YandexGPT / Claude / ChatGPT) проверяет все слои и исправляет ошибки моделей;
     5. сведение (fusion.fuse_snapshot) и, при OKO_AI_APPLY=auto, применение исправлений.
 
@@ -15,6 +17,10 @@
   • выводы детерминированных слоёв кешируются по содержимому кадра (cache.py): повторный анализ того же кадра и
     анализ кадра общего плана, оценённого в фоне при загрузке, заново вызывают только LLM;
   • модели загружаются в память сразу после старта сервиса (warmup), а не при первом анализе;
+  • VLM не запускается, если LLM сама смотрит на кадр; рассуждения LLM выключены (OKO_LLM_REASONING);
+  • LLM, которая сама смотрит на кадр, не ждёт модель готовности, если оценки этого кадра ещё нет (кадр зоны,
+    быстрая проверка): DINOv2 на CPU и запрос к LLM идут одновременно, анализ сводит та часть, что закончила
+    последней (_Join); кадры общего плана — по-прежнему по очереди: их оценка меняет отклонения (OKO_AI_PARALLEL);
   • время каждого слоя пишется в итог (layers.timings) — видно, что занимает время.
 Каждый шаг фиксируется в БД (status, step). После перезапуска незавершённые задачи помечаются ошибкой (recover).
 """
@@ -41,7 +47,7 @@ from . import cache
 from . import context as C
 from .fusion import apply_corrections, clean_day_output, cross_check, fuse_snapshot
 from .llm import DAY_SCHEMA, LLMError, get_llm, snapshot_schema
-from .readiness import assess_snapshot, assess_snapshot_ex, cached_predict, get_readiness
+from .readiness import assess_snapshot, assess_snapshot_ex, cached_predict, get_readiness, in_cache, snapshot_assessed
 from .vlm import get_vlm
 
 log = logging.getLogger("oko.ai")
@@ -66,9 +72,19 @@ def not_json(llm, res) -> str:
     return f"{llm.name} ({llm.model}) ответила не JSON: «{head}…»"
 
 
+def vlm_skip_reason() -> str:
+    """Почему локальная VLM не запускается: LLM сама получает изображения кадра и видит больше, чем VLM на CPU,
+    а VLM занимает 1–3 минуты на кадр. Пустая строка — VLM нужна (или выключена настройкой)."""
+    vlm, llm = get_vlm(), get_llm()
+    if not vlm.enabled or settings.vlm_always or not llm.enabled or not llm.vision:
+        return ""
+    return f"{llm.name} ({llm.model}) сама смотрит на кадр — локальная VLM не нужна (OKO_VLM_ALWAYS=1 — запускать)"
+
+
 def status() -> dict:
     rd, vlm, llm = get_readiness(), get_vlm(), get_llm()
-    return {"readiness": rd.plan(), "vlm": vlm.plan(), "llm": llm.info(),
+    skip = vlm_skip_reason()
+    return {"readiness": rd.plan(), "vlm": {**vlm.plan(), **({"skipped": skip} if skip else {})}, "llm": llm.info(),
             "auto": settings.ai_auto, "apply": settings.ai_apply, "min_conf": settings.ai_apply_min_conf,
             "enabled": rd.enabled or vlm.enabled or llm.enabled}
 
@@ -96,8 +112,10 @@ def _safe(fn, *args) -> None:
 
 def warmup() -> None:
     """Загрузить модели ИИ-слоя в память после старта: первый анализ не ждёт загрузки весов.
-    Порядок важен: VLM выбирается под память, оставшуюся после модели готовности."""
-    for name, obj in (("модель готовности", get_readiness()), ("VLM", get_vlm())):
+    Порядок важен: VLM выбирается под память, оставшуюся после модели готовности. VLM, которая не будет
+    запускаться (LLM сама видит кадр), в память не загружается."""
+    layers = [("модель готовности", get_readiness())] + ([] if vlm_skip_reason() else [("VLM", get_vlm())])
+    for name, obj in layers:
         if getattr(obj, "enabled", False) and hasattr(obj, "warm"):
             t0 = time.perf_counter()
             try:
@@ -110,7 +128,7 @@ def warmup() -> None:
 def submit_warmup() -> bool:
     if not settings.ai_warmup:
         return False
-    if not any(getattr(o, "enabled", False) for o in (get_readiness(), get_vlm())):
+    if not get_readiness().enabled and not (get_vlm().enabled and not vlm_skip_reason()):
         return False
     _executor.submit(_safe, warmup)
     return True
@@ -189,6 +207,10 @@ def _vlm(ctx: dict, img_fn, sha: str, step, errors: list, layers: dict, hint: st
     vlm = get_vlm()
     if not vlm.enabled:
         return "", None
+    skip = vlm_skip_reason()
+    if skip:                                 # LLM сама смотрит на кадр — VLM на CPU только добавила бы минуты
+        layers["vlm_skipped"] = skip
+        return "", None
     plan = vlm.plan()
     step(" ".join(x for x in ("локальная VLM", plan.get("model") or "", "описывает кадр") if x))
     t0 = time.perf_counter()
@@ -237,6 +259,10 @@ def _ask_llm(ctx: dict, images: list[bytes], errors: list, layers: dict):
 
 def _layers_meta(layers: dict, vlm_model: str, llm_res) -> dict:
     llm = get_llm()
+    if llm_res and llm_res.raw:                 # рассуждала ли модель (и принят ли reasoning_effort) — видно в карточке
+        raw = llm_res.raw
+        layers = {**layers, "llm_reasoning": {"effort": raw.get("reasoning_effort"), "used": bool(raw.get("reasoning")),
+                                              "tokens": raw.get("reasoning_tokens") or 0}}
     return {**layers, "vlm_model": vlm_model, "llm_model": llm_res.model if llm_res else (llm.model if llm.enabled else ""),
             "llm_provider": llm_res.provider if llm_res else (llm.provider if llm.enabled else ""),
             "llm_name": llm.name if llm.enabled else "", "llm_vision": llm.vision if llm.enabled else None}
@@ -255,8 +281,57 @@ def _fail(rid: int, s: Session, t0: float, e: Exception) -> None:
     s.commit()
 
 
+class _Join:
+    """Части анализа, которые идут одновременно: модель готовности на CPU и запрос к LLM по сети. Анализ завершает
+    часть, которая закончила последней; финал вызывается ровно один раз."""
+
+    def __init__(self, parts: tuple, finish):
+        self._left, self._got, self._finish = set(parts), {}, finish
+        self._lock = threading.Lock()
+
+    def put(self, name: str, value) -> None:
+        with self._lock:
+            if not self._left:
+                return
+            self._got[name] = value
+            self._left.discard(name)
+            last = not self._left
+        if last:
+            self._finish(dict(self._got))
+
+
+def _parallel(vision_llm: bool, overview: bool, assessed: bool) -> bool:
+    """LLM не ждёт модель готовности: LLM сама видит кадр, VLM не запускается (иначе LLM ждёт её описание), оценки
+    этого кадра ещё нет, и это не кадр общего плана — его оценка меняет отклонения, которые уходят в LLM."""
+    vlm = get_vlm()
+    vlm_runs = vlm.enabled and not vlm_skip_reason()
+    return (settings.ai_parallel and vision_llm and get_readiness().enabled and not vlm_runs and not overview
+            and not assessed)
+
+
+def _llm_part(payload: dict, join: _Join) -> None:
+    """Запрос к LLM в параллельном режиме (пул LLM); ответ — в join. errors и layers общие с моделью готовности:
+    части пишут разные ключи, а добавление в список и запись в словарь в CPython атомарны."""
+    res = None
+    try:
+        res = _ask_llm(payload["ctx"], payload["images"], payload["errors"], payload["layers"])
+    except Exception as e:                        # сбой не должен оставить анализ «выполняется» навсегда
+        log.exception("LLM")
+        payload["errors"].append(f"LLM: {e}")
+    join.put("llm", res)
+
+
+def _with_readiness(ctx: dict, assessment: dict | None) -> dict:
+    """Контекст для сведения: к тому, что видела LLM, добавляется оценка модели готовности, посчитанная параллельно."""
+    if not assessment:
+        return ctx
+    return {**ctx, "stage": {**ctx["stage"], "readiness_model": C.assessment_brief(assessment)}}
+
+
 def run_snapshot(rid: int) -> None:
-    """Шаги 1–3 на CPU; шаги 4–5 уходят в пул LLM (finish_snapshot), модели берутся за следующий кадр."""
+    """Шаги 1–3 на CPU; шаги 4–5 уходят в пул LLM (finish_snapshot), модели берутся за следующий кадр.
+    Параллельный режим (_parallel): контекст без оценки этого кадра сразу уходит в LLM, модель готовности считает
+    здесь же, анализ сводит _Join."""
     t0 = time.perf_counter()
     s = SessionLocal()
     r = s.get(M.AIReview, rid)
@@ -266,6 +341,10 @@ def run_snapshot(rid: int) -> None:
         rd, llm = get_readiness(), get_llm()
         errors, layers = [], {"timings": {}, "cached": []}
         step = lambda text: _step(s, r, text)  # noqa: E731
+        cam = s.get(M.Camera, snap.camera_id)
+        if snap.quality_ok and llm.enabled and _parallel(llm.vision, cam.is_overview, snapshot_assessed(s, snap)):
+            _run_snapshot_parallel(s, r, rid, snap, t0, errors, layers)
+            return
 
         if rd.enabled and snap.quality_ok:
             step("модель готовности (DINOv2 + голова): стадия и готовность")
@@ -307,8 +386,50 @@ def run_snapshot(rid: int) -> None:
     _submit_llm(finish_snapshot, rid, payload)
 
 
+def _run_snapshot_parallel(s: Session, r: M.AIReview, rid: int, snap: M.Snapshot, t0: float, errors: list,
+                           layers: dict) -> None:
+    """Контекст (без оценки этого кадра) — сразу в LLM; модель готовности тем временем считает в этом потоке."""
+    llm = get_llm()
+    _step(s, r, f"модель готовности и {llm.name} ({llm.model}) работают одновременно")
+    ctx = C.snapshot_context(s, snap)
+    r.context = ctx
+    s.commit()
+    payload = {"ctx": ctx, "images": C.llm_images(s, snap), "vlm_model": "", "vlm_out": None, "errors": errors,
+               "layers": {**layers, "parallel": ["readiness", "llm"]}, "t0": t0}
+    layers = payload["layers"]
+    join = _Join(("readiness", "llm"), lambda got: _complete_snapshot(      # rid, а не r.id: сведение может
+        rid, payload, got.get("llm"), _with_readiness(ctx, got.get("readiness"))))  # идти после закрытия сессии
+    _submit_llm(_llm_part, payload, join)
+    a, t1 = None, time.perf_counter()
+    try:
+        a, hit = assess_snapshot_ex(s, snap)
+        s.commit()
+        layers["readiness_model"] = (a or {}).get("model")
+        _timed(layers, "readiness", t1, hit)
+    except Exception as e:                       # нет памяти или весов DINOv2 — анализ сводится без слоя
+        s.rollback()
+        log.warning("модель готовности: %s", e)
+        errors.append(f"модель готовности: {e}")
+    join.put("readiness", a)
+
+
 def finish_snapshot(rid: int, payload: dict) -> None:
     """Шаги 4–5: LLM сверяет слои, сведение, сохранение, при OKO_AI_APPLY=auto — применение исправлений."""
+    try:
+        llm_res = _ask_llm(payload["ctx"], payload["images"], payload["errors"], payload["layers"])
+    except Exception as e:
+        s = SessionLocal()
+        try:
+            _fail(rid, s, payload["t0"], e)
+        finally:
+            s.close()
+        raise
+    _complete_snapshot(rid, payload, llm_res)
+
+
+def _complete_snapshot(rid: int, payload: dict, llm_res, fuse_ctx: dict | None = None) -> None:
+    """Сведение и сохранение. fuse_ctx — контекст для сведения, если он шире того, что видела LLM (оценка модели
+    готовности, посчитанная параллельно); в ai_reviews.context остаётся ровно то, что ушло в LLM."""
     t0 = payload["t0"]
     s = SessionLocal()
     try:
@@ -316,7 +437,6 @@ def finish_snapshot(rid: int, payload: dict) -> None:
         ctx, errors, layers = payload["ctx"], payload["errors"], payload["layers"]
         vlm_out = payload["vlm_out"]
         llm = get_llm()
-        llm_res = _ask_llm(ctx, payload["images"], errors, layers)
         llm_out = llm_res.output if llm_res else None
         if llm_res:
             r.llm_provider, r.llm_model = llm_res.provider, llm_res.model
@@ -326,7 +446,7 @@ def finish_snapshot(rid: int, payload: dict) -> None:
             r.llm_provider, r.llm_model = llm.provider, llm.model
         r.context = ctx
         layers = _layers_meta(layers, payload["vlm_model"], llm_res)
-        r.final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
+        r.final = fuse_snapshot(fuse_ctx or ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
         ok = _ok(llm_out, vlm_out, layers)
         r.status, r.step, r.error = ("done" if ok else "error"), "", "; ".join(errors)[:2000]
         r.duration_ms = round((time.perf_counter() - t0) * 1000)
@@ -444,23 +564,44 @@ def run_quick(jid: str) -> None:
         ctx = C.quick_context(res, wts, name)
         sha = res.get("sha256") or ""
         step = lambda text: _qset(jid, status="running", step=text)  # noqa: E731
-        assessment = None
-        if rd.enabled and res["quality"]["ok"]:
-            step("модель готовности (DINOv2 + голова): стадия и готовность")
-            t1 = time.perf_counter()
-            try:
-                dets = [(b["cls"], b["conf"], tuple(b["xyxy"])) for b in res["boxes"] if b["conf"] >= 0.3]
-                assessment, hit = cached_predict(rd, lambda: img, dets, m.normalize_class, sha)
-                assessment["note"] = "модель обучена на общих планах площадки; на крупном плане оценка ориентировочная"
-                ctx["stage"]["readiness_model"] = C.assessment_brief(assessment)
-                layers["readiness_model"] = assessment.get("model")
-                _timed(layers, "readiness", t1, hit)
-            except Exception as e:
-                log.warning("модель готовности: %s", e)
-                errors.append(f"модель готовности: {e}")
         boxes = [{"id": b["id"], "label": f"#{b['id']} {b['label']}", "conf": b["conf"], "color": b.get("color") or "#E1A21C",
                   "x1": b["xyxy"][0], "y1": b["xyxy"][1], "x2": b["xyxy"][2], "y2": b["xyxy"][3],
                   "dashed": not b["strong"]} for b in res["boxes"]]
+        dets = [(b["cls"], b["conf"], tuple(b["xyxy"])) for b in res["boxes"] if b["conf"] >= 0.3]
+        ok_q = res["quality"]["ok"]
+
+        def readiness() -> dict | None:
+            t1 = time.perf_counter()
+            try:
+                a, hit = cached_predict(rd, lambda: img, dets, m.normalize_class, sha)
+                a["note"] = "модель обучена на общих планах площадки; на крупном плане оценка ориентировочная"
+                layers["readiness_model"] = a.get("model")
+                _timed(layers, "readiness", t1, hit)
+                return a
+            except Exception as e:
+                log.warning("модель готовности: %s", e)
+                errors.append(f"модель готовности: {e}")
+                return None
+
+        if ok_q and llm.enabled and _parallel(llm.vision, False, not rd.enabled or in_cache(rd, dets, sha)):
+            step(f"модель готовности и {llm.name} ({llm.model}) работают одновременно")
+            layers["parallel"] = ["readiness", "llm"]
+            payload = {"ctx": ctx, "images": C.frame_images(img, boxes), "vlm_model": "", "vlm_out": None,
+                       "errors": errors, "layers": layers, "t0": t0, "assessment": None}
+
+            def finish(got: dict) -> None:
+                payload["assessment"] = got.get("readiness")
+                _complete_quick(jid, payload, got.get("llm"), _with_readiness(ctx, got.get("readiness")))
+            join = _Join(("readiness", "llm"), finish)
+            _submit_llm(_llm_part, payload, join)
+            join.put("readiness", readiness())
+            return
+        assessment = None
+        if rd.enabled and ok_q:
+            step("модель готовности (DINOv2 + голова): стадия и готовность")
+            assessment = readiness()
+            if assessment:
+                ctx["stage"]["readiness_model"] = C.assessment_brief(assessment)
         vlm_model, vlm_out = _vlm(ctx, lambda: img, sha, step, errors, layers, "быстрая проверка снимка стройплощадки")
         images = C.frame_images(img, boxes) if llm.enabled and llm.vision else []
         if llm.enabled:
@@ -474,13 +615,22 @@ def run_quick(jid: str) -> None:
 
 
 def finish_quick(jid: str, payload: dict) -> None:
+    try:
+        llm_res = _ask_llm(payload["ctx"], payload["images"], payload["errors"], payload["layers"])
+    except Exception as e:
+        _qset(jid, status="error", step="", error=str(e)[:2000],
+              duration_ms=round((time.perf_counter() - payload["t0"]) * 1000))
+        raise
+    _complete_quick(jid, payload, llm_res)
+
+
+def _complete_quick(jid: str, payload: dict, llm_res, fuse_ctx: dict | None = None) -> None:
     t0 = payload["t0"]
     try:
         ctx, errors, layers, vlm_out = payload["ctx"], payload["errors"], payload["layers"], payload["vlm_out"]
-        llm_res = _ask_llm(ctx, payload["images"], errors, layers)
         llm_out = llm_res.output if llm_res else None
         layers = _layers_meta(layers, payload["vlm_model"], llm_res)
-        final = fuse_snapshot(ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
+        final = fuse_snapshot(fuse_ctx or ctx, vlm_out, llm_out, settings.ai_apply_min_conf, meta=layers)
         final["assessment"] = payload["assessment"]
         ok = _ok(llm_out, vlm_out, layers)
         _qset(jid, status="done" if ok else "error", step="", final=final, error="; ".join(errors)[:2000],

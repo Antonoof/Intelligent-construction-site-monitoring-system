@@ -11,6 +11,7 @@ import logging
 
 from huggingface_hub import snapshot_download
 
+from .jobs import vlm_skip_reason
 from .readiness import get_readiness
 from .vlm import get_vlm
 
@@ -28,7 +29,10 @@ def main() -> None:
         names.append(ck["backbone"])
     vlm = get_vlm()
     plan = vlm.plan()
-    if plan.get("model"):
+    skip = vlm_skip_reason()
+    if skip:                                   # LLM сама видит кадр — VLM не запускается, качать её не нужно
+        log.info("VLM не скачиваю: %s", skip)
+    elif plan.get("model"):
         names.append(plan["model"])
     elif vlm.enabled:
         log.warning("VLM не помещается в память: %s", plan.get("reason"))

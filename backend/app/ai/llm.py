@@ -7,6 +7,9 @@
               или, если ключа нет, IAM-токен сервисного аккаунта ВМ из сервиса метаданных.
               YandexGPT не принимает изображения: о кадре она судит по описанию локальной VLM и рамкам
               детектора; модель qwen3.6-35b-a3b в AI Studio изображения принимает — тогда они отправляются.
+              Рассуждения у моделей, которые рассуждают по умолчанию (Qwen3.x, gpt-oss), выключаются параметром
+              reasoning_effort (OKO_LLM_REASONING): подсказку /no_think Qwen3.6 не понимает, а рассуждения
+              втрое удлиняют ответ. Если API параметр не принимает, запрос повторяется без него.
   anthropic — Claude, Messages API; ответ через инструмент со схемой JSON.
   openai    — ChatGPT и любой OpenAI-совместимый шлюз (Chat Completions, response_format=json_object).
 
@@ -38,7 +41,7 @@ SYSTEM = (
     "выводы всех слоёв, найти и исправить ошибки моделей, дать итоговую оценку, прогноз и рекомендации. "
     "Правила: опирайся на данные и на то, что действительно видно; не выдумывай технику; если слои расходятся "
     "и данных для решения нет — ставь verdict «uncertain» или «doubtful» и низкую уверенность. Отвечай по-русски, "
-    "кратко и по делу. Координаты рамок — доли кадра 0..1 (x1, y1, x2, y2)."
+    "кратко и по делу."
 )
 
 
@@ -47,7 +50,7 @@ def snapshot_schema(class_keys: list[str]) -> dict:
     return {
         "type": "object",
         "properties": {
-            "summary": {"type": "string", "description": "2–4 предложения: что происходит и главный вывод"},
+            "summary": {"type": "string", "description": "1–2 предложения: что происходит и главный вывод"},
             "scene": {"type": "object", "properties": {
                 "conditions": {"type": "string"},
                 "activity": {"type": "string", "enum": ["работы ведутся", "работы не ведутся", "не определить"]},
@@ -58,32 +61,35 @@ def snapshot_schema(class_keys: list[str]) -> dict:
                                "verdict": {"type": "string",
                                            "enum": ["confirmed", "false_positive", "wrong_class", "uncertain"]},
                                "correct_class": {"type": "string", "enum": class_keys},
-                               "comment": {"type": "string"}},
+                               "comment": {"type": "string", "description": "до 12 слов; для confirmed не нужен"}},
                                "required": ["id", "verdict"]}},
             "missed": {"type": "array", "description": "техника, которую детектор пропустил",
                        "items": {"type": "object", "properties": {
                            "cls": {"type": "string", "enum": class_keys},
                            "box": {"type": "array", "items": {"type": "number"}},
                            "confidence": {"type": "number"},
-                           "comment": {"type": "string"}},
+                           "comment": {"type": "string", "description": "до 12 слов"}},
                            "required": ["cls", "box", "confidence"]}},
             "stage": {"type": "object", "properties": {
                 "value": stage, "readiness": {"type": "number", "description": "готовность объекта, %"},
-                "confidence": {"type": "number"}, "comment": {"type": "string"}}, "required": ["value"]},
+                "confidence": {"type": "number"}, "comment": {"type": "string", "description": "до 15 слов"}},
+                "required": ["value"]},
             "deviations": {"type": "array", "description": "вердикт по каждому отклонению правил (по id)",
                            "items": {"type": "object", "properties": {
                                "id": {"type": "integer"},
                                "verdict": {"type": "string", "enum": ["confirmed", "doubtful", "rejected"]},
-                               "comment": {"type": "string"}},
+                               "comment": {"type": "string", "description": "до 12 слов"}},
                                "required": ["id", "verdict"]}},
-            "new_findings": {"type": "array", "description": "отклонения, которые правила не нашли",
+            "new_findings": {"type": "array", "description": "отклонения, которые правила не нашли; не больше 3",
                              "items": {"type": "object", "properties": {
                                  "title": {"type": "string"},
                                  "severity": {"type": "string", "enum": ["critical", "warning", "info"]},
-                                 "zone": {"type": "string"}, "reason": {"type": "string"}},
+                                 "zone": {"type": "string"},
+                                 "reason": {"type": "string", "description": "до 15 слов"}},
                                  "required": ["title", "severity", "reason"]}},
-            "forecast": {"type": "string", "description": "прогноз по этапам зоны: успевают ли, чем грозит"},
-            "recommendations": {"type": "array", "items": {"type": "string"}},
+            "forecast": {"type": "string", "description": "1–2 предложения: успевают ли этапы зоны, чем грозит"},
+            "recommendations": {"type": "array", "description": "1–3 действия, до 15 слов каждое",
+                                "items": {"type": "string"}},
             "confidence": {"type": "number", "description": "уверенность в анализе 0..1"},
         },
         "required": ["summary", "detections", "missed", "stage", "deviations", "recommendations", "confidence"],
@@ -134,7 +140,7 @@ class LLMError(RuntimeError):
 class LLMClient:
     def __init__(self, provider: str, model: str = "", api_key: str = "", base_url: str = "",
                  timeout: float = 180.0, transport: httpx.BaseTransport | None = None, folder_id: str = "",
-                 images: str = "auto", max_tokens: int = 8000):
+                 images: str = "auto", max_tokens: int = 8000, reasoning: str = "off"):
         self.provider = (provider or "off").lower()
         self.model = model or DEFAULT_MODELS.get(self.provider, "")
         self.api_key = api_key
@@ -144,7 +150,10 @@ class LLMClient:
         self.folder_id = folder_id
         self.images_mode = (images or "auto").lower()
         self.max_tokens = max_tokens
+        self.reasoning_mode = (reasoning or "off").lower()
         self._iam: tuple[str, float] | None = None     # IAM-токен ВМ и время его истечения
+        self._effort_ok: bool | None = None            # принимает ли API reasoning_effort (None — ещё не ясно)
+        self._fmt: tuple | None = None                 # (формат ответа,) — который модель уже приняла
 
     @property
     def enabled(self) -> bool:
@@ -162,6 +171,17 @@ class LLMClient:
         """Модель по умолчанию рассуждает (Qwen3, gpt-oss): рассуждения съедают лимит токенов ответа."""
         m = self.model.lower()
         return any(k in m for k in ("qwen3", "gpt-oss", "deepseek"))
+
+    @property
+    def effort(self) -> str | None:
+        """reasoning_effort для запроса: у рассуждающих моделей по умолчанию рассуждения выключены (none; у gpt-oss
+        выключить нельзя — low). None — параметр не отправляется."""
+        mode = self.reasoning_mode
+        if not self.reasoning or mode in ("model", "auto", "default", "") or self._effort_ok is False:
+            return None
+        if mode in ("off", "none", "0", "false", "no"):
+            return "low" if "gpt-oss" in self.model.lower() else "none"
+        return mode
 
     @property
     def vision(self) -> bool:
@@ -266,31 +286,26 @@ class LLMClient:
                 for im in images]
         else:
             content = prompt                      # текстовым моделям — обычная строка
-        if self.reasoning and isinstance(content, str):
-            content += "\n\n/no_think"          # Qwen3: без рассуждений — сразу JSON (другие модели это игнорируют)
-        elif self.reasoning:
-            content[0]["text"] += "\n\n/no_think"
+        if self.reasoning and self.reasoning_mode in ("off", "none") and "qwen3" in self.model.lower():
+            # подсказку /no_think понимает Qwen3; Qwen3.5+ её игнорирует — им рассуждения выключает reasoning_effort
+            if isinstance(content, str):
+                content += "\n\n/no_think"
+            else:
+                content[0]["text"] += "\n\n/no_think"
         base = {"model": self.model_uri, "temperature": 0.2,
                 "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": content}]}
         if self.provider == "openai" and "api.openai.com" in self.base_url:
             base.pop("temperature")               # новые модели OpenAI принимают только значение по умолчанию
-        budget, tin, tout = self.max_tokens, 0, 0
+        if self._fmt and self._fmt[0] in formats:  # формат, который модель уже принимала, — без лишних отказов
+            formats = formats[formats.index(self._fmt[0]):]
+        budget, tin, tout, rtok = self.max_tokens, 0, 0, 0
         for attempt in range(2):
-            r = fmt = None
-            for i, fmt in enumerate(formats):
-                body = {**base, token_param: budget}
-                if fmt == "json_schema":
-                    body["response_format"] = {"type": "json_schema", "json_schema": {"name": tool_name, "schema": schema}}
-                elif fmt == "json_object":
-                    body["response_format"] = {"type": "json_object"}
-                r = http.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
-                # схему или формат ответа модель может не поддерживать — пробуем формат попроще
-                if r.status_code in (400, 422) and i < len(formats) - 1:
-                    continue
-                break
+            r, fmt, body = self._post_first_accepted(http, headers, base, formats, schema, tool_name,
+                                                     token_param, budget)
             if r.status_code >= 400:
                 raise LLMError(f"{self.name} API {r.status_code}: {r.text[:500]}")
             formats = (fmt,)                      # формат, который модель приняла, — и для повтора
+            self._fmt = (fmt,)
             data = r.json()
             choice = (data.get("choices") or [{}])[0]
             msg = choice.get("message") or {}
@@ -298,6 +313,7 @@ class LLMClient:
             u = data.get("usage") or {}
             tin += int(u.get("prompt_tokens") or 0)
             tout += int(u.get("completion_tokens") or 0)
+            rtok += int((u.get("completion_tokens_details") or {}).get("reasoning_tokens") or 0)
             out = parse_json(text_out)
             finish = choice.get("finish_reason")
             # ответ обрезан на лимите (модель долго рассуждала) — один повтор с вдвое большим лимитом
@@ -306,7 +322,41 @@ class LLMClient:
             budget = min(budget * 2, 32000)
         return LLMResult(self.provider, self.model, out, tin, tout,
                          raw={"id": data.get("id"), "format": fmt, "finish_reason": finish, "max_tokens": budget,
-                              "reasoning": bool(msg.get("reasoning_content")) or "<think>" in text_out})
+                              "reasoning": bool(msg.get("reasoning_content")) or "<think>" in text_out or rtok > 0,
+                              "reasoning_tokens": rtok, "reasoning_effort": body.get("reasoning_effort")})
+
+    def _post_first_accepted(self, http: httpx.Client, headers: dict, base: dict, formats: tuple, schema: dict,
+                             tool_name: str, token_param: str, budget: int) -> tuple:
+        """Запрос в первом формате ответа, который модель принимает (json_schema → json_object → текст), с
+        reasoning_effort. Не принят параметр рассуждений (400/422 с его упоминанием или во всех форматах) —
+        те же форматы без него, и дальше клиент его не отправляет. Возвращает (ответ, формат, тело запроса)."""
+        efforts = [self.effort, None] if self.effort else [None]
+        r = fmt = body = None
+        for effort in efforts:
+            for i, fmt in enumerate(formats):
+                body = {**base, token_param: budget}
+                if fmt == "json_schema":
+                    body["response_format"] = {"type": "json_schema", "json_schema": {"name": tool_name, "schema": schema}}
+                elif fmt == "json_object":
+                    body["response_format"] = {"type": "json_object"}
+                if effort:
+                    body["reasoning_effort"] = effort
+                r = http.post(f"{self.base_url}/chat/completions", json=body, headers=headers)
+                if r.status_code in (400, 422):
+                    if effort and "reasoning" in r.text.lower():
+                        break                     # не принят параметр рассуждений — те же форматы без него
+                    if i < len(formats) - 1:
+                        continue                  # не принят формат ответа — формат попроще
+                break
+            if r.status_code < 400:
+                if effort:
+                    self._effort_ok = True
+                elif efforts[0]:
+                    self._effort_ok = False       # без параметра рассуждений принято — больше его не отправляем
+                break
+            if r.status_code not in (400, 422):
+                break                             # авторизация, лимиты, сбой сервиса — повтор без параметра не поможет
+        return r, fmt, body
 
 
 _override: LLMClient | None = None
@@ -322,7 +372,7 @@ def get_llm() -> LLMClient:
         from ..config import settings
         _client = LLMClient(settings.llm_provider, settings.llm_model, settings.llm_api_key, settings.llm_base_url,
                             settings.llm_timeout, folder_id=settings.yc_folder_id, images=settings.llm_images,
-                            max_tokens=settings.llm_max_tokens)
+                            max_tokens=settings.llm_max_tokens, reasoning=settings.llm_reasoning)
     return _client
 
 

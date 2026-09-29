@@ -123,7 +123,7 @@ async function init() {
   });
   api('/api/health').then((hh) => {
     const a = state.ai;
-    const layers = a ? [a.readiness?.enabled && 'модель готовности', a.vlm?.enabled && `VLM ${a.vlm.model || '—'}`,
+    const layers = a ? [a.readiness?.enabled && 'модель готовности', a.vlm?.enabled && !a.vlm.skipped && `VLM ${a.vlm.model || '—'}`,
       a.llm?.provider !== 'off' && `${a.llm.name} ${a.llm.model}`].filter(Boolean) : [];
     $('#status').innerHTML = `<span>Детектор: <b>${esc(hh.detector)}</b> (${hh.detector_classes.length} классов)</span>`
       + `<span>ИИ-анализ: ${layers.length ? esc(layers.join(' · ')) : 'выключен'}</span>`
@@ -363,9 +363,15 @@ function aiLayersHint() {
   if (!a) return '';
   const l = [];
   l.push(a.readiness?.enabled ? 'модель готовности (DINOv2 + голова)' : null);
-  l.push(a.vlm?.enabled ? `локальная VLM ${a.vlm.model || '(не помещается в память)'}` : null);
-  l.push(a.llm?.provider !== 'off' ? `${a.llm.name} ${a.llm.model}${a.llm.vision ? '' : ' (текст: судит по VLM и рамкам)'}` : null);
+  l.push(a.vlm?.enabled && !a.vlm.skipped ? `локальная VLM ${a.vlm.model || '(не помещается в память)'}` : null);
+  l.push(a.llm?.provider !== 'off' ? `${a.llm.name} ${a.llm.model}${a.llm.vision ? ' (сама смотрит на кадр)' : ' (текст: судит по VLM и рамкам)'}` : null);
   return l.filter(Boolean).join(' → ');
+}
+
+// сколько ждать анализ: модель готовности на CPU ≈20 с и LLM; VLM на CPU (если LLM не видит кадр) — ещё минуты
+function aiEta() {
+  const a = state.ai;
+  return a?.vlm?.enabled && !a.vlm.skipped ? 'до пары минут: модель готовности и VLM работают на CPU' : 'обычно до минуты';
 }
 
 async function loadAI(d, view, redraw) {
@@ -379,7 +385,7 @@ async function loadAI(d, view, redraw) {
   try { r = await api(`/api/snapshots/${d.id}/ai-review`); } catch (e) { box.innerHTML = `<div class="hint">Ошибка: ${esc(e.message)}</div>`; return; }
   renderAI(d, r, view, redraw);
   if (r && (r.status === 'queued' || r.status === 'running')) {
-    setTimeout(() => { if ($('#dlg').open) loadAI(d, view, redraw); }, 2500);
+    setTimeout(() => { if ($('#dlg').open) loadAI(d, view, redraw); }, 1500);
   }
 }
 
@@ -390,7 +396,7 @@ function renderAI(d, r, view, redraw) {
   if (!r) {
     box.innerHTML = `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM исправляет ошибки детектора и правил, прогнозирует и даёт рекомендации.</p>${start('Запустить анализ ИИ')}`;
   } else if (r.status === 'queued' || r.status === 'running') {
-    box.innerHTML = `<p><span class="spinner"></span> ${esc(r.step || 'в очереди')}…</p><p class="hint">На CPU модель готовности и VLM работают до минуты-двух; окно можно закрыть — анализ продолжится.</p>`;
+    box.innerHTML = `<p><span class="spinner"></span> ${esc(r.step || 'в очереди')}…</p><p class="hint">Время анализа — ${aiEta()}; окно можно закрыть — анализ продолжится.</p>`;
   } else if (r.status === 'error' && !r.final) {
     box.innerHTML = `<p class="bad-mark">Ошибка анализа</p><p class="hint">${esc(r.error)}</p>${start('Повторить')}`;
   } else {
@@ -412,24 +418,34 @@ function renderAI(d, r, view, redraw) {
   if ($('#aiRevert')) $('#aiRevert').onclick = () => act(`/api/ai/reviews/${r.id}/revert`, 'Исправления отменены');
 }
 
+// рассуждала ли LLM: выключенные рассуждения ускоряют ответ в разы; если API не принял параметр — видно здесь
+function reasoningNote(x) {
+  if (!x) return '';
+  if (x.used) return ` · модель рассуждала${x.tokens ? ` (${x.tokens} токенов)` : ''}`;
+  return x.effort === 'none' ? ' · без рассуждений' : '';
+}
+
 function aiResultHTML(d, r, { quick = false } = {}) {
   const f = r.final, L = f.layers || {};
   const src = [L.readiness_model && 'модель готовности', L.vlm_model && `VLM ${L.vlm_model.split('/').pop()}`,
     L.llm_model && `${L.llm_name || L.llm_provider} ${L.llm_model}`].filter(Boolean);
   let h = `<div class="ai-head">${src.map((x) => `<span class="chip plain s-info">${esc(x)}</span>`).join('')}`
     + `${f.confidence != null ? `<span class="hint">уверенность ${Math.round(f.confidence * 100)}%</span>` : ''}`
-    + `<span class="hint">${(r.duration_ms / 1000).toFixed(1)} с${r.llm?.tokens_in ? ` · токенов ${r.llm.tokens_in}+${r.llm.tokens_out}` : ''}</span></div>`;
+    + `<span class="hint">${(r.duration_ms / 1000).toFixed(1)} с${r.llm?.tokens_in ? ` · токенов ${r.llm.tokens_in}+${r.llm.tokens_out}` : ''}${reasoningNote(L.llm_reasoning)}</span></div>`;
   const TL = { readiness: 'модель готовности', vlm: 'VLM', llm: L.llm_name || 'LLM' };
   const hit = new Set(L.cached || []);
   const tline = Object.entries(L.timings || {}).map(([k, v]) => `${TL[k] || k} ${hit.has(k) ? 'из кеша' : `${v} с`}`).join(' · ');
-  if (tline) h += `<div class="hint">время слоёв: ${esc(tline)}</div>`;
+  const par = (L.parallel || []).length > 1 ? ` · ${(L.parallel || []).map((k) => TL[k] || k).join(' и ')} — одновременно` : '';
+  if (tline) h += `<div class="hint">время слоёв: ${esc(tline + par)}</div>`;
   if (L.vlm_model && L.vlm_reason) h += `<div class="hint">VLM ${esc(L.vlm_model.split('/').pop())}: ${esc(L.vlm_reason)}</div>`;
+  if (L.vlm_skipped) h += `<div class="hint">локальная VLM не запускалась: ${esc(L.llm_name || 'LLM')} сама смотрит на кадр</div>`;
   if (f.summary) h += `<p class="ai-sum">${esc(f.summary)}</p>`;
   if (r.error) h += `<p class="hint">Не все слои отработали: ${esc(r.error)}</p>`;
   // техника: детектор / VLM / LLM
   if (f.equipment?.length) {
-    h += `<table class="eqtab"><thead><tr><th>Техника</th><th>Детектор</th><th>VLM</th><th>ИИ-итог</th></tr></thead><tbody>`
-      + f.equipment.map((e) => `<tr class="${e.agree ? '' : 'dis'}"><td>${eqChip(e.cls)}</td><td>${e.detector}</td><td>${e.vlm ?? '—'}</td><td><b>${e.final}</b>${e.agree ? '' : ' <span class="vchip warn">расхождение</span>'}</td></tr>`).join('')
+    const hasVlm = f.equipment.some((e) => e.vlm != null);
+    h += `<table class="eqtab"><thead><tr><th>Техника</th><th>Детектор</th>${hasVlm ? '<th>VLM</th>' : ''}<th>ИИ-итог</th></tr></thead><tbody>`
+      + f.equipment.map((e) => `<tr class="${e.agree ? '' : 'dis'}"><td>${eqChip(e.cls)}</td><td>${e.detector}</td>${hasVlm ? `<td>${e.vlm ?? '—'}</td>` : ''}<td><b>${e.final}</b>${e.agree ? '' : ' <span class="vchip warn">расхождение</span>'}</td></tr>`).join('')
       + `</tbody></table>`;
   }
   // стадия по всем слоям
@@ -719,6 +735,7 @@ async function vAnalyze(main) {
     const fd = new FormData();
     fd.append('file', file); fd.append('work_types', $('#aWT').value); fd.append('planned', $('#aPlan').value);
     fd.append('tiles', $('#aTiles').checked ? '3' : '0');
+    if ($('#aAI')?.checked) fd.append('ai', '1');
     $('#aOut').innerHTML = '<p class="muted"><span class="spinner"></span> Распознаём…</p>';
     try {
       const r = await api('/api/analyze', { method: 'POST', body: fd });
@@ -727,7 +744,7 @@ async function vAnalyze(main) {
       let h = `<div class="card"><div class="row" id="qTg" style="margin-bottom:6px" hidden><label id="qTgAIl" hidden><input type="checkbox" id="qTgAI" checked> находки ИИ</label><label id="qTgAl" hidden><input type="checkbox" id="qTgA"> внимание модели</label></div>`
         + `<div id="qFrame">${frameHTML(snap, { boxes: r.boxes })}</div><div class="hint" style="margin-top:6px">детектор ${esc(r.detector)} · ${r.timing_ms.total} мс${r.detector_note ? ` · ${esc(r.detector_note)}` : ''}</div>`;
       h += `<section class="ai" id="qAi" style="margin-top:10px"><h3>Анализ ИИ</h3><div id="qAiBody">${state.ai?.enabled
-        ? `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM проверяет рамки детектора и предупреждения, находит пропущенную технику и даёт рекомендации. На CPU — 1–2 минуты.</p><button class="btn small primary" id="qAiRun">Запустить анализ ИИ</button>`
+        ? `<p class="hint">Слои: ${esc(aiLayersHint())}. Модели сверяют друг друга, LLM проверяет рамки детектора и предупреждения, находит пропущенную технику и даёт рекомендации. Время анализа — ${aiEta()}.</p><button class="btn small primary" id="qAiRun">Запустить анализ ИИ</button>`
         : '<div class="hint">ИИ-анализ выключен: модель готовности — веса в <span class="mono">weights/readiness/</span>, VLM — <span class="mono">OKO_VLM=auto</span>, YandexGPT — <span class="mono">OKO_LLM_PROVIDER=yandex</span>.</div>'}</div></section>`;
       h += `<h3 style="margin-top:10px">Предупреждения</h3>` + (r.findings.length ? r.findings.map((f) => `<div class="dev ${f.severity}"><div class="title">${esc(f.title)}</div><div class="row">${sevChip(f.severity)}</div><div class="msg">${esc(f.message)}</div><div class="rec">${esc(f.recommendation)}</div></div>`).join('') : '<div class="hint">Отклонений нет.</div>');
       h += `<h3 style="margin-top:10px">Проверки методики</h3>${checkHTML({ ...r.check, zone: 'FRAME', zone_name: 'Кадр' })}</div>`;
@@ -737,22 +754,24 @@ async function vAnalyze(main) {
         q.append('file', file); q.append('work_types', $('#aWT').value); q.append('planned', $('#aPlan').value);
         q.append('tiles', $('#aTiles').checked ? '3' : '0');
         return q;
-      });
-      if ($('#aAI')?.checked && $('#qAiRun')) {
-        if (r.quality.ok) $('#qAiRun').click();
-        else $('#qAiBody').insertAdjacentHTML('afterbegin', '<p class="hint">Снимок не прошёл контроль качества — анализ ИИ не запущен автоматически, его можно запустить вручную.</p>');
-      }
+      }, undefined, r.ai_job?.id);
+      if (r.ai_note && $('#qAiBody')) $('#qAiBody').insertAdjacentHTML('afterbegin', `<p class="hint">${esc(r.ai_note)}; его можно запустить вручную.</p>`);
     } catch (e) { $('#aOut').innerHTML = `<div class="card">Ошибка: ${esc(e.message)}</div>`; }
   };
 }
 
 // ИИ-анализ снимка из «Проверить снимок»: тот же конвейер, результат хранится в памяти сервиса
-function bindQuickAI(snap, r, formData, view = { aiBoxes: [], attention: null }) {
+function bindQuickAI(snap, r, formData, view = { aiBoxes: [], attention: null }, jid = null) {
   const redraw = () => {
     $('#qFrame').innerHTML = frameHTML(snap, { boxes: r.boxes, aiBoxes: $('#qTgAI').checked ? view.aiBoxes : [],
       attention: $('#qTgA').checked ? view.attention : null });
   };
   $('#qTgAI').onchange = redraw; $('#qTgA').onchange = redraw;
+  if (jid) {                        // анализ уже поставлен запросом детекции — сразу следим за ним
+    $('#qAi').dataset.jid = jid;
+    pollQuickAI(jid, view, redraw, formData, snap, r);
+    return;
+  }
   const run = $('#qAiRun');
   if (!run) return;
   run.onclick = async () => {
@@ -771,8 +790,8 @@ async function pollQuickAI(jid, view, redraw, formData, snap, r) {
   let j;
   try { j = await api(`/api/analyze/ai/${jid}`); } catch (e) { box.innerHTML = `<div class="hint">Ошибка: ${esc(e.message)}</div>`; return; }
   if (j.status === 'queued' || j.status === 'running') {
-    box.innerHTML = `<p><span class="spinner"></span> ${esc(j.step || 'в очереди')}…</p><p class="hint">На CPU модель готовности и VLM работают до минуты-двух.</p>`;
-    setTimeout(() => pollQuickAI(jid, view, redraw, formData, snap, r), 2500);
+    box.innerHTML = `<p><span class="spinner"></span> ${esc(j.step || 'в очереди')}…</p><p class="hint">Время анализа — ${aiEta()}.</p>`;
+    setTimeout(() => pollQuickAI(jid, view, redraw, formData, snap, r), 1000);
     return;
   }
   const f = j.final;
