@@ -42,9 +42,24 @@ engine = make_engine()
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
+# столбцы, добавленные после первой версии схемы: create_all новые таблицы создаёт, а столбцы в существующие —
+# нет, поэтому база, созданная прежней версией (том PostgreSQL на демо-ВМ), дополняется здесь
+ADDED_COLUMNS = {"snapshots": {"frame_zone": "VARCHAR(32)"}}
+
+
 def init_db(bind=None) -> None:
+    from sqlalchemy import inspect, text
+
     from . import models  # noqa: F401  регистрация таблиц
-    Base.metadata.create_all(bind or engine)
+    eng = bind or engine
+    Base.metadata.create_all(eng)
+    insp = inspect(eng)
+    with eng.begin() as conn:
+        for table, cols in ADDED_COLUMNS.items():
+            have = {c["name"] for c in insp.get_columns(table)}
+            for name, ddl in cols.items():
+                if name not in have:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
 
 
 @contextmanager

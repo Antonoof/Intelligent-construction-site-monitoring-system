@@ -66,6 +66,9 @@ class Settings:
     # модель готовности ML-части (DINOv2 + голова): auto — weights/readiness/<прогон>/head.pt | путь | off
     readiness: str = field(default_factory=lambda: os.environ.get("OKO_READINESS", "auto"))
     readiness_dtype: str = field(default_factory=lambda: os.environ.get("OKO_READINESS_DTYPE", "float32"))
+    # Grounding DINO — прочие объекты (опалубка, леса, рабочие…) и проверка техники по текстовым подсказкам
+    # (methodology/open_vocab.yaml): auto — IDEA-Research/grounding-dino-base | id модели Hugging Face | off
+    openvocab: str = field(default_factory=lambda: os.environ.get("OKO_OPENVOCAB", "auto"))
     # VLM: off | auto (самая крупная Qwen3-VL, которая помещается в память) | id модели Hugging Face
     vlm: str = field(default_factory=lambda: os.environ.get("OKO_VLM", "off"))
     vlm_device: str = field(default_factory=lambda: os.environ.get("OKO_VLM_DEVICE", "auto"))   # auto | cpu | cuda
@@ -96,6 +99,10 @@ class Settings:
     ai_apply_min_conf: float = field(default_factory=lambda: float(os.environ.get("OKO_AI_APPLY_MIN_CONF", "0.6")))
     # manual — исправления LLM применяет инженер кнопкой; auto — сразу после анализа (с возможностью отмены)
     ai_apply: str = field(default_factory=lambda: os.environ.get("OKO_AI_APPLY", "manual"))
+    # кеш выводов детерминированных слоёв по содержимому кадра (модель готовности, Grounding DINO, VLM)
+    ai_cache: bool = field(default_factory=lambda: os.environ.get("OKO_AI_CACHE", "1") not in ("0", "false", "no"))
+    # загрузить модели ИИ-слоя в память сразу после старта, а не при первом анализе
+    ai_warmup: bool = field(default_factory=lambda: os.environ.get("OKO_AI_WARMUP", "1") not in ("0", "false", "no"))
 
     def db_url(self) -> str:
         if self.database_url:

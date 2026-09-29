@@ -202,13 +202,56 @@ def camera_zone_keys(cam: M.Camera, zkeys: dict[int, str]) -> list[str]:
     return keys
 
 
+def snapshot_zone_keys(sn: M.Snapshot, cam: M.Camera, zkeys: dict[int, str]) -> list[str]:
+    """Зоны, которые видит снимок: весь кадр — одна зона (frame_zone) или зоны по разметке камеры."""
+    if sn.frame_zone and sn.frame_zone in zkeys.values():
+        return [sn.frame_zone]
+    return camera_zone_keys(cam, zkeys)
+
+
+def zone_assigner(cam: M.Camera, zkeys: dict[int, str], frame_zone: str | None, width: int, height: int,
+                  m: Methodology):
+    """(класс, рамка) → id зоны: весь кадр в frame_zone или точка опоры в полигоне камеры; кран — вся площадка."""
+    zids = {v: k for k, v in zkeys.items()}
+    polys = _camera_zone_polys(cam, zkeys)
+    default = zkeys.get(cam.default_zone_id) if cam.default_zone_id else None
+    whole = frame_zone if frame_zone in zids else None
+
+    def assign(cls: str, box) -> int | None:
+        if cls in m.site_wide:
+            return None
+        zk = whole or assign_zone(box, width, height, polys, default)
+        return zids.get(zk) if zk else None
+    return assign
+
+
+def set_frame_zone(s: Session, project: M.Project, snap: M.Snapshot, zone_key: str | None) -> None:
+    """Сменить привязку снимка к зонам (весь кадр → зона или разметка камеры) и пересчитать выводы."""
+    if zone_key and zone_key not in {z.key for z in project.zones}:
+        raise NotFound(f"зона {zone_key} не найдена")
+    snap.frame_zone = zone_key or None
+    zkeys = {z.id: z.key for z in project.zones}
+    assign = zone_assigner(s.get(M.Camera, snap.camera_id), zkeys, snap.frame_zone, snap.width, snap.height,
+                           get_methodology())
+    for d in snap.detections:
+        d.zone_id = assign(d.equipment_class, (d.x1, d.y1, d.x2, d.y2))
+    s.flush()
+    s.refresh(snap)
+    recompute_snapshot(s, project, snap)
+    recompute_day(s, project, snap.taken_at.date())
+
+
 def ingest_snapshot(s: Session, project: M.Project, cam: M.Camera, data: bytes, filename: str,
                     taken_at: dt.datetime | None = None, recompute: bool = True,
-                    detector=None) -> tuple[M.Snapshot, dict]:
+                    detector=None, frame_zone: str | None = None, tiles: int | None = None) -> tuple[M.Snapshot, dict]:
     """Принять снимок: сохранить, распознать, привязать к зонам, пересчитать отклонения.
 
-    detector — подмена детектора (демо-проекты всегда загружаются с эталонной разметкой).
+    detector — подмена детектора (демо-проекты всегда загружаются с эталонной разметкой);
+    frame_zone — весь кадр относится к этой зоне (полигоны камеры не применяются);
+    tiles — детекция по фрагментам n×n для этого снимка (по умолчанию — настройка камеры общего плана).
     """
+    if frame_zone and frame_zone not in {z.key for z in project.zones}:
+        raise NotFound(f"зона {frame_zone} не найдена")
     detector = detector or get_detector()
     t0 = time.perf_counter()
     m = get_methodology()
@@ -224,7 +267,8 @@ def ingest_snapshot(s: Session, project: M.Project, cam: M.Camera, data: bytes, 
     det_result = None
     if q.ok:
         t1 = time.perf_counter()
-        det_result = detector.detect(img, tiles=cam.tiles if cam.is_overview else 0, sha256=digest)
+        n_tiles = tiles if tiles is not None else (cam.tiles if cam.is_overview else 0)
+        det_result = detector.detect(img, tiles=n_tiles, sha256=digest)
         timings["detect_ms"] = round((time.perf_counter() - t1) * 1000)
 
     day_dir = settings.snapshots_dir / str(project.id) / cam.key / when.strftime("%Y-%m-%d")
@@ -241,17 +285,13 @@ def ingest_snapshot(s: Session, project: M.Project, cam: M.Camera, data: bytes, 
                       height=img.height, brightness=q.brightness, contrast=q.contrast, sharpness=q.sharpness,
                       quality_ok=quality_ok, quality_reason=quality_reason,
                       detector=det_result.model if det_result else detector.name,
-                      assessment=det_result.assessment if det_result else None)
+                      assessment=det_result.assessment if det_result else None, frame_zone=frame_zone or None)
     s.add(snap)
     s.flush()
-    zkeys = {z.id: z.key for z in project.zones}
-    zids = {z.key: z.id for z in project.zones}
-    polys = _camera_zone_polys(cam, zkeys)
-    default = zkeys.get(cam.default_zone_id) if cam.default_zone_id else None
+    assign = zone_assigner(cam, {z.id: z.key for z in project.zones}, snap.frame_zone, img.width, img.height, m)
     for d in (det_result.dets if det_result else []):
-        zk = None if d.cls in m.site_wide else assign_zone(d.box, img.width, img.height, polys, default)
         s.add(M.Detection(snapshot_id=snap.id, equipment_class=d.cls, confidence=round(d.conf, 3),
-                          x1=d.box[0], y1=d.box[1], x2=d.box[2], y2=d.box[3], zone_id=zids.get(zk) if zk else None,
+                          x1=d.box[0], y1=d.box[1], x2=d.box[2], y2=d.box[3], zone_id=assign(d.cls, d.box),
                           source=d.source))
     s.flush()
     s.refresh(snap)
@@ -309,7 +349,7 @@ def _windows_for_day(s: Session, project: M.Project, day: dt.date, snaps: list[M
     site_a, site_u, site_r = tasks_for_zone(tasks, SITE_ZONE, day, horizon, lookback)
     windows = []
     for z in project.zones:
-        zsnaps = [sn for sn in snaps if z.key in camera_zone_keys(cams[sn.camera_id], zkeys)]
+        zsnaps = [sn for sn in snaps if z.key in snapshot_zone_keys(sn, cams[sn.camera_id], zkeys)]
         if not zsnaps:
             continue
         a, u, r = tasks_for_zone(tasks, z.key, day, horizon, lookback)
@@ -433,15 +473,12 @@ def recompute_project(s: Session, project: M.Project) -> int:
     """Полный пересчёт (после загрузки нового графика или изменения зон)."""
     days = sorted({d.date() for d in s.scalars(select(M.Snapshot.taken_at).where(M.Snapshot.project_id == project.id))})
     zkeys = {z.id: z.key for z in project.zones}
-    polys = {c.id: (_camera_zone_polys(c, zkeys), zkeys.get(c.default_zone_id)) for c in project.cameras}
-    zids = {z.key: z.id for z in project.zones}
+    cams = {c.id: c for c in project.cameras}
     m = get_methodology()
     for snap in s.scalars(select(M.Snapshot).where(M.Snapshot.project_id == project.id)):
-        pz, default = polys[snap.camera_id]
+        assign = zone_assigner(cams[snap.camera_id], zkeys, snap.frame_zone, snap.width, snap.height, m)
         for d in snap.detections:
-            zk = None if d.equipment_class in m.site_wide else assign_zone((d.x1, d.y1, d.x2, d.y2), snap.width,
-                                                                           snap.height, pz, default)
-            d.zone_id = zids.get(zk) if zk else None
+            d.zone_id = assign(d.equipment_class, (d.x1, d.y1, d.x2, d.y2))
         s.flush()
         recompute_snapshot(s, project, snap)
     for day in days:
@@ -568,7 +605,7 @@ def project_summary(s: Session, project: M.Project, day: dt.date) -> dict:
     board = []
     for z in project.zones:
         active = [t for t in tasks if t.zone_key == z.key and t.start <= day <= t.end]
-        zsnaps = [sn for sn in snaps if z.key in camera_zone_keys(cams[sn.camera_id], zkeys)]
+        zsnaps = [sn for sn in snaps if z.key in snapshot_zone_keys(sn, cams[sn.camera_id], zkeys)]
         valid = [sn for sn in zsnaps if sn.quality_ok]
         last = (valid or zsnaps)[-1] if zsnaps else None
         seen: dict[str, int] = defaultdict(int)

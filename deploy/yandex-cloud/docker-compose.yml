@@ -44,6 +44,7 @@ services:
       # ИИ-анализ: модель готовности (weights/readiness) → локальная VLM → YandexGPT сверяет все слои
       OKO_READINESS: ${OKO_READINESS:-auto}
       OKO_READINESS_DTYPE: ${OKO_READINESS_DTYPE:-float32}
+      OKO_OPENVOCAB: ${OKO_OPENVOCAB:-auto}
       OKO_VLM: ${OKO_VLM:-auto}
       OKO_LLM_PROVIDER: ${OKO_LLM_PROVIDER:-yandex}
       OKO_LLM_MODEL: ${OKO_LLM_MODEL:-yandexgpt-5.1}
@@ -51,6 +52,8 @@ services:
       OKO_LLM_API_KEY: ${OKO_LLM_API_KEY:-}
       OKO_LLM_MAX_TOKENS: ${OKO_LLM_MAX_TOKENS:-8000}
       OKO_AI_AUTO: ${OKO_AI_AUTO:-0}
+      OKO_AI_CACHE: ${OKO_AI_CACHE:-1}
+      OKO_AI_WARMUP: ${OKO_AI_WARMUP:-1}
       OKO_AI_APPLY: ${OKO_AI_APPLY:-manual}
       OKO_AI_APPLY_MIN_CONF: ${OKO_AI_APPLY_MIN_CONF:-0.6}
       # веса DINOv2, VLM и конфигурация RF-DETR скачиваются с Hugging Face один раз — кешируем в томе

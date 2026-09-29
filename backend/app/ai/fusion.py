@@ -21,7 +21,6 @@ from sqlalchemy.orm import Session
 from .. import models as M
 from .. import services as S
 from ..methodology import Methodology, get_methodology
-from ..zones import assign_zone
 from .context import stage_of
 
 VERDICTS = ("confirmed", "false_positive", "wrong_class", "uncertain")
@@ -146,7 +145,7 @@ def clean_day_output(out: dict) -> dict:
 
 
 def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_conf: float,
-                  meta: dict | None = None) -> dict:
+                  meta: dict | None = None, open_vocab: dict | None = None) -> dict:
     m = get_methodology()
     llm = clean_snapshot_output(llm_out)
     has_llm = bool(llm_out) and "raw" not in llm
@@ -196,9 +195,11 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
             llm_c[r["correct_class"]] += 1
     for x in missed:
         llm_c[x["cls"]] += 1
+    ov_c = Counter((open_vocab or {}).get("equipment_counts") or {})
     equipment = []
-    for c in sorted(set(det_c) | set(vlm_c) | set(llm_c), key=lambda k: m.class_name(k)):
+    for c in sorted(set(det_c) | set(vlm_c) | set(llm_c) | set(ov_c), key=lambda k: m.class_name(k)):
         row = {"cls": c, "name": m.class_name(c), "detector": det_c.get(c, 0),
+               "open_vocab": ov_c.get(c, 0) if open_vocab else None,
                "vlm": vlm_c.get(c, 0) if vlm_ok else None, "llm": llm_c.get(c, 0) if has_llm else None}
         row["final"] = row["llm"] if has_llm else row["detector"]
         votes = [v for v in (row["detector"], row["vlm"], row["llm"]) if v is not None]
@@ -255,7 +256,7 @@ def fuse_snapshot(ctx: dict, vlm_out: dict | None, llm_out: dict | None, min_con
     summary = llm.get("summary") if has_llm else (vlm_out.get("scene") if vlm_ok else "")
     return {
         "summary": summary or "", "scene": scene, "equipment": equipment, "detections": det_rows, "missed": missed,
-        "stage": st, "deviations": devs, "cross_check": ctx.get("cross_check"),
+        "stage": st, "deviations": devs, "cross_check": ctx.get("cross_check"), "open_vocab": open_vocab,
         "new_findings": [x for x in llm.get("new_findings") or [] if isinstance(x, dict)],
         "forecast": llm.get("forecast", "") if has_llm else "",
         "recommendations": [str(x) for x in llm.get("recommendations") or []],
@@ -287,14 +288,7 @@ def apply_corrections(s: Session, review: M.AIReview) -> dict:
     snap = s.get(M.Snapshot, review.snapshot_id)
     p = s.get(M.Project, snap.project_id)
     cam = s.get(M.Camera, snap.camera_id)
-    zkeys = {z.id: z.key for z in p.zones}
-    zids = {z.key: z.id for z in p.zones}
-    polys = S._camera_zone_polys(cam, zkeys)
-    default = zkeys.get(cam.default_zone_id) if cam.default_zone_id else None
-
-    def zone_for(cls: str, box_px) -> int | None:
-        zk = None if cls in m.site_wide else assign_zone(box_px, snap.width, snap.height, polys, default)
-        return zids.get(zk) if zk else None
+    zone_for = S.zone_assigner(cam, {z.id: z.key for z in p.zones}, snap.frame_zone, snap.width, snap.height, m)
 
     dets = {d.id: d for d in snap.detections}
     applied = {"rejected": [], "reclassified": [], "added": [], "at": M.utcnow().isoformat(timespec="seconds")}

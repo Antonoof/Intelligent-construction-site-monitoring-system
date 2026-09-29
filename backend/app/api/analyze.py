@@ -66,7 +66,8 @@ def quick_check(data: bytes, filename: str, work_types: str, planned: str, tiles
     when, source = resolve_time(data, filename, dt.datetime.fromisoformat(taken_at) if taken_at else None)
     q = assess_quality(img, m.config.get("quality", {}))
     det = get_detector()
-    res = det.detect(img, tiles=tiles, sha256=sha256(data)) if q.ok else None
+    digest = sha256(data)
+    res = det.detect(img, tiles=tiles, sha256=digest) if q.ok else None
     t_det = time.perf_counter()
     valid, reason = q.ok, q.reason
     if res is not None and not res.recognized:          # детектор не подключён — «нет данных», а не «нет техники»
@@ -88,7 +89,7 @@ def quick_check(data: bytes, filename: str, work_types: str, planned: str, tiles
         "taken_at": when.isoformat(), "time_source": source,
         "quality": {"ok": valid, "reason": reason, "brightness": q.brightness, "contrast": q.contrast,
                     "sharpness": q.sharpness},
-        "width": img.width, "height": img.height,
+        "width": img.width, "height": img.height, "sha256": digest,
         "boxes": [{"id": k, "cls": d.cls, "label": m.class_name(d.cls), "conf": round(d.conf, 3),
                    "xyxy": [round(v, 1) for v in d.box], "color": m.classes[d.cls].get("color"),
                    "strong": d.conf >= m.presence_threshold(d.cls)} for k, d in enumerate(dets)],

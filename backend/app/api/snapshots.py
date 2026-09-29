@@ -5,6 +5,7 @@ import datetime as dt
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -31,7 +32,11 @@ def _parse_dt(v: str | None) -> dt.datetime | None:
 
 @router.post("/projects/{pid}/snapshots", summary="Загрузить снимки с камеры и сразу проверить их")
 async def upload_snapshots(pid: int, camera: str = Form(..., description="ключ камеры, например CAM-01"),
-                           taken_at: str | None = Form(None, description="время съёмки, если его нет в EXIF и имени файла"),
+                           taken_at: str | None = Form(None, description="время съёмки (важнее EXIF и имени файла)"),
+                           frame_zone: str | None = Form(None, description="весь кадр — эта зона (ключ); пусто — "
+                                                                             "зоны по разметке камеры"),
+                           tiles: int | None = Form(None, description="детекция по фрагментам n×n (3); пусто — "
+                                                                       "по настройке камеры"),
                            files: list[UploadFile] = File(...), s: Session = Depends(get_session)):
     p = get_project(s, pid)
     try:
@@ -46,9 +51,12 @@ async def upload_snapshots(pid: int, camera: str = Form(..., description="клю
         if len(data) > settings.max_upload_mb * 1024 * 1024:
             raise HTTPException(413, f"{f.filename}: файл больше {settings.max_upload_mb} МБ")
         try:
-            snap, info = S.ingest_snapshot(s, p, cam, data, f.filename or "snapshot.jpg", when)
+            snap, info = S.ingest_snapshot(s, p, cam, data, f.filename or "snapshot.jpg", when,
+                                           frame_zone=frame_zone or None, tiles=tiles)
         except OSError:
             raise HTTPException(422, f"{f.filename}: не изображение")
+        except S.NotFound as e:
+            raise HTTPException(404, str(e))
         s.commit()
         devs = s.scalars(select(M.DeviationEvidence.deviation_id).where(M.DeviationEvidence.snapshot_id == snap.id)).all()
         row = {**S.snapshot_brief(snap, cam, m), **info, "deviation_ids": sorted(set(devs))}
@@ -102,12 +110,16 @@ def snapshot_detail(sid: int, s: Session = Depends(get_session)):
                                    .where(M.DeviationEvidence.snapshot_id == sid)).all()))
     devs = [S.deviation_view(s, d, m, p, with_evidence=False) for d in
             s.scalars(select(M.Deviation).where(M.Deviation.id.in_(dev_ids or [-1])))]
+    whole = zmeta.get(sn.frame_zone) if sn.frame_zone else None
     return {**S.snapshot_brief(sn, cam, m),
             "brightness": sn.brightness, "contrast": sn.contrast, "sharpness": sn.sharpness,
             "assessment": sn.assessment, "original_name": sn.original_name,
             "boxes": [S.box_view(d, m, zkeys) for d in sn.detections],
-            "zones": [{**zmeta[zkeys[cz.zone_id]], "polygon": cz.polygon} for cz in cam.zone_polygons
-                      if cz.zone_id in zkeys],
+            "frame_zone": whole,
+            "camera_zones": S.camera_zone_keys(cam, zkeys),
+            "project_zones": list(zmeta.values()),
+            "zones": [] if whole else [{**zmeta[zkeys[cz.zone_id]], "polygon": cz.polygon}
+                                       for cz in cam.zone_polygons if cz.zone_id in zkeys],
             "checks": [c.payload for c in checks], "deviations": devs}
 
 
@@ -131,8 +143,26 @@ def snapshot_image(sid: int, w: int = 0, annotate: int = 0, highlight: str = "",
                   "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2,
                   "dashed": d.confidence < m.presence_threshold(d.equipment_class)}
                  for d in sn.detections if not d.is_rejected and (not hl or d.id in hl)]
-        zones = [{"name": zmeta[cz.zone_id].name, "color": zmeta[cz.zone_id].color, "polygon": cz.polygon}
-                 for cz in cam.zone_polygons if cz.zone_id in zmeta]
+        zones = [] if sn.frame_zone else [{"name": zmeta[cz.zone_id].name, "color": zmeta[cz.zone_id].color,
+                                           "polygon": cz.polygon} for cz in cam.zone_polygons if cz.zone_id in zmeta]
         return Response(render_annotated(img, boxes, zones, hl, width=w or None), media_type="image/jpeg",
                         headers=headers)
+
+
+class FrameZoneIn(BaseModel):
+    frame_zone: str | None = Field(None, description="ключ зоны: весь кадр — эта зона; пусто — зоны по разметке камеры")
+
+
+@router.patch("/snapshots/{sid}", summary="Привязка снимка к зонам: весь кадр — одна зона или разметка камеры")
+def update_snapshot(sid: int, body: FrameZoneIn, s: Session = Depends(get_session)):
+    sn = s.get(M.Snapshot, sid)
+    if sn is None:
+        raise HTTPException(404, "снимок не найден")
+    p = s.get(M.Project, sn.project_id)
+    try:
+        S.set_frame_zone(s, p, sn, body.frame_zone or None)
+    except S.NotFound as e:
+        raise HTTPException(404, str(e))
+    s.commit()
+    return snapshot_detail(sid, s)
     return Response(thumbnail(img, w), media_type="image/jpeg", headers=headers)

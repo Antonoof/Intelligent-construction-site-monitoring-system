@@ -87,13 +87,21 @@ def _ram_total_gb() -> float:
 
 def ram_budget_gb(reserve_gb: float) -> tuple[float, str]:
     """Память под VLM на CPU по бюджету, а не только по MemAvailable: веса safetensors читаются через mmap и
-    числятся «доступными» (страничный кеш), хотя заняты. Бюджет = вся память − детектор − модель готовности − запас."""
+    числятся «доступными» (страничный кеш), хотя заняты. Бюджет = вся память − детектор − Grounding DINO − модель готовности − запас."""
     parts, budget = [], _ram_total_gb() - reserve_gb
     try:
         from ..detection import get_detector
         if get_detector().name.startswith("rfdetr"):
-            budget -= 1.5
-            parts.append("RF-DETR 1.5")
+            budget -= 1.0
+            parts.append("RF-DETR 1.0")
+    except Exception:
+        pass
+    try:
+        from .openvocab import get_openvocab
+        gd = get_openvocab().footprint_gb()
+        if gd:
+            budget -= gd
+            parts.append(f"Grounding DINO {gd:.1f}")
     except Exception:
         pass
     try:
@@ -222,6 +230,19 @@ class LocalVLM:
         else:
             name, why = self.setting, "задана в OKO_VLM"
         return {"enabled": True, "model": name, "device": device, "loaded": False, "reason": why}
+
+    def warm(self) -> None:
+        """Загрузить модель заранее (после старта сервиса), чтобы первый анализ её не ждал."""
+        with self._lock:
+            if self.enabled and self._model is None:
+                self._load()
+
+    def cache_key(self, sha: str, hint: str) -> str:
+        """Ключ кеша ответа: жадное декодирование детерминировано — тот же кадр, модель, запрос и контекст дают
+        тот же ответ."""
+        from . import cache
+        return cache.key("vlm", self.model_name or self.plan().get("model"), PROMPT, self.image_px, self.max_tokens,
+                         sha, hint)
 
     def _load(self) -> None:
         import torch

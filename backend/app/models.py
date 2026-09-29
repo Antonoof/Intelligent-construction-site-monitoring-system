@@ -220,6 +220,9 @@ class Snapshot(Base):
     quality_reason: Mapped[str] = mapped_column(String(200), default="")
     detector: Mapped[str] = mapped_column(String(120))                   # версия модели / demo
     assessment: Mapped[dict | None] = mapped_column(JSONType, nullable=True)  # стадия/готовность (ML-часть)
+    # весь кадр относится к одной зоне (ключ), полигоны камеры не применяются; NULL — зоны по разметке камеры.
+    # Нужно для снимков, снятых не с того ракурса, под который размечены зоны камеры (свои фото, телефон)
+    frame_zone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     processing_ms: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[dt.datetime] = mapped_column(DateTime, default=utcnow)
     detections: Mapped[list["Detection"]] = relationship(back_populates="snapshot", cascade="all, delete-orphan",

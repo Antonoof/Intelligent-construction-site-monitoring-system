@@ -18,7 +18,10 @@ from PIL import ExifTags, Image, ImageDraw, ImageFont, ImageOps
 
 EXIF_DT_TAGS = {k for k, v in ExifTags.TAGS.items() if v in ("DateTimeOriginal", "DateTimeDigitized", "DateTime")}
 # «cam01_2026-09-24_10-30.jpg», «20260924T103000», «2026.09.24 10:30:00», «CAM-01 24.09.2026 10-30»
-_FN_ISO = re.compile(r"(20\d{2})[-_.]?([01]\d)[-_.]?([0-3]\d)[T _\-]*([0-2]\d)[-_:.h]?([0-5]\d)(?:[-_:.m]?([0-5]\d))?")
+# дата и, если есть, время; за датой не может сразу идти вторая дата — «2025-03-01_2025-04-30» это период
+# съёмки, а не 20:25:04
+_FN_ISO = re.compile(r"(?<![0-3]\d[._-][01]\d[._-])(20\d{2})[-_.]?([01]\d)[-_.]?([0-3]\d)"
+                     r"(?:[T _\-]*(?!20\d{2}[-_.]?[01]\d[-_.]?[0-3]\d)([0-2]\d)[-_:.h]?([0-5]\d)(?:[-_:.m]?([0-5]\d))?)?")
 _FN_RU = re.compile(r"([0-3]\d)[._-]([01]\d)[._-](20\d{2})[T _\-]*([0-2]\d)[-_:.h]([0-5]\d)(?:[-_:.]([0-5]\d))?")
 
 
@@ -56,6 +59,8 @@ def filename_datetime(name: str) -> dt.datetime | None:
     try:
         if m:
             y, mo, d, h, mi, s = m.groups()
+            if h is None:                 # в имени только дата — полдень: середина рабочей смены
+                return dt.datetime(int(y), int(mo), int(d), 12, 0)
             return dt.datetime(int(y), int(mo), int(d), int(h), int(mi), int(s or 0))
         m = _FN_RU.search(stem)
         if m:

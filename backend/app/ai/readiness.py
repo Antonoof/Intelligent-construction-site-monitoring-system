@@ -168,6 +168,12 @@ class ReadinessModel:
         return {"enabled": True, "run": self.run.name, "loaded": self._ready,
                 "backbone": getattr(self, "backbone_name", None), "device": getattr(self, "device", None)}
 
+    def warm(self) -> None:
+        """Загрузить DINOv2 и голову заранее (после старта сервиса), чтобы первый анализ их не ждал."""
+        with self._lock:
+            if self.enabled and not self._ready:
+                self._load()
+
     def _load(self) -> None:
         import torch
         from transformers import AutoModel
@@ -186,10 +192,13 @@ class ReadinessModel:
         head = build_head(ck["dim"], ck["n_det"], len(ck["stages"]), ck["hidden"])
         head.load_state_dict(ck["state_dict"])
         self.head = head.to(device).eval()
-        try:
-            self.backbone = AutoModel.from_pretrained(name, dtype=dtype)
-        except TypeError:                          # transformers < 4.56
-            self.backbone = AutoModel.from_pretrained(name, torch_dtype=dtype)
+        try:                                       # SDPA — быстрое внимание PyTorch, результат тот же
+            self.backbone = AutoModel.from_pretrained(name, dtype=dtype, attn_implementation="sdpa")
+        except (TypeError, ValueError, ImportError):
+            try:
+                self.backbone = AutoModel.from_pretrained(name, dtype=dtype)
+            except TypeError:                      # transformers < 4.56
+                self.backbone = AutoModel.from_pretrained(name, torch_dtype=dtype)
         self.backbone = self.backbone.to(device).eval()
         mc = self.backbone.config
         self.patch = int(getattr(mc, "patch_size", 14))
@@ -290,9 +299,24 @@ def set_readiness(m) -> None:
     _model = m
 
 
+def cached_predict(model, load_img, dets, class_key, sha: str) -> tuple[dict, bool]:
+    """predict с кешем по содержимому кадра (ai/cache.py): тот же кадр, прогон, точность и рамки — тот же ответ.
+    Возвращает (оценка, взята_из_кеша)."""
+    from . import cache
+    run = getattr(model, "run", None)
+    k = cache.key("readiness", getattr(run, "name", type(model).__name__), getattr(model, "dtype_name", ""), sha,
+                  [(c, round(float(conf), 3), [round(float(v), 1) for v in box]) for c, conf, box in dets])
+    return cache.cached("readiness", k, lambda: model.predict(load_img(), dets, class_key))
+
+
 def assess_snapshot(s, snap) -> dict | None:
     """Оценить снимок моделью готовности, сравнить с планом по графику, сохранить в snapshots.assessment
     и пересчитать отклонения дня (правило STAGE_MISMATCH по кадрам общего плана)."""
+    return assess_snapshot_ex(s, snap)[0]
+
+
+def assess_snapshot_ex(s, snap) -> tuple[dict | None, bool]:
+    """assess_snapshot + признак, что оценка взята из кеша (модель не запускалась)."""
     from .. import models as M
     from .. import services as S
     from ..imaging import load_image
@@ -300,15 +324,15 @@ def assess_snapshot(s, snap) -> dict | None:
 
     model = get_readiness()
     if not model.enabled:
-        return None
+        return None, False
     p = s.get(M.Project, snap.project_id)
     if p.is_demo and snap.assessment:          # демо-сцены синтетические: оставляем оценку из разметки
-        return snap.assessment
+        return snap.assessment, True
     m = get_methodology()
     dets = [(d.equipment_class, d.confidence, (d.x1, d.y1, d.x2, d.y2)) for d in snap.detections
             if not d.is_rejected and d.source != "llm" and d.confidence >= 0.3]
-    img = load_image(Path(snap.file_path).read_bytes())
-    out = model.predict(img, dets, m.normalize_class)
+    out, hit = cached_predict(model, lambda: load_image(Path(snap.file_path).read_bytes()), dets,
+                              m.normalize_class, snap.sha256)
     cam = s.get(M.Camera, snap.camera_id)
     out["overview"] = bool(cam.is_overview)
     if not cam.is_overview:
@@ -323,4 +347,4 @@ def assess_snapshot(s, snap) -> dict | None:
     snap.assessment = out
     s.flush()
     S.recompute_day(s, p, snap.taken_at.date())
-    return out
+    return out, hit

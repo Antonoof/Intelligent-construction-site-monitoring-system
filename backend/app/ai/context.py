@@ -49,6 +49,11 @@ SNAPSHOT_REST = """
 6. forecast — чем ситуация грозит этапам зон (сроки этапов — в schedule[].tasks[].period).
 7. recommendations — 1–5 конкретных действий для инженера строительного контроля.
 
+open_vocab — Grounding DINO, поиск по текстовым подсказкам: objects — прочие объекты (рабочие, леса, опалубка,
+строящееся здание, котлован, ограждение) с зоной; это признаки работ там, где техники мало (монолит, фасад,
+отделка) — учитывай их в вердиктах по отклонениям «работы не ведутся» / «нет техники» и в стадии. only_open_vocab —
+техника, которую нашёл только Grounding DINO: в missed бери её, если подтверждают другие слои (VLM, изображение);
+class_conflict — рамка детектора, которую Grounding DINO считает другим классом.
 VLM — более слабая локальная модель, она может ошибаться. Детектор распознаёт только классы
 detector.classes: если на кадре нет техники других классов, это не отклонение."""
 
@@ -60,7 +65,8 @@ def snapshot_instructions(vision: bool) -> str:
 DAY_INSTRUCTIONS = """Сделай итоговый анализ стройплощадки за день по данным всех слоёв:
 board — зоны: идущие этапы графика, требуемая техника и итог проверки, увиденная за день техника;
 deviations — отклонения правил (review_status — вердикт инженера); ai_snapshots — итоги ИИ-анализа отдельных
-снимков (исправления детектора, новые находки); stage — стадия и готовность по модели готовности (с планом
+снимков (исправления детектора, новые находки, objects — прочие объекты Grounding DINO: опалубка, леса, рабочие);
+stage — стадия и готовность по модели готовности (с планом
 по графику) и стадии идущих этапов графика; history — снимки и отклонения по дням; upcoming и finishing —
 ближайшие этапы.{images}
 
@@ -140,7 +146,7 @@ def snapshot_context(s: Session, snap: M.Snapshot, vlm_output: dict | None = Non
                             .where(M.DeviationEvidence.snapshot_id == snap.id)).all())
     devs = [_dev_brief(s, d, znames) for d in
             s.scalars(select(M.Deviation).where(M.Deviation.id.in_(dev_ids or {-1})).order_by(M.Deviation.id))]
-    cam_zones = S.camera_zone_keys(cam, zkeys)
+    cam_zones = S.snapshot_zone_keys(snap, cam, zkeys)
     return {
         "project": {"name": p.name, "object_type": p.object_type, "address": p.address},
         "camera": {"key": cam.key, "name": cam.name, "overview": cam.is_overview, "note": cam.note},
@@ -153,9 +159,11 @@ def snapshot_context(s: Session, snap: M.Snapshot, vlm_output: dict | None = Non
         "classes": {k: v.get("name", k) for k, v in m.classes.items()},
         "detections": _dets(snap, m, zkeys),
         "rejected_by_engineer": [d.id for d in snap.detections if d.is_rejected],
-        "zones": [{"key": zkeys[cz.zone_id], "name": znames[cz.zone_id],
-                   "polygon": [[_r(x, 3), _r(y, 3)] for x, y in cz.polygon]}
-                  for cz in cam.zone_polygons if cz.zone_id in zkeys],
+        "zones": ([{"key": snap.frame_zone, "name": next(z.name for z in p.zones if z.key == snap.frame_zone),
+                    "polygon": "весь кадр"}] if snap.frame_zone in zkeys.values() else
+                  [{"key": zkeys[cz.zone_id], "name": znames[cz.zone_id],
+                    "polygon": [[_r(x, 3), _r(y, 3)] for x, y in cz.polygon]}
+                   for cz in cam.zone_polygons if cz.zone_id in zkeys]),
         "schedule": checks,
         "deviations": devs,
         "stage": {"planned": {zk: planned_stages(m, tasks, day, zk) for zk in cam_zones} or
@@ -200,6 +208,7 @@ def day_context(s: Session, p: M.Project, day: dt.date) -> dict:
                          "stage": (f.get("stage") or {}).get("final"),
                          "corrections": [c["text"] for c in f.get("corrections", [])],
                          "applied": bool(r.applied and not r.applied.get("reverted")),
+                         "objects": ((f.get("open_vocab") or {}).get("counts") or {}),
                          "new_findings": [n.get("title") for n in f.get("new_findings", [])]})
     # стадию площадки дают кадры общего плана: на них обучена модель готовности
     assessed = [{"camera": cams[sn.camera_id].key, "time": f"{sn.taken_at:%H:%M}", **assessment_brief(sn.assessment)}
@@ -258,8 +267,8 @@ def llm_images(s: Session, snap: M.Snapshot, width: int = 1280) -> list[bytes]:
               "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2,
               "dashed": d.confidence < m.presence_threshold(d.equipment_class)}
              for d in snap.detections if not d.is_rejected]
-    zones = [{"name": zmeta[cz.zone_id].name, "color": zmeta[cz.zone_id].color, "polygon": cz.polygon}
-             for cz in cam.zone_polygons if cz.zone_id in zmeta]
+    zones = [] if snap.frame_zone else [{"name": zmeta[cz.zone_id].name, "color": zmeta[cz.zone_id].color,
+                                         "polygon": cz.polygon} for cz in cam.zone_polygons if cz.zone_id in zmeta]
     return frame_images(img, boxes, zones, width)
 
 

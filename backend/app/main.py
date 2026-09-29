@@ -39,6 +39,8 @@ def startup() -> None:
             log.info("незавершённые ИИ-анализы помечены как прерванные")
     ai_st = _ai_brief()
     log.info("ИИ-анализ: VLM %s, LLM %s", ai_st["vlm"] or "выключена", ai_st["llm"] or "выключена")
+    if ai_jobs.submit_warmup():
+        log.info("ИИ-анализ: модели загружаются в память в фоне")
     if settings.seed_demo:
         with session_scope() as s:
             if not s.scalar(select(func.count(M.Project.id))):
