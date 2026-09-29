@@ -9,7 +9,8 @@ set -euo pipefail
 HOST=${1:?укажите публичный IP ВМ: deploy/yandex-cloud/deploy.sh 51.250.0.1}
 USER_=${2:-oko}
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-SSH="ssh -o StrictHostKeyChecking=accept-new $USER_@$HOST"
+# ConnectTimeout и ServerAlive — чтобы скрипт падал с сообщением, а не висел, если ВМ не отвечает
+SSH="ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=8 $USER_@$HOST"
 
 # веса: одна .pth в weights/ — её имя уйдёт в .env, если своего .env нет
 shopt -s nullglob
@@ -20,8 +21,19 @@ if [ ! -f "$ROOT/deploy/yandex-cloud/.env" ] && [ ${#PTH[@]} -gt 1 ]; then
 fi
 WEIGHTS=$(basename "${PTH[0]}")
 
-echo "→ жду, пока cloud-init поставит Docker на $HOST"
-$SSH 'cloud-init status --wait >/dev/null 2>&1 || true; until sudo docker compose version >/dev/null 2>&1; do sleep 5; done'
+echo "→ проверяю ВМ $HOST"
+if ! $SSH 'echo "   $(uptime -p), свободно памяти $(awk "/MemAvailable/{printf \"%.1f\", \$2/1048576}" /proc/meminfo) ГБ"'; then
+  echo "ВМ не отвечает по SSH. Проверьте, что она запущена: yc compute instance list"
+  echo "Если запущена, но не отвечает (нехватка памяти): yc compute instance restart <имя ВМ>"
+  exit 1
+fi
+# Docker уже стоит (повторная выкладка) — cloud-init не ждём; sudo -n не ждёт пароль, а сразу сообщает об ошибке
+if ! $SSH 'sudo -n docker compose version >/dev/null 2>&1'; then
+  echo "→ жду, пока cloud-init поставит Docker (до 10 минут)"
+  $SSH 'sudo -n timeout 300 cloud-init status --wait >/dev/null 2>&1 || true
+        for i in $(seq 1 60); do sudo -n docker compose version >/dev/null 2>&1 && exit 0; sleep 5; done
+        echo "Docker не появился. Состояние cloud-init:"; sudo -n cloud-init status --long; exit 1'
+fi
 
 echo "→ копирую код и веса (без документов и кешей)"
 # COPYFILE_DISABLE=1 — tar на macOS не добавляет служебные файлы ._имя с метаданными Finder
