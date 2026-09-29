@@ -35,12 +35,16 @@ if ! $SSH 'sudo -n docker compose version >/dev/null 2>&1'; then
         echo "Docker не появился. Состояние cloud-init:"; sudo -n cloud-init status --long; exit 1'
 fi
 
-echo "→ копирую код и веса (без документов и кешей)"
-# COPYFILE_DISABLE=1 — tar на macOS не добавляет служебные файлы ._имя с метаданными Finder
+echo "→ копирую код и веса (без документов, кешей и данных обучения)"
+# COPYFILE_DISABLE=1 — tar на macOS не добавляет служебные файлы ._имя с метаданными Finder.
+# Данные обучения (кадры, кеш признаков training/data/features — гигабайты, прогоны, видео, датасеты) сервису
+# не нужны: модель готовности берётся из weights/readiness/.
 COPYFILE_DISABLE=1 tar -C "$ROOT" \
   --exclude=.git --exclude=.venv --exclude='data/runtime' --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='._*' --exclude='.DS_Store' \
   --exclude='docs/*.pptx' --exclude='docs/*.pdf' --exclude='docs/*.docx' \
+  --exclude='training/data' --exclude='training/runs' --exclude='videos for train' \
+  --exclude='datasets' --exclude='predictions' \
   -czf - . | $SSH 'mkdir -p ~/oko && tar --warning=no-unknown-keyword -xzf - -C ~/oko \
                    && find ~/oko \( -name "._*" -o -name ".DS_Store" \) -type f -delete'
 $SSH "cd ~/oko && [ -f deploy/yandex-cloud/.env ] || echo 'OKO_WEIGHTS_FILE=$WEIGHTS' > deploy/yandex-cloud/.env"

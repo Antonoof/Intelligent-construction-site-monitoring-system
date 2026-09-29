@@ -11,7 +11,7 @@ YandexGPT в Yandex AI Studio, которая сверяет все слои, и
 | `upgrade-vm.sh` | уже созданная ВМ → 16 ГБ, сервисный аккаунт, закреплённый IP (ВМ на минуту останавливается) |
 | `service-account.sh` | общая функция: аккаунт `oko-ai` с ролью `ai.languageModels.user` в каталоге |
 | `cloud-init.yaml` | пользователь `oko` с вашим SSH-ключом, Docker, зеркало Docker Hub, swap 4 ГБ |
-| `deploy.sh` | копирует код и веса, собирает образ, запускает, в фоне скачивает DINOv2 и VLM; повторный запуск — обновление |
+| `deploy.sh` | копирует код и веса (без данных обучения: `training/data`, `training/runs`, видео, датасеты), собирает образ, запускает, в фоне скачивает DINOv2 и VLM; повторный запуск — обновление |
 | `docker-compose.yml` | PostgreSQL + сервис из `backend/Dockerfile.ai` (PyTorch CPU, rfdetr, transformers), порт 80 |
 | `.env.example` | веса детектора, YandexGPT (каталог, модель), модель готовности, VLM, автоанализ |
 
